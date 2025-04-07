@@ -11,9 +11,62 @@ async function editFilm() {
     { id: "our-narrow-slice" }, // Find the film by its unique ID
     {
       // 👇 Fields you want to update
-      credits: [
-        { title: 'Cinematography', names: ['Advik Kulkarni']}
-      ],
+        title: "Our Narrow Slice",
+        generalCredits: [
+            "Pranay Vajrapu",
+            "Advik Kulkarni",
+            "Sai Ashish Vure"
+        ],
+        credits: [
+            {
+                title: "Director",
+                names: [
+                    "Pranay Vajrapu",
+                    "Advik Kulkarni",
+                    "Sai Ashish Vure",
+                ],
+            },
+            {
+                title: "Cinematographer",
+                names: [
+                    "Advik Kulkarni"
+                ],
+            },
+            {
+                title: "Editor",
+                names: [
+                    "Advik Kulkarni"
+                ],
+            },
+            {
+                title: "Original Score",
+                names: [
+                    "Sai Ashish Vure"
+                ],
+            },
+            {
+                title: "Starring",
+                names: [
+                    "Dhruv Kothari"
+                ],
+            },
+            {
+                title: "Voice-over by",
+                names: [
+                    "B. Venugopal Reddy"
+                ],
+            },
+        ],
+        awards: [
+            {
+                title: "1st Place",
+                details: "Drishya '25 - Chalchitra Film Festival - IIT Guwahati",
+            },
+            {
+                title: "2nd Place",
+                details: "SHO(R)T - Waves '24 - BITS Goa",
+            }
+        ],
     },
     {
       new: true, // Return the updated document

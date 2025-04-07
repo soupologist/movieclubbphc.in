@@ -81,7 +81,7 @@ export default async function FilmsPage() {
                 </div>
               )}
 
-              {film.notes?.length > 0 && (
+              {/* {film.notes?.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-3xl font-light font-gotham mb-4 text-blue-200">
                     NOTES
@@ -92,7 +92,7 @@ export default async function FilmsPage() {
                     ))}
                   </ul>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </Link>
