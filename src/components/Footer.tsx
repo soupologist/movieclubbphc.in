@@ -14,14 +14,14 @@ export default function Footer() {
 
         {/* Right External Links */}
         <div className="flex flex-col md:items-end space-y-1 text-sm">
-          <a
+          <Link
             href="https://instagram.com/movieclubbphc"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition"
           >
             Instagram
-          </a>
+          </Link>
           <a
             href="https://www.youtube.com/@movieclubbphc"
             target="_blank"
