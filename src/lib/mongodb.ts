@@ -8,7 +8,7 @@ let clientPromise: Promise<MongoClient>;
 
 // Augment the globalThis object to include _mongoClientPromise
 declare global {
-  let _mongoClientPromise: Promise<MongoClient> | undefined;
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
 // Prevent TypeScript from treating this as a module
