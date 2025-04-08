@@ -1,18 +1,11 @@
+// src/lib/mongodb.ts
 import { MongoClient } from "mongodb";
 
 const uri = process.env.MONGODB_URI!;
 const options = {};
 
-let client: MongoClient;
+let client;
 let clientPromise: Promise<MongoClient>;
-
-// Augment the globalThis object to include _mongoClientPromise
-declare global {
-  let _mongoClientPromise: Promise<MongoClient> | undefined;
-}
-
-// Prevent TypeScript from treating this as a module
-export {};
 
 if (!process.env.MONGODB_URI) {
   throw new Error("Please add your MongoDB URI to .env.local");
