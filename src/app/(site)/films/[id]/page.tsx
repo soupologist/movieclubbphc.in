@@ -6,24 +6,27 @@ import dbConnect from "@/lib/dbConnect";
 import Film from "@/models/Film";
 import { IFilm } from "@/models/Film";
 
-interface FilmPageProps {
-  params: { id: string };
-}
-
+// Helper to extract Instagram ID
 function getInstagramId(url: string): string | undefined {
   const match = url.match(/(?:instagram\.com\/(?:p|reel|tv)\/)([a-zA-Z0-9_-]+)/);
   return match ? match[1] : undefined;
 }
 
-export default async function FilmPage({ params }: FilmPageProps) {
+// Page component
+export default async function FilmPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   await dbConnect();
   const film: IFilm | null = await Film.findOne({ id: params.id }).lean();
 
   if (!film) return notFound();
 
   return (
-      <div className="relative min-h-screen text-white overflow-hidden font-gotham">
-            {film.background?.endsWith(".mp4") ? (
+    <div className="relative min-h-screen text-white overflow-hidden font-gotham">
+      {/* Background Video or Image */}
+      {film.background?.endsWith(".mp4") ? (
         <video
           src={film.background}
           className="absolute inset-0 w-full h-full object-cover z-0"
@@ -69,7 +72,7 @@ export default async function FilmPage({ params }: FilmPageProps) {
           </div>
         )}
 
-
+        {/* Embed */}
         {film.embed && (
           <div className="mt-12 aspect-video w-full">
             {film.embed.includes("instagram.com") ? (
@@ -94,6 +97,7 @@ export default async function FilmPage({ params }: FilmPageProps) {
           </div>
         )}
 
+        {/* Credits */}
         {film.credits?.length > 0 && (
           <div className="mb-10 mt-10">
             <h2 className="text-4xl font-light text-blue-100 mb-4">Credits</h2>
@@ -110,6 +114,7 @@ export default async function FilmPage({ params }: FilmPageProps) {
           </div>
         )}
 
+        {/* Awards */}
         {film.awards?.length > 0 && (
           <div className="mt-14">
             <h2 className="text-4xl font-light text-yellow-100 mb-4">Awards</h2>
@@ -123,6 +128,7 @@ export default async function FilmPage({ params }: FilmPageProps) {
           </div>
         )}
 
+        {/* Notes */}
         {film.notes?.length > 0 && (
           <div className="mt-14">
             <h2 className="text-4xl font-light text-green-200 mb-4">
@@ -136,6 +142,7 @@ export default async function FilmPage({ params }: FilmPageProps) {
           </div>
         )}
 
+        {/* BTS Photos */}
         {film.btsPhotos?.length > 0 && (
           <div className="mt-14">
             <h2 className="text-4xl font-light text-pink-100 mb-4">
