@@ -1,4 +1,3 @@
-import React from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -6,18 +5,19 @@ import dbConnect from "@/lib/dbConnect";
 import Film from "@/models/Film";
 import { IFilm } from "@/models/Film";
 
-// Helper to extract Instagram ID
+// Correct way to type the params for a route like /films/[id]
+type FilmPageProps = {
+  params: {
+    id: string;
+  };
+};
+
 function getInstagramId(url: string): string | undefined {
   const match = url.match(/(?:instagram\.com\/(?:p|reel|tv)\/)([a-zA-Z0-9_-]+)/);
   return match ? match[1] : undefined;
 }
 
-// Page component
-export default async function FilmPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function FilmPage({ params }: FilmPageProps) {
   await dbConnect();
   const film: IFilm | null = await Film.findOne({ id: params.id }).lean();
 
@@ -25,7 +25,7 @@ export default async function FilmPage({
 
   return (
     <div className="relative min-h-screen text-white overflow-hidden font-gotham">
-      {/* Background Video or Image */}
+      {/* Background */}
       {film.background?.endsWith(".mp4") ? (
         <video
           src={film.background}
@@ -66,9 +66,7 @@ export default async function FilmPage({
 
         {film.description && (
           <div className="my-10 border-t border-gray-600 pt-6">
-            <p className="text-xl text-gray-200">
-              {film.description}
-            </p>
+            <p className="text-xl text-gray-200">{film.description}</p>
           </div>
         )}
 
@@ -142,7 +140,7 @@ export default async function FilmPage({
           </div>
         )}
 
-        {/* BTS Photos */}
+        {/* BTS */}
         {film.btsPhotos?.length > 0 && (
           <div className="mt-14">
             <h2 className="text-4xl font-light text-pink-100 mb-4">
