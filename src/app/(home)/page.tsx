@@ -1,7 +1,5 @@
 import React from "react";
 import { Instrument_Serif } from 'next/font/google';
-import Image from "next/image";
-import Link from "next/link";
 
 const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
