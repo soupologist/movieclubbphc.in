@@ -45,8 +45,8 @@ export default async function FilmPage({ params }: Props) {
       <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
 
       <div className="relative z-20 p-6 md:p-16 max-w-5xl mx-auto">
-        <Link href="/films" className="text-gray-300 hover:text-white text-xl mb-10 block">
-          ← Back to Films
+        <Link href="/films" className="inline-block mt-2 mb-8 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
+            GO BACK
         </Link>
 
         <h1 className="text-5xl md:text-7xl font-semibold mb-4">{film.title}</h1>

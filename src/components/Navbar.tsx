@@ -1,16 +1,42 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setShowNavbar(false); // hide on scroll down
+      } else {
+        setShowNavbar(true); // show on scroll up
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [lastScrollY]);
 
   return (
     <>
       {/* Top Navbar */}
-      <nav className="fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50">
+      <nav
+        className={`fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 transition-transform duration-300 ${
+          showNavbar ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
         <Link href="/">
           <Image
             src="/images/movieclub-white.png"
