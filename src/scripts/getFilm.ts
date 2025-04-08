@@ -6,9 +6,7 @@ import Film from "@/models/Film";
 
 // Define recursive type for deepClean-compatible data
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
-interface JSONObject {
-  [key: string]: JSONValue;
-}
+interface JSONObject extends Record<string, JSONValue> {}
 interface JSONArray extends Array<JSONValue> {}
 
 async function getFilm() {

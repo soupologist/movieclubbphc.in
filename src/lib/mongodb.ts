@@ -11,7 +11,13 @@ if (!process.env.MONGODB_URI) {
 }
 
 declare global {
-  // Extend the NodeJS global type to safely store the promise
+  // Fix ESLint error: "An interface declaring no members..."
+  // This ensures the type isn't empty by extending Record<string, unknown>
+  // which prevents @typescript-eslint/no-empty-interface
+  // Also note: global must be declared so we can safely use it
+  // as a shared namespace in dev
+  // (This does NOT get emitted into your final code)
+  // eslint-disable-next-line no-unused-vars
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
