@@ -10,15 +10,14 @@ if (!process.env.MONGODB_URI) {
   throw new Error("Please add your MongoDB URI to .env.local");
 }
 
+// Correct usage of global typing
 declare global {
-  // Fix ESLint error: "An interface declaring no members..."
-  // This ensures the type isn't empty by extending Record<string, unknown>
-  // which prevents @typescript-eslint/no-empty-interface
-  // Also note: global must be declared so we can safely use it
-  // as a shared namespace in dev
-  // (This does NOT get emitted into your final code)
-  // eslint-disable-next-line no-unused-vars
-  var _mongoClientPromise: Promise<MongoClient> | undefined;
+  // Fix both errors here by using `let` not `var` and removing the eslint-disable
+  // `globalThis` is modern and valid for both Node and browser if needed
+  // You can also use `globalThis` in place of `global`
+  // Just make sure it’s consistent
+  // eslint-disable-next-line no-var -- ✘ REMOVE THIS LINE, it's not needed
+  let _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
 if (process.env.NODE_ENV === "development") {
