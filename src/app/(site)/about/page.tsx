@@ -30,69 +30,69 @@ export default function AboutPage() {
         </ul>
       </section>
 
-      <section className="mb-16">
-        <h2 className="text-3xl font-medium text-pink-200 mb-8">Team</h2>
+      <section className="mb-20 px-4">
+        <h2 className="text-center text-4xl sm:text-5xl font-bold text-pink-200 mb-14">Meet the Team</h2>
 
         {/* Secretary + Joint Secretary */}
-        <div className="grid sm:grid-cols-2 gap-10 mb-12">
-          <div className="text-center">
+        <div className="grid sm:grid-cols-2 gap-12 mb-16">
+          <div className="flex flex-col items-center text-center">
             <Image
-              src="/images/team/pranay.jpg"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744187255/pranay_axnjwm.jpg"
               alt="Pranay Vajrapu"
               width={160}
               height={160}
-              className="rounded-full mx-auto mb-4 object-cover shadow-lg"
+              className="w-40 h-40 rounded-full object-cover shadow-lg mb-4"
             />
             <p className="text-2xl font-semibold text-white">Pranay Vajrapu</p>
-            <p className="text-sm text-gray-400">Secretary</p>
+            <p className="text-m text-gray-400">Secretary</p>
           </div>
 
-          <div className="text-center">
+          <div className="flex flex-col items-center text-center">
             <Image
               src="https://res.cloudinary.com/dlglodixp/image/upload/v1744100582/ashish_klnruy.jpg"
               alt="Sai Ashish Vure"
               width={160}
               height={160}
-              className="rounded-full mx-auto mb-4 object-cover shadow-lg"
+              className="w-40 h-40 rounded-full object-cover shadow-lg mb-4"
             />
             <p className="text-2xl font-semibold text-white">Sai Ashish Vure</p>
-            <p className="text-sm text-gray-400">Joint Secretary</p>
+            <p className="text-m text-gray-400">Joint Secretary</p>
           </div>
         </div>
 
         {/* Rest of the team */}
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-10">
-          <div className="text-center">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-12">
+          <div className="flex flex-col items-center text-center">
             <Image
-              src="/images/team/yash.jpg"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744187241/mufidh_cnvbzx.jpg"
               alt="Mufidh"
-              width={128}
-              height={128}
-              className="rounded-full mx-auto mb-4 object-cover"
+              width={160}
+              height={160}
+              className="w-40 h-40 rounded-full object-cover shadow-lg mb-4"
             />
             <p className="text-xl font-semibold text-white">Mufidh Muhsin</p>
             <p className="text-sm text-gray-400">Treasurer</p>
           </div>
 
-          <div className="text-center">
+          <div className="flex flex-col items-center text-center">
             <Image
-              src="/images/team/navya.jpg"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744130174/harshid-cropped_gdsqtz.jpg"
               alt="Harshid"
-              width={128}
-              height={128}
-              className="rounded-full mx-auto mb-4 object-cover"
+              width={160}
+              height={160}
+              className="w-40 h-40 rounded-full object-cover shadow-lg mb-4"
             />
             <p className="text-xl font-semibold text-white">Harshid S</p>
             <p className="text-sm text-gray-400">Catharsis Convener</p>
           </div>
 
-          <div className="text-center">
+          <div className="flex flex-col items-center text-center">
             <Image
-              src="/images/team/abhinav.jpg"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744185653/asw_i6fugs.jpg"
               alt="Aswanth"
-              width={128}
-              height={128}
-              className="rounded-full mx-auto mb-4 object-cover"
+              width={160}
+              height={160}
+              className="w-40 h-40 rounded-full object-cover shadow-lg mb-4"
             />
             <p className="text-xl font-semibold text-white">Aswanth Ganesan</p>
             <p className="text-sm text-gray-400">Club Representative</p>
@@ -128,7 +128,7 @@ export default function AboutPage() {
         </div>
       </section> */}
 
-      <section className="mb-16">
+      <section className="mb-6">
         <h2 className="text-3xl font-medium text-green-200 mb-4">Get Involved</h2>
         <p className="text-gray-300 leading-relaxed">
           Interested in joining us? Whether you&rsquo;re interested in making short films or are just a huge film buff, we welcome new voices and ideas every semester.
@@ -143,27 +143,6 @@ export default function AboutPage() {
           </Link>{" "}
           Facebook group.
         </p>
-      </section>
-
-      <section className="mt-10 border-t border-gray-700 pt-10">
-        <h2 className="text-3xl text-white mb-4">Follow Us</h2>
-        <ul className="space-y-2 text-gray-300">
-          <li>
-            <Link href="https://instagram.com/movieclubbphc" target="_blank" className="hover:text-pink-400">
-              Instagram
-            </Link>
-          </li>
-          <li>
-            <Link href="https://youtube.com/@movieclubbphc" target="_blank" className="hover:text-red-400">
-              YouTube
-            </Link>
-          </li>
-          <li>
-            <Link href="https://letterboxd.com/movieclubbphc" target="_blank" className="hover:text-green-400">
-              Letterboxd
-            </Link>
-          </li>
-        </ul>
       </section>
     </div>
   );

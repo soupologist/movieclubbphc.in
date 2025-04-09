@@ -30,11 +30,7 @@ export default async function FilmsPage() {
   return (
     <div className="min-h-screen bg-black text-white px-6 md:px-12 py-16">
       <div className="mb-24">
-        <h1
-          className={`${instrument.className} text-[clamp(8rem,8vw,8rem)] text-center ml-2 whitespace-nowrap`}
-        >
-          Our Films
-        </h1>
+        <h1 className={`text-9xl mb-10 ${instrument.className}`}>Our Films</h1>
       </div>
 
       <div className="space-y-28">
