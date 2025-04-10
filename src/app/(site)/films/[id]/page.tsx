@@ -2,10 +2,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from 'rehype-raw';
 
 type Credit = { title: string; names: string[] };
 type Award = { title: string; details: string };
@@ -130,12 +131,13 @@ export default function FilmPage() {
         )}
 
         {film.notes && (
-          <div className="mt-14 prose prose-invert max-w-none">
-            <h2 className="text-4xl font-light text-green-200 mb-6">Production Notes</h2>
-            <ReactMarkdown>{film.notes}</ReactMarkdown>
+          <div className="mt-14 prose prose-invert prose-img:rounded-xl prose-a:text-blue-400 max-w-none">
+            <h2 className="text-4xl font-light text-green-200 mb-4">Production Notes</h2>
+            <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+              {Array.isArray(film.notes) ? film.notes.join('\n\n') : film.notes}
+            </ReactMarkdown>
           </div>
         )}
-
         {film.btsPhotos?.length > 0 && (
           <div className="mt-14">
             <h2 className="text-4xl font-light text-pink-100 mb-4">Behind The Scenes</h2>

@@ -2,47 +2,78 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 export default function AdminFilmsPage() {
+  const router = useRouter();
+
   const [filmId, setFilmId] = useState('');
   const [newFilm, setNewFilm] = useState({
     id: '',
     title: '',
     date: '',
     poster: '',
+    background: '',
+    backgroundImage: '',
+    embed: '',
     description: '',
+    generalCredits: '',
+    notes: '',
+    btsPhotos: '',
+    status: '',
   });
-
-  const router = useRouter();
 
   const handleNavigate = () => {
     if (filmId) {
-      router.push(`/admin/films/edit?id=${filmId}`);
+      router.push(`/admin/films/edit/${filmId}`);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setNewFilm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAdd = async () => {
+    const filmToSend = {
+      ...newFilm,
+      generalCredits: newFilm.generalCredits.split(',').map((s) => s.trim()),
+      btsPhotos: newFilm.btsPhotos.split(',').map((s) => s.trim()),
+    };
+
     const res = await fetch('/api/films', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newFilm),
+      body: JSON.stringify(filmToSend),
     });
 
     if (res.ok) {
       alert('Film added successfully!');
-      setNewFilm({ id: '', title: '', date: '', poster: '', description: '' });
+      setNewFilm({
+        id: '',
+        title: '',
+        date: '',
+        poster: '',
+        background: '',
+        backgroundImage: '',
+        embed: '',
+        description: '',
+        generalCredits: '',
+        notes: '',
+        btsPhotos: '',
+        status: '',
+      });
     } else {
       alert('Error adding film');
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-10">
+    <div className="min-h-screen bg-black text-white p-10 max-w-4xl mx-auto">
       <h1 className="text-4xl mb-10 font-bold">Admin</h1>
 
       <div className="mb-20">
@@ -60,13 +91,51 @@ export default function AdminFilmsPage() {
       </div>
 
       <div className="border border-gray-700 p-6 rounded-lg space-y-4">
-        <h2 className="text-2xl">Add New Film</h2>
+        <h2 className="text-2xl font-semibold mb-4">Add New Film</h2>
+
         <input name="id" value={newFilm.id} onChange={handleChange} placeholder="ID (e.g. the-film-id)" className="p-2 bg-gray-800 w-full" />
         <input name="title" value={newFilm.title} onChange={handleChange} placeholder="Title (e.g. The Film Title)" className="p-2 bg-gray-800 w-full" />
         <input name="date" value={newFilm.date} onChange={handleChange} placeholder="Date (e.g. 2024-10-05)" className="p-2 bg-gray-800 w-full" />
         <input name="poster" value={newFilm.poster} onChange={handleChange} placeholder="Poster URL (e.g. https://...)" className="p-2 bg-gray-800 w-full" />
+        <input name="background" value={newFilm.background} onChange={handleChange} placeholder="Background Video/Image URL" className="p-2 bg-gray-800 w-full" />
+        <input name="backgroundImage" value={newFilm.backgroundImage} onChange={handleChange} placeholder="Optional Background Image URL" className="p-2 bg-gray-800 w-full" />
+        <input name="embed" value={newFilm.embed} onChange={handleChange} placeholder="Embed URL (YouTube/Instagram)" className="p-2 bg-gray-800 w-full" />
         <textarea name="description" value={newFilm.description} onChange={handleChange} placeholder="Description" className="p-2 bg-gray-800 w-full" />
-        <button onClick={handleAdd} className="bg-green-600 px-4 py-2">
+
+        <input
+          name="generalCredits"
+          value={newFilm.generalCredits}
+          onChange={handleChange}
+          placeholder="General Credits (comma-separated)"
+          className="p-2 bg-gray-800 w-full"
+        />
+
+        <textarea
+          name="btsPhotos"
+          value={newFilm.btsPhotos}
+          onChange={handleChange}
+          placeholder="Behind-the-scenes photo URLs (comma-separated)"
+          className="p-2 bg-gray-800 w-full"
+        />
+
+        <select name="status" value={newFilm.status} onChange={handleChange} className="p-2 bg-gray-800 w-full">
+          <option value="">Select Status</option>
+          <option value="released">Released</option>
+          <option value="shelved">Shelved</option>
+        </select>
+
+        <div>
+          <label className="block mb-2 text-sm text-gray-400">Production Notes (Markdown)</label>
+          <div className="bg-gray-800 p-2 rounded">
+            <MDEditor
+              value={newFilm.notes}
+              onChange={(val) => setNewFilm((prev) => ({ ...prev, notes: val || '' }))}
+              height={300}
+            />
+          </div>
+        </div>
+
+        <button onClick={handleAdd} className="bg-green-600 px-6 py-3 font-bold mt-6">
           Add Film
         </button>
       </div>
