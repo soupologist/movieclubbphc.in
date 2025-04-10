@@ -1,26 +1,52 @@
-// src/app/(site)/films/[id]/page.tsx
+// app/(site)/films/[id]/page.tsx
+"use client";
 
-import { notFound } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import dbConnect from "@/lib/dbConnect";
-import Film from "@/models/Film";
-import { IFilm } from "@/models/Film";
+import ReactMarkdown from "react-markdown";
 
-type Props = {
-  params: { id: string };
-};
+type Credit = { title: string; names: string[] };
+type Award = { title: string; details: string };
+
+interface Film {
+  _id: string;
+  id: string;
+  title: string;
+  description?: string;
+  date?: string;
+  background?: string;
+  backgroundImage?: string;
+  embed?: string;
+  generalCredits?: string[];
+  credits: Credit[];
+  awards: Award[];
+  notes?: string;
+  btsPhotos: string[];
+}
 
 const getInstagramId = (url: string) => {
   const match = url.match(/(?:instagram\.com\/(?:p|reel|tv)\/)([a-zA-Z0-9_-]+)/);
   return match?.[1];
 };
 
-export default async function FilmPage({ params }: Props) {
-  await dbConnect();
-  const film: IFilm | null = await Film.findOne({ id: params.id }).lean();
+export default function FilmPage() {
+  const { id } = useParams<{ id: string }>();
+  const [film, setFilm] = useState<Film | null>(null);
 
-  if (!film) return notFound();
+  useEffect(() => {
+    async function fetchFilm() {
+      const res = await fetch(`/api/films/${id}`);
+      if (!res.ok) return setFilm(null);
+      const data = await res.json();
+      setFilm(data);
+    }
+
+    fetchFilm();
+  }, [id]);
+
+  if (!film) return <div className="p-10 text-white">Loading...</div>;
 
   return (
     <div className="relative min-h-screen text-white overflow-hidden font-gotham">
@@ -103,14 +129,10 @@ export default async function FilmPage({ params }: Props) {
           </div>
         )}
 
-        {film.notes?.length > 0 && (
-          <div className="mt-14">
-            <h2 className="text-4xl font-light text-green-200 mb-4">Production Notes</h2>
-            <ul className="list-disc list-inside space-y-2 text-gray-300">
-              {film.notes.map((note, i) => (
-                <li key={i}>{note}</li>
-              ))}
-            </ul>
+        {film.notes && (
+          <div className="mt-14 prose prose-invert max-w-none">
+            <h2 className="text-4xl font-light text-green-200 mb-6">Production Notes</h2>
+            <ReactMarkdown>{film.notes}</ReactMarkdown>
           </div>
         )}
 

@@ -11,6 +11,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@uiw/react-md-editor": "^4.0.5",
     "dotenv": "^16.4.7",
     "gsap": "^3.12.7",
     "mongodb": "^6.15.0",
@@ -18,6 +20,8 @@
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "rehype-raw": "^7.0.0",
     "tsx": "^4.19.3"
   },
   "devDependencies": {

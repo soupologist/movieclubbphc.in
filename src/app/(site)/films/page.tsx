@@ -1,5 +1,7 @@
-import dbConnect from "@/lib/dbConnect";
-import FilmModel from "@/models/Film";
+// app/films/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Instrument_Serif } from "next/font/google";
@@ -10,22 +12,30 @@ const instrument = Instrument_Serif({
   display: "swap",
 });
 
-export default async function FilmsPage() {
-  await dbConnect();
-  const rawFilms = await FilmModel.find({}).lean();
+interface Film {
+  _id: string;
+  id: string;
+  title: string;
+  generalCredits: string[];
+  credits: { title: string; names: string[] }[];
+  date: string;
+  poster: string;
+  description: string;
+  awards: { title: string; details: string }[];
+}
 
-  const films = rawFilms.map((film) => ({
-    ...film,
-    _id: film._id.toString(),
-    credits: film.credits?.map((credit) => ({
-      title: credit.title,
-      names: credit.names,
-    })) || [],
-    awards: film.awards?.map((award) => ({
-      title: award.title,
-      details: award.details,
-    })) || [],
-  }));
+export default function FilmsPage() {
+  const [films, setFilms] = useState<Film[]>([]);
+
+  useEffect(() => {
+    async function fetchFilms() {
+      const res = await fetch("/api/films");
+      const data = await res.json();
+      setFilms(data);
+    }
+
+    fetchFilms();
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white px-6 md:px-12 py-16">
@@ -62,7 +72,7 @@ export default async function FilmsPage() {
 
                 <p className="text-lg text-gray-300 leading-relaxed line-clamp-4">
                   {film.description}
-                </p>       
+                </p>
 
                 {film.awards?.length > 0 && (
                   <div className="mt-6">
@@ -84,7 +94,6 @@ export default async function FilmsPage() {
                     Read More
                   </span>
                 </div>
-
               </div>
             </div>
           </Link>

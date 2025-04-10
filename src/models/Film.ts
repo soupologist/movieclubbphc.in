@@ -22,7 +22,7 @@ export interface IFilm extends Document {
   backgroundImage?: string;
   embed?: string;
   awards: Award[];
-  notes: string[];
+  notes?: string;
   btsPhotos: string[];
   status?: string;
   createdAt?: Date;
@@ -58,7 +58,7 @@ const FilmSchema: Schema<IFilm> = new Schema(
       ],
       default: [],
     },
-    notes: { type: [String], default: [] },
+    notes: { type: String, default: '' },
     btsPhotos: { type: [String], default: [] },
     status: { type: String, default: 'released' },
   },
