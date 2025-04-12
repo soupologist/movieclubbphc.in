@@ -47,7 +47,13 @@ export default function FilmPage() {
     fetchFilm();
   }, [id]);
 
-  if (!film) return <div className="p-10 text-white">Loading...</div>;
+  if (!film) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-white">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen text-white overflow-hidden font-gotham">

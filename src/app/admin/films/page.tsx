@@ -7,6 +7,18 @@ import dynamic from 'next/dynamic';
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 export default function AdminFilmsPage() {
+
+  const [authenticated, setAuthenticated] = useState(false);
+  const [passkey, setPasskey] = useState("");
+
+  const checkPasskey = () => {
+    if (passkey === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      setAuthenticated(true);
+    } else {
+      alert("Incorrect key");
+    }
+  };
+
   const router = useRouter();
 
   const [filmId, setFilmId] = useState('');
@@ -71,6 +83,24 @@ export default function AdminFilmsPage() {
       alert('Error adding film');
     }
   };
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <h1 className="text-3xl mb-4">Enter Admin Passkey</h1>
+        <input
+          type="password"
+          value={passkey}
+          onChange={(e) => setPasskey(e.target.value)}
+          className="p-2 bg-gray-800 mb-4 w-72"
+          placeholder="Passkey"
+        />
+        <button onClick={checkPasskey} className="bg-blue-600 px-4 py-2">
+          Submit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-10 max-w-4xl mx-auto">

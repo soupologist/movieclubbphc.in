@@ -37,7 +37,7 @@ export default function AboutPage() {
         <div className="grid sm:grid-cols-2 gap-12 mb-16">
           <div className="flex flex-col items-center text-center">
             <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744187255/pranay_axnjwm.jpg"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744356950/pranay-cropped_r15deg.jpg"
               alt="Pranay Vajrapu"
               width={160}
               height={160}

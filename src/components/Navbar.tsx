@@ -52,8 +52,8 @@ export default function Navbar() {
         <div className="hidden md:flex space-x-10 text-lg font-regular">
           <Link href="/about" className="hover:text-gray-300">About Us</Link>
           <Link href="/films" className="hover:text-gray-300">Films</Link>
-          <Link href="/editorials" className="hover:text-gray-300">Editorials</Link>
           <Link href="/festival" className="hover:text-gray-300">Film Festival</Link>
+          <Link href="/contact" className="hover:text-gray-300">Contact Us</Link>
         </div>
 
         {/* Hamburger Button */}
@@ -77,9 +77,10 @@ export default function Navbar() {
         <div className="flex flex-col items-end mt-16 p-6 space-y-6">
           <button onClick={() => setMenuOpen(false)} className="text-white text-xl">✕</button>
           <Link href="/about" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">About Us</Link>
-          <Link href="/films" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Films</Link>
-          <Link href="/editorials" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Editorials</Link>
+          <Link href="/films" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Our Films</Link>
+          {/* <Link href="/editorials" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Editorials</Link> */}
           <Link href="/festival" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Film Festival</Link>
+          <Link href="/contact" className="hover:text-gray-300">Contact Us</Link>
         </div>
       </div>
     </>

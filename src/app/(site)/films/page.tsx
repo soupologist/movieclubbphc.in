@@ -26,16 +26,27 @@ interface Film {
 
 export default function FilmsPage() {
   const [films, setFilms] = useState<Film[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchFilms() {
       const res = await fetch("/api/films");
       const data = await res.json();
       setFilms(data);
+      setLoading(false);
     }
-
+  
     fetchFilms();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white">
+        <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-white mb-6" />
+        <p className="text-lg tracking-wide font-gotham">Loading Films...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white px-6 md:px-12 py-16">
