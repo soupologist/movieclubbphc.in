@@ -57,25 +57,24 @@ export default function FilmPage() {
 
   return (
     <div className="relative min-h-screen text-white overflow-hidden font-gotham">
-      {film.background?.endsWith(".mp4") ? (
-        <video
-          src={film.background}
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-      ) : (
-        <Image
-          src={film.backgroundImage || film.background || "/fallback.jpg"}
-          alt="Background"
-          fill
-          className="object-cover z-0"
-        />
-      )}
-
-      <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
+    {film.background && film.background.trim().endsWith(".mp4") ? (
+      <video
+        src={film.background.trim()}
+        className="absolute inset-0 w-full h-full object-cover z-0"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+    ) : (
+      <Image
+        src={film.backgroundImage?.trim() || film.background?.trim() || "/fallback.jpg"}
+        alt="Background"
+        fill
+        className="object-cover z-0"
+      />
+    )}
+    <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
 
       <div className="relative z-20 p-6 md:p-16 max-w-5xl mx-auto">
         <Link href="/films" className="inline-block mt-2 mb-8 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
@@ -92,7 +91,7 @@ export default function FilmPage() {
           </div>
         )}
 
-        {film.embed && (
+        {film.embed?.trim() && (
           <div className="mt-12 aspect-video w-full">
             <iframe
               src={

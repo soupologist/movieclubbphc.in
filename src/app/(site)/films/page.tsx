@@ -16,6 +16,7 @@ interface Film {
   _id: string;
   id: string;
   title: string;
+  background: string;
   generalCredits: string[];
   credits: { title: string; names: string[] }[];
   date: string;
@@ -57,7 +58,21 @@ export default function FilmsPage() {
       <div className="space-y-28">
         {films.map((film) => (
           <Link key={film._id} href={`/films/${film.id}`} className="block group">
-            <div className="relative flex flex-col md:flex-row items-start gap-12 md:gap-20 cursor-pointer group-hover:opacity-85 transition-opacity duration-300">
+            <div className="relative flex flex-col md:flex-row items-start gap-12 md:gap-20 cursor-pointer group-hover:opacity-90 transition-opacity duration-300 overflow-hidden rounded-s px-4 py-16">
+              {/* Background Video */}
+              {film.background?.trim() !== "" && (
+                <video
+                  src={film.background}
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                  preload="none"
+                  className="absolute inset-0 w-full h-full object-cover opacity-30 z-0 pointer-events-none"
+                />
+              )}
+
+              {/* Foreground Content */}
               <div className="relative w-full md:w-1/3 z-10">
                 <Image
                   src={film.poster}
@@ -107,6 +122,7 @@ export default function FilmsPage() {
                 </div>
               </div>
             </div>
+            
           </Link>
         ))}
       </div>

@@ -55,7 +55,7 @@ export default function ContactPage() {
         <div className="mt-12">
             <h2 className="text-2xl mb-4">Sponsorship Deck</h2>
             <iframe
-                src="https://drive.google.com/file/d/1MXUaw5wilmDwm13fRfOmlkkiBf_E2Xtg/"
+                src="https://drive.google.com/file/d/1MXUaw5wilmDwm13fRfOmlkkiBf_E2Xtg/preview"
                 width="100%"
                 height="600"
                 className="border border-gray-700 rounded-xl w-full"

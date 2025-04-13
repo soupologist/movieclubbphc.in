@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 
+const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY
+
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 export default function AdminFilmsPage() {
@@ -12,7 +14,7 @@ export default function AdminFilmsPage() {
   const [passkey, setPasskey] = useState("");
 
   const checkPasskey = () => {
-    if (passkey === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+    if (passkey === ADMIN_KEY) {
       setAuthenticated(true);
     } else {
       alert("Incorrect key");
