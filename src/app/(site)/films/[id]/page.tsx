@@ -57,43 +57,45 @@ export default function FilmPage() {
 
   return (
     <div className="relative min-h-screen text-white overflow-hidden font-gotham">
-    {film.background && film.background.trim().endsWith(".mp4") ? (
-      <video
-        src={film.background.trim()}
-        className="absolute inset-0 w-full h-full object-cover z-0"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-      />
-    ) : (
-      <Image
-        src={film.backgroundImage?.trim() || film.background?.trim() || "/fallback.jpg"}
-        alt="Background"
-        fill
-        className="object-cover z-0"
-      />
-    )}
-    <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
+      {film.background && film.background.trim().endsWith(".mp4") ? (
+        <video
+          src={film.background.trim()}
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+        />
+      ) : (
+        <Image
+          src={film.backgroundImage?.trim() || film.background?.trim() || "/fallback.jpg"}
+          alt="Background"
+          fill
+          className="object-cover z-0"
+        />
+      )}
+      <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
 
       <div className="relative z-20 p-6 md:p-16 max-w-5xl mx-auto">
         <Link href="/films" className="inline-block mt-2 mb-8 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
-            GO BACK
+          GO BACK
         </Link>
 
         <h1 className="text-5xl md:text-7xl font-semibold mb-4">{film.title}</h1>
 
-        {film.date && <p className="text-gray-400 italic text-lg mb-8">Released on {film.date}</p>}
+        {film.date && (
+          <p className="text-gray-400 italic text-lg mb-8">Released on {film.date}</p>
+        )}
 
         {film.description && (
-          <div className="my-10 border-t border-gray-600 pt-6">
+          <div className="mt-12 md:mt-16 border-t border-gray-600 pt-6">
             <p className="text-xl text-gray-200">{film.description}</p>
           </div>
         )}
 
         {film.embed?.trim() && (
-          <div className="mt-12 aspect-video w-full">
+          <div className="mt-12 md:mt-16 aspect-video w-full">
             <iframe
               src={
                 film.embed.includes("instagram.com")
@@ -110,7 +112,7 @@ export default function FilmPage() {
         )}
 
         {film.credits?.length > 0 && (
-          <div className="mb-10 mt-10">
+          <div className="mt-12 md:mt-16">
             <h2 className="text-4xl font-light text-blue-100 mb-4">Credits</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6">
               {film.credits.map((credit, i) => (
@@ -124,7 +126,7 @@ export default function FilmPage() {
         )}
 
         {film.awards?.length > 0 && (
-          <div className="mt-14">
+          <div className="mt-12 md:mt-16">
             <h2 className="text-4xl font-light text-yellow-100 mb-4">Awards</h2>
             <ul className="list-disc list-inside space-y-2 text-gray-300">
               {film.awards.map((a, i) => (
@@ -136,16 +138,19 @@ export default function FilmPage() {
           </div>
         )}
 
-        <h2 className="text-4xl font-light text-green-200 mb-4">Production Notes</h2>
         {film.notes && (
-          <div className="mt-4 prose prose-invert prose-img:rounded-xl prose-a:text-blue-400 max-w-none">
-            <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-              {Array.isArray(film.notes) ? film.notes.join('\n\n') : film.notes}
-            </ReactMarkdown>
+          <div className="mt-12 md:mt-16">
+            <h2 className="text-4xl font-light text-green-200 mb-4">Production Notes</h2>
+            <div className="mt-4 prose prose-invert prose-img:rounded-xl prose-a:text-blue-400 max-w-none">
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                {Array.isArray(film.notes) ? film.notes.join('\n\n') : film.notes}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
+
         {film.btsPhotos?.length > 0 && (
-          <div className="mt-14">
+          <div className="mt-12 md:mt-16">
             <h2 className="text-4xl font-light text-pink-100 mb-4">Behind The Scenes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {film.btsPhotos.map((src, i) => (

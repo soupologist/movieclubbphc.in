@@ -70,6 +70,33 @@ export default function EditFilmPage() {
     }));
   };
 
+  const handleAwardChange = (index: number, field: 'title' | 'details', value: string) => {
+    const updatedAwards = [...(film?.awards || [])];
+    if (!updatedAwards[index]) updatedAwards[index] = { title: '', details: '' };
+    updatedAwards[index][field] = value;
+  
+    setFilm((prev) => ({
+      ...(prev || {}),
+      awards: updatedAwards,
+    }));
+  };
+  
+  const handleAddAward = () => {
+    setFilm((prev) => ({
+      ...(prev || {}),
+      awards: [...(prev?.awards || []), { title: '', details: '' }],
+    }));
+  };
+  
+  const handleDeleteAward = (index: number) => {
+    const updated = [...(film?.awards || [])];
+    updated.splice(index, 1);
+    setFilm((prev) => ({
+      ...(prev || {}),
+      awards: updated,
+    }));
+  };  
+
   const handleSave = async () => {
     const res = await fetch(`/api/films/${id}`, {
       method: 'PUT',
@@ -178,6 +205,41 @@ export default function EditFilmPage() {
           </button>
         </div>
 
+        <div className="border-t border-gray-600 pt-6 mt-6">
+          <h2 className="text-xl mb-4 font-semibold">Awards</h2>
+
+          {(film?.awards || []).map((award, index) => (
+            <div key={index} className="space-y-2 mb-4">
+              <input
+                value={award.title}
+                onChange={(e) => handleAwardChange(index, 'title', e.target.value)}
+                placeholder="Award Title (e.g. Best Short Film)"
+                className="p-2 w-full bg-gray-800"
+              />
+              <input
+                value={award.details}
+                onChange={(e) => handleAwardChange(index, 'details', e.target.value)}
+                placeholder="Award Details (e.g. Sundance, 2023)"
+                className="p-2 w-full bg-gray-800"
+              />
+              <button
+                onClick={() => handleDeleteAward(index)}
+                className="text-sm text-red-400 hover:text-red-300 underline"
+              >
+                Remove Award
+              </button>
+            </div>
+          ))}
+
+          <button
+            onClick={handleAddAward}
+            className="bg-blue-600 px-4 py-2 text-sm"
+          >
+            Add Award
+          </button>
+        </div>
+
+
         <div className="flex gap-4 flex-wrap mt-10">
           <button onClick={handleSave} className="bg-green-600 px-6 py-3 font-bold">
             Save Changes
@@ -190,6 +252,8 @@ export default function EditFilmPage() {
           </button>
         </div>
       </div>
+
+
     </div>
   );
 }

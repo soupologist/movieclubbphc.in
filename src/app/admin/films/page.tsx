@@ -37,6 +37,7 @@ export default function AdminFilmsPage() {
     notes: '',
     btsPhotos: '',
     status: '',
+    awards: [] as { title: string; details: string }[],
   });
 
   const handleNavigate = () => {
@@ -80,6 +81,7 @@ export default function AdminFilmsPage() {
         notes: '',
         btsPhotos: '',
         status: '',
+        awards: [],
       });
     } else {
       alert('Error adding film');
@@ -155,6 +157,51 @@ export default function AdminFilmsPage() {
           <option value="released">Released</option>
           <option value="shelved">Shelved</option>
         </select>
+
+        <div className="space-y-2">
+          <label className="block text-sm text-gray-400">Awards</label>
+
+          {newFilm.awards.map((award, index) => (
+            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="Award Title"
+                value={award.title}
+                onChange={(e) => {
+                  const updatedAwards = [...newFilm.awards];
+                  updatedAwards[index].title = e.target.value;
+                  setNewFilm((prev) => ({ ...prev, awards: updatedAwards }));
+                }}
+                className="p-2 bg-gray-800 w-full"
+              />
+              <input
+                type="text"
+                placeholder="Award Details"
+                value={award.details}
+                onChange={(e) => {
+                  const updatedAwards = [...newFilm.awards];
+                  updatedAwards[index].details = e.target.value;
+                  setNewFilm((prev) => ({ ...prev, awards: updatedAwards }));
+                }}
+                className="p-2 bg-gray-800 w-full"
+              />
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() =>
+              setNewFilm((prev) => ({
+                ...prev,
+                awards: [...prev.awards, { title: '', details: '' }],
+              }))
+            }
+            className="mt-2 text-sm mr-3 underline text-blue-400 hover:text-blue-200"
+          >
+            + Add Award
+          </button>
+        </div>
+
 
         <div>
           <label className="block mb-2 text-sm text-gray-400">Production Notes (Markdown)</label>

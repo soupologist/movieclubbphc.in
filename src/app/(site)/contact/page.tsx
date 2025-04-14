@@ -24,7 +24,7 @@ export default function ContactPage() {
         <div className="space-y-8 text-left">
           <div className="flex items-center space-x-4">
             <Mail className="w-6 h-6 text-gray-400" />
-            <a href="mailto:movieclub@hyderabad.bits-pilani.ac.in" className="hover:underline text-lg text-blue-300">
+            <a href="mailto:movieclub@hyderabad.bits-pilani.ac.in" className="hover:underline text-lg">
               movieclub@hyderabad.bits-pilani.ac.in
             </a>
           </div>
@@ -46,7 +46,7 @@ export default function ContactPage() {
           <div className="flex items-center space-x-4">
             <SiYoutube className="w-6 h-6 text-red-500" />
             <Link href="https://youtube.com/@movieclubbphc" target="_blank" className="hover:underline text-lg">
-                Movie Club BITS Hyderabad
+                Movie Club, BITS Hyderabad
             </Link>
            </div>
 
