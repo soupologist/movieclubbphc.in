@@ -65,6 +65,7 @@ export default function FilmPage() {
         muted
         loop
         playsInline
+        preload="auto"
       />
     ) : (
       <Image
@@ -135,9 +136,9 @@ export default function FilmPage() {
           </div>
         )}
 
+        <h2 className="text-4xl font-light text-green-200 mb-4">Production Notes</h2>
         {film.notes && (
-          <div className="mt-14 prose prose-invert prose-img:rounded-xl prose-a:text-blue-400 max-w-none">
-            <h2 className="text-4xl font-light text-green-200 mb-4">Production Notes</h2>
+          <div className="mt-4 prose prose-invert prose-img:rounded-xl prose-a:text-blue-400 max-w-none">
             <ReactMarkdown rehypePlugins={[rehypeRaw]}>
               {Array.isArray(film.notes) ? film.notes.join('\n\n') : film.notes}
             </ReactMarkdown>
