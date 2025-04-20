@@ -149,7 +149,7 @@ export default function FilmPage() {
           </div>
         )}
 
-        {film.btsPhotos?.length > 0 && (
+        {film.btsPhotos?.length > 0 && film.btsPhotos[0] !== "" && (
           <div className="mt-12 md:mt-16">
             <h2 className="text-4xl font-light text-pink-100 mb-4">Behind The Scenes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

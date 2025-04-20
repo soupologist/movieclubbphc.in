@@ -45,7 +45,7 @@ export default function FestivalPage() {
           {/* Event 2 */}
           <div className="flex flex-col md:flex-row gap-8">
             <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744188530/slumber-party-combined_x0asuh.png"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1745131713/day1-left_hj3xdq.png"
               alt="Slumber Party Screenings"
               width={500}
               height={300}
@@ -99,7 +99,7 @@ export default function FestivalPage() {
           {/* Event 5 */}
           <div className="flex flex-col md:flex-row gap-8">
             <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744190023/posterwall_hdapdv.jpg"
+              src="https://res.cloudinary.com/dlglodixp/image/upload/v1745132361/wall_iujbnn.jpg"
               alt="Movie Wall"
               width={500}
               height={300}
@@ -107,9 +107,9 @@ export default function FestivalPage() {
             />
             <div className="flex flex-col justify-center text-gray-300 md:w-1/2">
               <h3 className="text-3xl font-semibold text-white">The Movie Wall</h3>
-              <p className="text-lg text-gray-400 mb-2 italic">A Wall of Posters</p>
+              <p className="text-lg text-gray-400 mb-2 italic">The Wall of Posters</p>
               <p>
-                A yearly tradition where we take the wall next to F104 and completely fill it with posters, usually following a centralised theme.
+                A yearly tradition where we take the wall next to F104 and completely fill it with movie posters, usually following a centralised theme.
               </p>
             </div>
           </div>
