@@ -1,6 +1,7 @@
 import "@/app/globals.css";
 import React from "react";
 import Navbar from "@/components/Navbar";
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata = {
   title: "Movie Club, BITS Hyderabad",
@@ -28,6 +29,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       <body className="font-gotham bg-black text-white">
         <Navbar />
         {children}
+        <Analytics />
       </body>
     </html>
   );

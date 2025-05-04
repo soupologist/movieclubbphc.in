@@ -2,6 +2,7 @@ import "../globals.css";
 import React from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata = {
   title: "Movie Club, BITS Hyderabad",
@@ -30,6 +31,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         <main className="pt-20 pb-16">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );

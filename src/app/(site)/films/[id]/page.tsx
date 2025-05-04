@@ -57,7 +57,7 @@ export default function FilmPage() {
 
   return (
     <div className="relative min-h-screen text-white overflow-hidden font-gotham">
-      {film.background && film.background.trim().endsWith(".mp4") ? (
+      {film.background ? (
         <video
           src={film.background.trim()}
           className="absolute inset-0 w-full h-full object-cover z-0"
