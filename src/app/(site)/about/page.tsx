@@ -32,7 +32,7 @@ const coreTeam = [
   {
     name: "Sachin Siva Atluri",
     role: "Club Representative",
-    image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744185653/asw_i6fugs.jpg",
+    image: "https://res.cloudinary.com/dlglodixp/image/upload/v1746442951/sachin_lac3zd.jpg",
   },
 ];
 
@@ -62,12 +62,12 @@ const teamLeads = [
       {
         name: "Mufidh Muhsin",
         role: "Screenings Lead",
-        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744130174/harshid-cropped_gdsqtz.jpg",
+        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744187241/mufidh_cnvbzx.jpg",
       },
       {
         name: "Akarsh Ramadugu",
         role: "Screenings Lead",
-        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744130174/harshid-cropped_gdsqtz.jpg",
+        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1746443298/akarsh-cowboy_fxm41t.jpg",
       },
     ],
   },
@@ -96,12 +96,12 @@ const teamLeads = [
       {
         name: "Kavya Dholaria",
         role: "Design Lead",
-        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744130174/harshid-cropped_gdsqtz.jpg",
+        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1746442789/kavya_alzo2g.jpg",
       },
       {
         name: "Anirudh Yendalur",
         role: "Design Lead",
-        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744130174/harshid-cropped_gdsqtz.jpg",
+        image: "https://res.cloudinary.com/dlglodixp/image/upload/v1746442897/anirudh_tfpq4r.jpg",
       },
     ],
   },
