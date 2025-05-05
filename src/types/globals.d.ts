@@ -1,5 +1,5 @@
 /* eslint-disable no-var, @typescript-eslint/no-explicit-any */
-import { MongoClient } from "mongodb";
+import { MongoClient } from 'mongodb';
 
 export {};
 

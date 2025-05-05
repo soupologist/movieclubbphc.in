@@ -65,7 +65,6 @@ const FilmSchema: Schema<IFilm> = new Schema(
   { timestamps: true }
 );
 
-const Film: Model<IFilm> =
-  mongoose.models?.Film || mongoose.model<IFilm>('Film', FilmSchema);
+const Film: Model<IFilm> = mongoose.models?.Film || mongoose.model<IFilm>('Film', FilmSchema);
 
 export default Film;

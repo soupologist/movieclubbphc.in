@@ -1,17 +1,17 @@
 // app/films/page.tsx
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Instrument_Serif } from "next/font/google";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Instrument_Serif } from 'next/font/google';
+import { ChevronDown } from 'lucide-react';
 
 function StyledSelect({
   value,
   onChange,
   children,
-  className = "",
+  className = '',
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -33,9 +33,9 @@ function StyledSelect({
 }
 
 const instrument = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
 });
 
 interface Film {
@@ -55,45 +55,49 @@ export default function FilmsPage() {
   const [films, setFilms] = useState<Film[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [selectedCredit, setSelectedCredit] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchFilms() {
-      const res = await fetch("/api/films");
+      const res = await fetch('/api/films');
       const data = await res.json();
       setFilms(data);
       setLoading(false);
     }
-  
+
     fetchFilms();
   }, []);
 
-  const uniqueYears = Array.from(new Set(films.map((f) => new Date(f.date).getFullYear().toString()))).sort().reverse();
-  const uniqueCredits = Array.from(
-    new Set(films.flatMap((f) => f.generalCredits))
-  ).sort();
+  const uniqueYears = Array.from(
+    new Set(films.map((f) => new Date(f.date).getFullYear().toString()))
+  )
+    .sort()
+    .reverse();
+  const uniqueCredits = Array.from(new Set(films.flatMap((f) => f.generalCredits))).sort();
 
   const filteredFilms = films
-  .filter((film) => {
-    const search = searchTerm.toLowerCase();
-    const matchesSearch =
-      film.title.toLowerCase().includes(search) ||
-      film.generalCredits.some((credit) => credit.toLowerCase().includes(search));
+    .filter((film) => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        film.title.toLowerCase().includes(search) ||
+        film.generalCredits.some((credit) => credit.toLowerCase().includes(search));
 
-    const matchesYear = selectedYear ? new Date(film.date).getFullYear().toString() === selectedYear : true;
-    const matchesCredit = selectedCredit ? film.generalCredits.includes(selectedCredit) : true;
+      const matchesYear = selectedYear
+        ? new Date(film.date).getFullYear().toString() === selectedYear
+        : true;
+      const matchesCredit = selectedCredit ? film.generalCredits.includes(selectedCredit) : true;
 
-    return matchesSearch && matchesYear && matchesCredit;
-  })
-  .sort((a, b) =>
-    sortOrder === "newest"
-      ? new Date(b.date).getTime() - new Date(a.date).getTime()
-      : new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+      return matchesSearch && matchesYear && matchesCredit;
+    })
+    .sort((a, b) =>
+      sortOrder === 'newest'
+        ? new Date(b.date).getTime() - new Date(a.date).getTime()
+        : new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
   if (loading) {
     return (
@@ -106,60 +110,75 @@ export default function FilmsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white px-6 md:px-12 py-16">
-
       <div className="mb-24 mx-2">
         <h1 className={`text-9xl mb-10 ${instrument.className}`}>Our Films</h1>
       </div>
 
       <div className="px-4 md:px-4 mb-12">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-white font-gotham">
-        
-        {/* Search Input */}
-        <input
-          type="text"
-          placeholder="Search films..."
-          className="w-full md:w-1/2 bg-transparent border border-white placeholder-gray-400 px-5 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-white"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+          {/* Search Input */}
+          <input
+            type="text"
+            placeholder="Search films..."
+            className="w-full md:w-1/2 bg-transparent border border-white placeholder-gray-400 px-5 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-white"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
 
-        {/* Dropdowns (Stacked on mobile, inline on desktop) */}
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full md:w-auto">
-          
-          <StyledSelect value={sortOrder} onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")} className="w-full sm:w-auto">
-            <option className="text-black" value="newest">Newest</option>
-            <option className="text-black" value="oldest">Oldest</option>
-          </StyledSelect>
-
-          <StyledSelect value={selectedYear || ""} onChange={(e) => setSelectedYear(e.target.value || null)} className="w-full sm:w-auto">
-            <option className="text-black" value="">All Years</option>
-            {uniqueYears.map((year) => (
-              <option key={year} className="text-black" value={year}>
-                {year}
+          {/* Dropdowns (Stacked on mobile, inline on desktop) */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full md:w-auto">
+            <StyledSelect
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+              className="w-full sm:w-auto"
+            >
+              <option className="text-black" value="newest">
+                Newest
               </option>
-            ))}
-          </StyledSelect>
-
-          <StyledSelect value={selectedCredit || ""} onChange={(e) => setSelectedCredit(e.target.value || null)} className="w-full sm:w-auto">
-            <option className="text-black" value="">All Credits</option>
-            {uniqueCredits.map((credit) => (
-              <option key={credit} className="text-black" value={credit}>
-                {credit}
+              <option className="text-black" value="oldest">
+                Oldest
               </option>
-            ))}
-          </StyledSelect>
+            </StyledSelect>
+
+            <StyledSelect
+              value={selectedYear || ''}
+              onChange={(e) => setSelectedYear(e.target.value || null)}
+              className="w-full sm:w-auto"
+            >
+              <option className="text-black" value="">
+                All Years
+              </option>
+              {uniqueYears.map((year) => (
+                <option key={year} className="text-black" value={year}>
+                  {year}
+                </option>
+              ))}
+            </StyledSelect>
+
+            <StyledSelect
+              value={selectedCredit || ''}
+              onChange={(e) => setSelectedCredit(e.target.value || null)}
+              className="w-full sm:w-auto"
+            >
+              <option className="text-black" value="">
+                All Credits
+              </option>
+              {uniqueCredits.map((credit) => (
+                <option key={credit} className="text-black" value={credit}>
+                  {credit}
+                </option>
+              ))}
+            </StyledSelect>
+          </div>
         </div>
       </div>
-
-      </div>
-
 
       <div className="space-y-28">
         {filteredFilms.map((film) => (
           <Link key={film._id} href={`/films/${film.id}`} className="block group">
             <div className="relative flex flex-col md:flex-row items-start gap-12 md:gap-20 cursor-pointer group-hover:opacity-90 transition-opacity duration-300 overflow-hidden rounded-s px-4 py-16">
               {/* Background Video */}
-              {film.background?.trim() !== "" && (
+              {film.background?.trim() !== '' && (
                 <video
                   src={film.background}
                   muted
@@ -184,15 +203,11 @@ export default function FilmsPage() {
 
               <div className="relative flex-1 z-10 space-y-6 md:space-y-8">
                 <div className="space-y-2 md:space-y-4">
-                  <h2 className="text-4xl md:text-5xl font-semibold font-gotham">
-                    {film.title}
-                  </h2>
+                  <h2 className="text-4xl md:text-5xl font-semibold font-gotham">{film.title}</h2>
                   <p className="text-lg text-gray-300">
-                    A film by {film.generalCredits?.join(", ")}
+                    A film by {film.generalCredits?.join(', ')}
                   </p>
-                  <p className="text-md text-gray-400 italic">
-                    Released on {film.date}
-                  </p>
+                  <p className="text-md text-gray-400 italic">Released on {film.date}</p>
                 </div>
 
                 <p className="text-lg text-gray-300 leading-relaxed line-clamp-4">
@@ -201,9 +216,7 @@ export default function FilmsPage() {
 
                 {film.awards?.length > 0 && (
                   <div className="mt-6">
-                    <h3 className="text-2xl font-light font-gotham mb-2 text-yellow-100">
-                      AWARDS
-                    </h3>
+                    <h3 className="text-2xl font-light font-gotham mb-2 text-yellow-100">AWARDS</h3>
                     <ul className="list-disc list-inside text-gray-300 space-y-1">
                       {film.awards.map((award, index) => (
                         <li key={index}>
@@ -221,7 +234,6 @@ export default function FilmsPage() {
                 </div>
               </div>
             </div>
-            
           </Link>
         ))}
       </div>

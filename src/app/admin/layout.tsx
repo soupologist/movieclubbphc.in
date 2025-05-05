@@ -1,12 +1,12 @@
-import "../globals.css";
-import React from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import '../globals.css';
+import React from 'react';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: "Movie Club, BITS Hyderabad",
-  description: "The filmmaking and review club of BITS Hyderabad."
-}
+  title: 'Movie Club, BITS Hyderabad',
+  description: 'The filmmaking and review club of BITS Hyderabad.',
+};
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (

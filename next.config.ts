@@ -1,14 +1,14 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 module.exports = {
   async headers() {
     return [
       {
-        source: "/videos/:path*",
+        source: '/videos/:path*',
         headers: [
           {
-            key: "Content-Type",
-            value: "video/mp4",
+            key: 'Content-Type',
+            value: 'video/mp4',
           },
         ],
       },
@@ -29,7 +29,6 @@ module.exports = {
     ],
   },
 };
-
 
 const nextConfig: NextConfig = {
   /* config options here */

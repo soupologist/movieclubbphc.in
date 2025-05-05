@@ -1,11 +1,11 @@
 // app/(site)/films/[id]/page.tsx
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-import ReactMarkdown from "react-markdown";
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
 type Credit = { title: string; names: string[] };
@@ -69,7 +69,7 @@ export default function FilmPage() {
         />
       ) : (
         <Image
-          src={film.backgroundImage?.trim() || film.background?.trim() || "/fallback.jpg"}
+          src={film.backgroundImage?.trim() || film.background?.trim() || '/fallback.jpg'}
           alt="Background"
           fill
           className="object-cover z-0"
@@ -78,15 +78,16 @@ export default function FilmPage() {
       <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
 
       <div className="relative z-20 p-6 md:p-16 max-w-5xl mx-auto">
-        <Link href="/films" className="inline-block mt-2 mb-8 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
+        <Link
+          href="/films"
+          className="inline-block mt-2 mb-8 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition"
+        >
           GO BACK
         </Link>
 
         <h1 className="text-5xl md:text-7xl font-semibold mb-4">{film.title}</h1>
 
-        {film.date && (
-          <p className="text-gray-400 italic text-lg mb-8">Released on {film.date}</p>
-        )}
+        {film.date && <p className="text-gray-400 italic text-lg mb-8">Released on {film.date}</p>}
 
         {film.description && (
           <div className="mt-12 md:mt-16 border-t border-gray-600 pt-6">
@@ -98,7 +99,7 @@ export default function FilmPage() {
           <div className="mt-12 md:mt-16 aspect-video w-full">
             <iframe
               src={
-                film.embed.includes("instagram.com")
+                film.embed.includes('instagram.com')
                   ? `https://www.instagram.com/p/${getInstagramId(film.embed)}/embed`
                   : film.embed
               }
@@ -118,7 +119,7 @@ export default function FilmPage() {
               {film.credits.map((credit, i) => (
                 <div key={i}>
                   <p className="text-lg text-gray-400 italic">{credit.title}</p>
-                  <p className="text-lg text-gray-300">{credit.names?.join(", ")}</p>
+                  <p className="text-lg text-gray-300">{credit.names?.join(', ')}</p>
                 </div>
               ))}
             </div>
@@ -149,7 +150,7 @@ export default function FilmPage() {
           </div>
         )}
 
-        {film.btsPhotos?.length > 0 && film.btsPhotos[0] !== "" && (
+        {film.btsPhotos?.length > 0 && film.btsPhotos[0] !== '' && (
           <div className="mt-12 md:mt-16">
             <h2 className="text-4xl font-light text-pink-100 mb-4">Behind The Scenes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

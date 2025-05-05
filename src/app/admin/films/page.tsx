@@ -4,20 +4,19 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 
-const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY
+const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY;
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 export default function AdminFilmsPage() {
-
   const [authenticated, setAuthenticated] = useState(false);
-  const [passkey, setPasskey] = useState("");
+  const [passkey, setPasskey] = useState('');
 
   const checkPasskey = () => {
     if (passkey === ADMIN_KEY) {
       setAuthenticated(true);
     } else {
-      alert("Incorrect key");
+      alert('Incorrect key');
     }
   };
 
@@ -127,14 +126,62 @@ export default function AdminFilmsPage() {
       <div className="border border-gray-700 p-6 rounded-lg space-y-4">
         <h2 className="text-2xl font-semibold mb-4">Add New Film</h2>
 
-        <input name="id" value={newFilm.id} onChange={handleChange} placeholder="ID (e.g. the-film-id)" className="p-2 bg-gray-800 w-full" />
-        <input name="title" value={newFilm.title} onChange={handleChange} placeholder="Title (e.g. The Film Title)" className="p-2 bg-gray-800 w-full" />
-        <input name="date" value={newFilm.date} onChange={handleChange} placeholder="Date (e.g. 2024-10-05)" className="p-2 bg-gray-800 w-full" />
-        <input name="poster" value={newFilm.poster} onChange={handleChange} placeholder="Poster URL (e.g. https://...)" className="p-2 bg-gray-800 w-full" />
-        <input name="background" value={newFilm.background} onChange={handleChange} placeholder="Background Video/Image URL" className="p-2 bg-gray-800 w-full" />
-        <input name="backgroundImage" value={newFilm.backgroundImage} onChange={handleChange} placeholder="Optional Background Image URL" className="p-2 bg-gray-800 w-full" />
-        <input name="embed" value={newFilm.embed} onChange={handleChange} placeholder="Embed URL (YouTube/Instagram)" className="p-2 bg-gray-800 w-full" />
-        <textarea name="description" value={newFilm.description} onChange={handleChange} placeholder="Description" className="p-2 bg-gray-800 w-full" />
+        <input
+          name="id"
+          value={newFilm.id}
+          onChange={handleChange}
+          placeholder="ID (e.g. the-film-id)"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <input
+          name="title"
+          value={newFilm.title}
+          onChange={handleChange}
+          placeholder="Title (e.g. The Film Title)"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <input
+          name="date"
+          value={newFilm.date}
+          onChange={handleChange}
+          placeholder="Date (e.g. 2024-10-05)"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <input
+          name="poster"
+          value={newFilm.poster}
+          onChange={handleChange}
+          placeholder="Poster URL (e.g. https://...)"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <input
+          name="background"
+          value={newFilm.background}
+          onChange={handleChange}
+          placeholder="Background Video/Image URL"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <input
+          name="backgroundImage"
+          value={newFilm.backgroundImage}
+          onChange={handleChange}
+          placeholder="Optional Background Image URL"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <input
+          name="embed"
+          value={newFilm.embed}
+          onChange={handleChange}
+          placeholder="Embed URL (YouTube/Instagram)"
+          className="p-2 bg-gray-800 w-full"
+        />
+        <textarea
+          name="description"
+          value={newFilm.description}
+          onChange={handleChange}
+          placeholder="Description"
+          className="p-2 bg-gray-800 w-full"
+        />
 
         <input
           name="generalCredits"
@@ -152,7 +199,12 @@ export default function AdminFilmsPage() {
           className="p-2 bg-gray-800 w-full"
         />
 
-        <select name="status" value={newFilm.status} onChange={handleChange} className="p-2 bg-gray-800 w-full">
+        <select
+          name="status"
+          value={newFilm.status}
+          onChange={handleChange}
+          className="p-2 bg-gray-800 w-full"
+        >
           <option value="">Select Status</option>
           <option value="released">Released</option>
           <option value="shelved">Shelved</option>
@@ -201,7 +253,6 @@ export default function AdminFilmsPage() {
             + Add Award
           </button>
         </div>
-
 
         <div>
           <label className="block mb-2 text-sm text-gray-400">Production Notes (Markdown)</label>

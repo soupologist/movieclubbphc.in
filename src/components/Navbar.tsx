@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -22,10 +22,10 @@ export default function Navbar() {
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [lastScrollY]);
 
@@ -34,7 +34,7 @@ export default function Navbar() {
       {/* Top Navbar */}
       <nav
         className={`fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 transition-transform duration-300 ${
-          showNavbar ? "translate-y-0" : "-translate-y-full"
+          showNavbar ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
         <Link href="/">
@@ -50,10 +50,18 @@ export default function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden md:flex space-x-10 text-lg font-regular">
-          <Link href="/about" className="hover:text-gray-300">About Us</Link>
-          <Link href="/films" className="hover:text-gray-300">Films</Link>
-          <Link href="/festival" className="hover:text-gray-300">Festival</Link>
-          <Link href="/contact" className="hover:text-gray-300">Contact Us</Link>
+          <Link href="/about" className="hover:text-gray-300">
+            About Us
+          </Link>
+          <Link href="/films" className="hover:text-gray-300">
+            Films
+          </Link>
+          <Link href="/festival" className="hover:text-gray-300">
+            Film Festival
+          </Link>
+          <Link href="/contact" className="hover:text-gray-300">
+            Contact Us
+          </Link>
         </div>
 
         {/* Hamburger Button */}
@@ -71,16 +79,38 @@ export default function Navbar() {
       {/* Mobile Menu */}
       <div
         className={`fixed top-0 right-0 h-full w-64 bg-black bg-opacity-95 transform transition-transform z-40 ${
-          menuOpen ? "translate-x-0" : "translate-x-full"
+          menuOpen ? 'translate-x-0' : 'translate-x-full'
         } md:hidden`}
       >
         <div className="flex flex-col items-end mt-16 p-6 space-y-6">
-          <button onClick={() => setMenuOpen(false)} className="text-white text-xl">✕</button>
-          <Link href="/about" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">About Us</Link>
-          <Link href="/films" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Films</Link>
+          <button onClick={() => setMenuOpen(false)} className="text-white text-xl">
+            ✕
+          </button>
+          <Link
+            href="/about"
+            onClick={() => setMenuOpen(false)}
+            className="text-lg hover:text-gray-300"
+          >
+            About Us
+          </Link>
+          <Link
+            href="/films"
+            onClick={() => setMenuOpen(false)}
+            className="text-lg hover:text-gray-300"
+          >
+            Films
+          </Link>
           {/* <Link href="/editorials" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Editorials</Link> */}
-          <Link href="/festival" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Festival</Link>
-          <Link href="/contact" className="hover:text-gray-300">Contact Us</Link>
+          <Link
+            href="/festival"
+            onClick={() => setMenuOpen(false)}
+            className="text-lg hover:text-gray-300"
+          >
+            Film Festival
+          </Link>
+          <Link href="/contact" className="hover:text-gray-300">
+            Contact Us
+          </Link>
         </div>
       </div>
     </>

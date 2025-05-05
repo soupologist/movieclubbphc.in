@@ -74,20 +74,20 @@ export default function EditFilmPage() {
     const updatedAwards = [...(film?.awards || [])];
     if (!updatedAwards[index]) updatedAwards[index] = { title: '', details: '' };
     updatedAwards[index][field] = value;
-  
+
     setFilm((prev) => ({
       ...(prev || {}),
       awards: updatedAwards,
     }));
   };
-  
+
   const handleAddAward = () => {
     setFilm((prev) => ({
       ...(prev || {}),
       awards: [...(prev?.awards || []), { title: '', details: '' }],
     }));
   };
-  
+
   const handleDeleteAward = (index: number) => {
     const updated = [...(film?.awards || [])];
     updated.splice(index, 1);
@@ -95,7 +95,7 @@ export default function EditFilmPage() {
       ...(prev || {}),
       awards: updated,
     }));
-  };  
+  };
 
   const handleSave = async () => {
     const res = await fetch(`/api/films/${id}`, {
@@ -135,14 +135,62 @@ export default function EditFilmPage() {
       <h1 className="text-4xl font-bold mb-6">Edit Film: {film?.title}</h1>
 
       <div className="space-y-4">
-        <input name="title" value={film?.title || ''} onChange={handleChange} placeholder="Film Title" className="p-2 w-full bg-gray-800" />
-        <input name="id" value={film?.id || ''} onChange={handleChange} placeholder="ID (unique)" className="p-2 w-full bg-gray-800" />
-        <input name="date" value={film?.date || ''} onChange={handleChange} placeholder="Release Date" className="p-2 w-full bg-gray-800" />
-        <input name="poster" value={film?.poster || ''} onChange={handleChange} placeholder="Poster URL" className="p-2 w-full bg-gray-800" />
-        <input name="background" value={film?.background || ''} onChange={handleChange} placeholder="Background video or image" className="p-2 w-full bg-gray-800" />
-        <input name="backgroundImage" value={film?.backgroundImage || ''} onChange={handleChange} placeholder="Optional background image URL" className="p-2 w-full bg-gray-800" />
-        <input name="embed" value={film?.embed || ''} onChange={handleChange} placeholder="Embed URL (YouTube, Instagram)" className="p-2 w-full bg-gray-800" />
-        <textarea name="description" value={film?.description || ''} onChange={handleChange} placeholder="Description" className="p-2 w-full bg-gray-800" />
+        <input
+          name="title"
+          value={film?.title || ''}
+          onChange={handleChange}
+          placeholder="Film Title"
+          className="p-2 w-full bg-gray-800"
+        />
+        <input
+          name="id"
+          value={film?.id || ''}
+          onChange={handleChange}
+          placeholder="ID (unique)"
+          className="p-2 w-full bg-gray-800"
+        />
+        <input
+          name="date"
+          value={film?.date || ''}
+          onChange={handleChange}
+          placeholder="Release Date"
+          className="p-2 w-full bg-gray-800"
+        />
+        <input
+          name="poster"
+          value={film?.poster || ''}
+          onChange={handleChange}
+          placeholder="Poster URL"
+          className="p-2 w-full bg-gray-800"
+        />
+        <input
+          name="background"
+          value={film?.background || ''}
+          onChange={handleChange}
+          placeholder="Background video or image"
+          className="p-2 w-full bg-gray-800"
+        />
+        <input
+          name="backgroundImage"
+          value={film?.backgroundImage || ''}
+          onChange={handleChange}
+          placeholder="Optional background image URL"
+          className="p-2 w-full bg-gray-800"
+        />
+        <input
+          name="embed"
+          value={film?.embed || ''}
+          onChange={handleChange}
+          placeholder="Embed URL (YouTube, Instagram)"
+          className="p-2 w-full bg-gray-800"
+        />
+        <textarea
+          name="description"
+          value={film?.description || ''}
+          onChange={handleChange}
+          placeholder="Description"
+          className="p-2 w-full bg-gray-800"
+        />
 
         <input
           name="generalCredits"
@@ -176,7 +224,12 @@ export default function EditFilmPage() {
           className="p-2 w-full bg-gray-800"
         />
 
-        <select name="status" value={film?.status || ''} onChange={handleChange} className="p-2 w-full bg-gray-800">
+        <select
+          name="status"
+          value={film?.status || ''}
+          onChange={handleChange}
+          className="p-2 w-full bg-gray-800"
+        >
           <option value="">Select Status</option>
           <option value="released">Released</option>
           <option value="shelved">Shelved</option>
@@ -231,14 +284,10 @@ export default function EditFilmPage() {
             </div>
           ))}
 
-          <button
-            onClick={handleAddAward}
-            className="bg-blue-600 px-4 py-2 text-sm"
-          >
+          <button onClick={handleAddAward} className="bg-blue-600 px-4 py-2 text-sm">
             Add Award
           </button>
         </div>
-
 
         <div className="flex gap-4 flex-wrap mt-10">
           <button onClick={handleSave} className="bg-green-600 px-6 py-3 font-bold">
@@ -247,13 +296,14 @@ export default function EditFilmPage() {
           <button onClick={handleDelete} className="bg-red-600 px-6 py-3 font-bold">
             Delete Film
           </button>
-          <button onClick={() => router.push('/admin/films')} className="bg-gray-700 px-6 py-3 font-bold">
+          <button
+            onClick={() => router.push('/admin/films')}
+            className="bg-gray-700 px-6 py-3 font-bold"
+          >
             Back to Admin
           </button>
         </div>
       </div>
-
-
     </div>
   );
 }
