@@ -52,7 +52,7 @@ export default function Navbar() {
         <div className="hidden md:flex space-x-10 text-lg font-regular">
           <Link href="/about" className="hover:text-gray-300">About Us</Link>
           <Link href="/films" className="hover:text-gray-300">Films</Link>
-          <Link href="/festival" className="hover:text-gray-300">Catharsis</Link>
+          <Link href="/festival" className="hover:text-gray-300">Festival</Link>
           <Link href="/contact" className="hover:text-gray-300">Contact Us</Link>
         </div>
 
@@ -79,7 +79,7 @@ export default function Navbar() {
           <Link href="/about" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">About Us</Link>
           <Link href="/films" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Films</Link>
           {/* <Link href="/editorials" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Editorials</Link> */}
-          <Link href="/festival" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Catharsis</Link>
+          <Link href="/festival" onClick={() => setMenuOpen(false)} className="text-lg hover:text-gray-300">Festival</Link>
           <Link href="/contact" className="hover:text-gray-300">Contact Us</Link>
         </div>
       </div>

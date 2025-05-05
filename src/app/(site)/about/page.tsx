@@ -12,12 +12,12 @@ const coreTeam = [
   {
     name: "Aswanth Ganesan",
     role: "Secretary",
-    image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744185653/asw_i6fugs.jpg",
+    image: "https://res.cloudinary.com/dlglodixp/image/upload/v1746465844/aswanth_hcjgw0.jpg",
   },
   {
     name: "Harshid S",
     role: "Joint Secretary",
-    image: "https://res.cloudinary.com/dlglodixp/image/upload/v1744130174/harshid-cropped_gdsqtz.jpg",
+    image: "https://res.cloudinary.com/dlglodixp/image/upload/v1746465789/harshid-cool_bwaxbz.jpg",
   },
   {
     name: "Tarun Manick Murugesan",
@@ -190,7 +190,7 @@ export default function AboutPage() {
               {/* Info + Leads */}
               <div className="flex-1 space-y-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-white text-center md:text-left">{team.team}</h3>
+                  <h3 className="text-2xl font-medium text-white text-center md:text-left">{team.team}</h3>
                   <p className="text-gray-400 text-base text-center md:text-left">
                     {team.description}
                   </p>
