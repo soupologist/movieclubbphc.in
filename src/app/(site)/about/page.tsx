@@ -32,7 +32,7 @@ const coreTeam = [
   {
     name: 'Sachin Siva Atluri',
     role: 'Club Representative',
-    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746468729/sachin-blurry_wscudp.jpg',
+    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746539556/sachin-new_pgpnml.jpg',
   },
 ];
 
@@ -124,35 +124,47 @@ const teamLeads = [
 export default function AboutPage() {
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-12">
-      <h1 className={`text-9xl sm:text-9xl mb-10 ${instrument.className} text-white`}>About Us</h1>
-
-      {/* About Section */}
-      <section className="mb-16">
-        <p className="text-l sm:text-xl text-gray-300 leading-relaxed max-w-5xl">
-          Movie Club, BITS Hyderabad is the filmmaking and review collective of BITS Pilani,
-          Hyderabad Campus. We are a community of active filmmakers and film lovers committed to
-          strengthening film culture on campus.
-        </p>
-      </section>
+      <h1 className={`text-9xl mb-10 ${instrument.className} text-white`}>About Us</h1>
+      <p className="hidden sm:block text-xl text-gray-300 leading-relaxed max-w-5xl">
+        Movie Club, BITS Hyderabad is a collective of student filmmakers and film enthusiasts at
+        BITS Pilani, Hyderabad Campus. We create short films, host screenings, and celebrate cinema
+        in all its forms.
+      </p>
+      <p className="block sm:hidden text-base text-gray-300 leading-relaxed">
+        Student filmmakers & film lovers at BITS Hyderabad.
+      </p>
 
       {/* What We Do */}
-      <section className="mb-20">
-        <h2 className="text-3xl font-bold text-blue-200 mb-6">What We Do</h2>
-        <ul className="list-disc pl-5 space-y-3 text-gray-300 text-base sm:text-lg">
-          <li>
-            Make short films, spanning both traditional and experimental styles of filmmaking.
-          </li>
-          <li>
-            Participate in short film competitions and film festivals throughout India, both online
-            and offline.
-          </li>
-          <li>
-            Screen films regularly in lecture halls, bringing alternative cinema to the General
-            Body&apos;s radar.
-          </li>
-          <li>Write reviews, editorials, and recommendations for films on our Instagram page.</li>
-          <li>Conduct fun movie-related events for the campus.</li>
-        </ul>
+      <section className="mt-10 mb-20">
+        {/* Mobile version */}
+        <div className="sm:hidden">
+          <h2 className="text-3xl font-medium text-blue-200 mb-3">What We Do</h2>
+          <div className="sm:grid-cols-2 space-y-3 text-gray-300 text-base leading-relaxed">
+            <p>We make short films.</p>
+            <p>We watch movies and analyse them.</p>
+          </div>
+        </div>
+
+        {/* Desktop version */}
+        <div className="hidden sm:block">
+          <h2 className="text-3xl font-medium text-blue-200 mb-6">What We Do</h2>
+          <ul className="list-disc pl-5 space-y-3 text-gray-300 text-lg">
+            <li>
+              <b>Make short films</b>, spanning both traditional and experimental styles of
+              filmmaking.
+            </li>
+            <li>
+              Participate in short film competitions and film festivals throughout India, both
+              online and offline.
+            </li>
+            <li>
+              Screen films regularly in lecture halls, bringing alternative cinema to the General
+              Body's radar.
+            </li>
+            <li>Write reviews, editorials, and recommendations for films on our Instagram page.</li>
+            <li>Conduct fun movie-related events for the campus.</li>
+          </ul>
+        </div>
       </section>
 
       <section className="mb-20">
@@ -228,10 +240,26 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <section className="mb-16">
+        <h2 className="text-3xl font-medium text-yellow-200 mb-4">History of the Club</h2>
+        <p className="text-gray-300 leading-relaxed text-base sm:text-lg mb-2">
+          Founded in 2014, the Movie Club originated as a club that organises movie screenings on
+          campus, but has later expanded into other avenues as well, notably filmmaking and
+          editorials. Over the years, the club has grown significantly, with new voices emerging
+          every year. For more information, check out the Legacy page.
+        </p>
+
+        <Link href={'/about/legacy'}>
+          <span className="inline-block mt-2 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
+            Read More
+          </span>
+        </Link>
+      </section>
+
       {/* Get Involved Section */}
       <section className="mb-16">
-        <h2 className="text-3xl font-bold text-green-200 mb-6">Get Involved</h2>
-        <p className="text-gray-300 leading-relaxed text-base sm:text-lg">
+        <h2 className="text-3xl font-medium text-green-200 mb-6">Get Involved</h2>
+        <p className="text-gray-300 leading-relaxed text-base sm:text-lg mb-2">
           Interested in joining us? Whether you&apos;re into making short films or are just a huge
           film buff, we welcome new voices and ideas every semester. At the beginning of each
           semester, we float our induction form on our socials and the{' '}
@@ -245,19 +273,10 @@ export default function AboutPage() {
           </Link>{' '}
           Facebook group.
         </p>
-      </section>
 
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold text-yellow-200 mb-4">History of the Club</h2>
-        <p className="text-gray-300 leading-relaxed text-base sm:text-lg mb-2">
-          Curious about our history and the people who shaped the club before us? Check out the
-          legacy page for an in-depth look at our origins and detailed tenure reports from each
-          academic year.
-        </p>
-
-        <Link href={'/about/legacy'}>
+        <Link href={'/contact'}>
           <span className="inline-block mt-2 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
-            Read More
+            Contact Us
           </span>
         </Link>
       </section>
