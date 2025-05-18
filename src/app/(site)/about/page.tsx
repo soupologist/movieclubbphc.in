@@ -1,12 +1,51 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Instrument_Serif } from 'next/font/google';
+import { Film, Megaphone, Palette, BookOpenText, Video } from 'lucide-react';
 
 const instrument = Instrument_Serif({
   subsets: ['latin'],
   weight: '400',
   display: 'swap',
 });
+
+const cards = [
+  {
+    title: 'Filmmaking',
+    description: 'Make short films and participate in competitions',
+    icon: <Video className="w-8 h-8 text-green-500" />,
+    border: 'border-green-500',
+    image: '/images/filmmaking.jpg',
+  },
+  {
+    title: 'Screenings',
+    description: 'Organise screenings for the campus.',
+    icon: <Film className="w-8 h-8 text-red-500" />,
+    border: 'border-red-500',
+    image: '/images/screenings.jpg',
+  },
+  {
+    title: 'Editorial',
+    description: 'Write reviews, essays, and film discourse.',
+    icon: <BookOpenText className="w-8 h-8 text-blue-500" />,
+    border: 'border-blue-500',
+    image: '/images/editorial.jpg',
+  },
+  {
+    title: 'Design',
+    description: 'Craft the visual aspect of the club, through posters & merch',
+    icon: <Palette className="w-8 h-8 text-yellow-500" />,
+    border: 'border-yellow-500',
+    image: '/images/design.jpg',
+  },
+  {
+    title: 'Publicity',
+    description: 'Promote events and manage outreach.',
+    icon: <Megaphone className="w-8 h-8 text-purple-500" />,
+    border: 'border-purple-500',
+    image: '/images/publicity.jpg',
+  },
+];
 
 const coreTeam = [
   {
@@ -125,45 +164,38 @@ export default function AboutPage() {
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-12">
       <h1 className={`text-9xl mb-10 ${instrument.className} text-white`}>About Us</h1>
+
+      {/* What We Do */}
       <p className="hidden sm:block text-xl text-gray-300 leading-relaxed max-w-5xl">
         Movie Club, BITS Hyderabad is a collective of student filmmakers and film enthusiasts at
         BITS Pilani, Hyderabad Campus. We create short films, host screenings, and celebrate cinema
         in all its forms.
       </p>
       <p className="block sm:hidden text-base text-gray-300 leading-relaxed">
-        Student filmmakers & film lovers at BITS Hyderabad.
+        Movie Club, BITS Hyderabad is a collective of student filmmakers and film enthusiasts at
+        BITS Pilani, Hyderabad Campus. We create short films, host screenings, and celebrate cinema
+        in all its forms.
       </p>
 
-      {/* What We Do */}
       <section className="mt-10 mb-20">
-        {/* Mobile version */}
-        <div className="sm:hidden">
-          <h2 className="text-3xl font-medium text-blue-200 mb-3">What We Do</h2>
-          <div className="sm:grid-cols-2 space-y-3 text-gray-300 text-base leading-relaxed">
-            <p>We make short films.</p>
-            <p>We watch movies and analyse them.</p>
+        <div className="max-w-screen-xl mx-auto border-white">
+          <h2 className="text-3xl font-medium text-blue-200 mb-8 text-center sm:text-left">
+            What We Do
+          </h2>
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {cards.map((card) => (
+              <div
+                key={card.title}
+                className={`rounded-2xl p-6 bg-white/5 backdrop-blur-sm shadow-md hover:shadow-xl transition border-2 ${card.border}`}
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  {card.icon}
+                  <h3 className="text-xl font-semibold text-white">{card.title}</h3>
+                </div>
+                <p className="text-sm text-white/80">{card.description}</p>
+              </div>
+            ))}
           </div>
-        </div>
-
-        {/* Desktop version */}
-        <div className="hidden sm:block">
-          <h2 className="text-3xl font-medium text-blue-200 mb-6">What We Do</h2>
-          <ul className="list-disc pl-5 space-y-3 text-gray-300 text-lg">
-            <li>
-              <b>Make short films</b>, spanning both traditional and experimental styles of
-              filmmaking.
-            </li>
-            <li>
-              Participate in short film competitions and film festivals throughout India, both
-              online and offline.
-            </li>
-            <li>
-              Screen films regularly in lecture halls, bringing alternative cinema to the General
-              Body's radar.
-            </li>
-            <li>Write reviews, editorials, and recommendations for films on our Instagram page.</li>
-            <li>Conduct fun movie-related events for the campus.</li>
-          </ul>
         </div>
       </section>
 
@@ -274,7 +306,7 @@ export default function AboutPage() {
           Facebook group.
         </p>
 
-        <Link href={'/contact'}>
+        <Link href="/contact">
           <span className="inline-block mt-2 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
             Contact Us
           </span>

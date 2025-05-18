@@ -9,7 +9,7 @@ const instrument = Instrument_Serif({
 
 export default function FestivalPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-4 py-10">
       <h1 className={`text-9xl mb-10 ${instrument.className}`}>Catharsis Film Festival</h1>
 
       {/* Intro */}
