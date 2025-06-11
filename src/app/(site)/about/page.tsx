@@ -99,15 +99,16 @@ const teamLeads = [
     logo: 'https://res.cloudinary.com/dlglodixp/image/upload/v1745659626/screenings-team_igzv9f.png',
     members: [
       {
-        name: 'Mufidh Muhsin',
-        role: 'Screenings Lead',
-        image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744187241/mufidh_cnvbzx.jpg',
-      },
-      {
         name: 'Akarsh Ramadugu',
         role: 'Screenings Lead',
         image:
           'https://res.cloudinary.com/dlglodixp/image/upload/v1746443298/akarsh-cowboy_fxm41t.jpg',
+      },
+      {
+        name: 'Arjan Singh',
+        role: 'Screenings Lead',
+        image:
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1749641486/arjan-square_qdcito.jpg',
       },
     ],
   },
@@ -123,9 +124,10 @@ const teamLeads = [
           'https://res.cloudinary.com/dlglodixp/image/upload/v1746362334/mofasser_1_kzkkpq.webp',
       },
       {
-        name: 'Mufidh Muhsin',
+        name: 'Sachin Siva Atluri',
         role: 'Editorial Lead',
-        image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744187241/mufidh_cnvbzx.jpg',
+        image:
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1746539556/sachin-new_pgpnml.jpg',
       },
     ],
   },
@@ -166,7 +168,7 @@ export default function AboutPage() {
       <h1 className={`text-9xl mb-10 ${instrument.className} text-white`}>About Us</h1>
 
       {/* What We Do */}
-      <p className="hidden sm:block text-xl text-gray-300 leading-relaxed max-w-5xl">
+      <p className="hidden sm:block text-xl text-gray-300 leading-relaxed max-w-6xl">
         Movie Club, BITS Hyderabad is a collective of student filmmakers and film enthusiasts at
         BITS Pilani, Hyderabad Campus. We create short films, host screenings, and celebrate cinema
         in all its forms.
@@ -199,9 +201,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mb-20">
+      <section className="mt-10 mb-20">
         <h2 className="text-4xl font-bold text-pink-200 mb-12">The Senate</h2>
-
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-10">
           {coreTeam.map((person) => (
             <div key={person.name + person.role} className="flex items-start space-x-4">
