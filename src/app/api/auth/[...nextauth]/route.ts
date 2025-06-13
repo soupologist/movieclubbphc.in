@@ -9,6 +9,7 @@ const ADMIN_EMAILS = [
 const CLUB_EMAILS = ['f20230177@hyderabad.bits-pilani.ac.in'];
 
 const authOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
