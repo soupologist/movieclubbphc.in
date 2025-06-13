@@ -1,25 +1,14 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import dynamic from 'next/dynamic';
-
-const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY;
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 export default function AdminFilmsPage() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [passkey, setPasskey] = useState('');
-
-  const checkPasskey = () => {
-    if (passkey === ADMIN_KEY) {
-      setAuthenticated(true);
-    } else {
-      alert('Incorrect key');
-    }
-  };
-
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const [filmId, setFilmId] = useState('');
@@ -38,6 +27,14 @@ export default function AdminFilmsPage() {
     status: '',
     awards: [] as { title: string; details: string }[],
   });
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    } else if (status === 'authenticated' && session?.user?.role !== 'admin') {
+      router.push('/unauthorized');
+    }
+  }, [status, session, router]);
 
   const handleNavigate = () => {
     if (filmId) {
@@ -87,22 +84,14 @@ export default function AdminFilmsPage() {
     }
   };
 
-  if (!authenticated) {
+  if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
-        <h1 className="text-3xl mb-4">Enter Admin Passkey</h1>
-        <input
-          type="password"
-          value={passkey}
-          onChange={(e) => setPasskey(e.target.value)}
-          className="p-2 bg-gray-800 mb-4 w-72"
-          placeholder="Passkey"
-        />
-        <button onClick={checkPasskey} className="bg-blue-600 px-4 py-2">
-          Submit
-        </button>
-      </div>
+      <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>
     );
+  }
+
+  if (!session || session.user?.role !== 'admin') {
+    return null;
   }
 
   return (
