@@ -83,6 +83,9 @@ export default function Navbar() {
           <Link href="/films" className="hover:text-gray-300">
             Films
           </Link>
+          <Link href="/editorials" className="hover:text-gray-300">
+            Editorials
+          </Link>
           <Link href="/festival" className="hover:text-gray-300">
             Film Festival
           </Link>
@@ -151,6 +154,13 @@ export default function Navbar() {
             className="text-lg hover:text-gray-300"
           >
             Films
+          </Link>
+          <Link
+            href="/editorials"
+            onClick={() => setMenuOpen(false)}
+            className="text-lg hover:text-gray-300"
+          >
+            Editorials
           </Link>
           <Link
             href="/festival"

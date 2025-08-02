@@ -14,7 +14,7 @@ export const metadata = {
     siteName: 'Movie Club, BITS Hyderabad',
     images: [
       {
-        url: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744486673/banner_cg39aj.png', // 👈 Your custom image
+        url: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744486673/banner_cg39aj.png',
         width: 1200,
         height: 630,
         alt: 'Movie Club banner',

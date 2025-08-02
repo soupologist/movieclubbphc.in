@@ -1,27 +1,26 @@
-'use client'; // Required in Next.js 13+ for client-side code
+// app/(site)/contact/page.tsx
+'use client';
 
-import { useEffect, useRef } from 'react';
-import React from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Link from 'next/link';
+import { Mail } from 'lucide-react';
+import { SiInstagram, SiLetterboxd, SiYoutube } from 'react-icons/si';
+import { Instrument_Serif } from 'next/font/google';
 
-gsap.registerPlugin(ScrollTrigger);
+const instrument = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+});
 
-export default function GsapTestPage() {
-  const boxRef = useRef(null);
-
-  useEffect(() => {
-    gsap.fromTo(
-      boxRef.current,
-      { x: -200, opacity: 0 },
-      { x: 0, opacity: 1, duration: 1.5, ease: 'power2.out' }
-    );
-  }, []);
-
+export default function EditorialsPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <div ref={boxRef} className="bg-blue-500 text-white p-6 rounded-lg text-2xl">
-        GSAP is Working!
+    <div className="min-h-screen bg-black text-white px-6 md:px-12 py-20 font-gotham">
+      <div className="max-w-5xl mx-auto">
+        <h1 className={`text-9xl mb-10 ${instrument.className}`}>Editorials</h1>
+        <p className="text-lg text-gray-300 mb-12">
+          We often write editorials on films, directors, and cinematic trends. These pieces are more
+          detailed than those found on our Instagram.
+        </p>
       </div>
     </div>
   );

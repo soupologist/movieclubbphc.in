@@ -12,9 +12,8 @@ The site has been deployed on [movieclubbphc.in](https://movieclubbphc.in), and 
 
 ## Tech Stack
 
-- **Next.js 14** – React-based framework for server-side rendering and routing
+- **Next.js** – React-based framework for server-side rendering and routing
 - **MongoDB** – NoSQL database for storing film metadata
-- **Mongoose** – Schema-based solution for MongoDB
 - **Cloudinary** – Media hosting for images and videos
 - **Tailwind CSS** – Utility-first CSS framework
 - **Prettier** - Code formatting and readability tool in Visual Studio Code
