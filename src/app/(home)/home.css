@@ -1,0 +1,12 @@
+html,
+body {
+  scroll-behavior: smooth;
+}
+
+section {
+  scroll-snap-type: y mandatory;
+}
+
+section > div {
+  scroll-snap-align: start;
+}
