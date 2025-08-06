@@ -125,10 +125,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Split Scrollable Section */}
-        <section className="relative flex flex-col md:flex-row min-h-[300vh]">
-          {/* Left Sticky Heading */}
-          <div className="sticky top-0 h-screen md:w-1/2 flex justify-center items-center px-6">
+        <section className="relative flex flex-col md:flex-row">
+          {/* Desktop View */}
+          <div className="hidden md:flex sticky top-0 h-screen md:w-1/2 justify-center items-center px-6">
             <AnimatePresence mode="wait">
               <motion.p
                 key={sections[activeIndex].id}
@@ -147,18 +146,25 @@ export default function Home() {
             </AnimatePresence>
           </div>
 
-          {/* Right Side Scrollable Panels */}
-          <div className="md:w-1/2 px-6 md:px-12 space-y-[100vh] py-16">
+          {/* Right Side Content (Both Mobile & Desktop) */}
+          <div className="w-full md:w-1/2 px-6 md:px-12 space-y-16 py-16">
             {sections.map((sec, i) => (
               <div
                 key={sec.id}
                 ref={(el) => {
                   sectionRefs.current[i] = el;
                 }}
-                className="h-screen flex flex-col justify-center"
+                className="min-h-screen flex flex-col justify-center"
               >
-                <div className="space-y-6 max-w-4xl">
-                  {/* Freeform image grid */}
+                {/* Mobile View Heading */}
+                <div className="md:hidden mb-8">
+                  <p className={`${instrumentSerif.className} text-6xl text-left`}>
+                    {sec.before} <span className={sec.middleColor}>{sec.middle}</span> {sec.after}
+                  </p>
+                </div>
+
+                <div className="space-y-6 max-w-4xl mx-auto">
+                  {/* Images */}
                   <div className="columns-2 md:columns-3 gap-4 space-y-4">
                     {sec.images?.map((src, idx) => (
                       <img
