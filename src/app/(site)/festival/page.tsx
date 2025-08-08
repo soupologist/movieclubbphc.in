@@ -138,8 +138,8 @@ export default function FestivalPage() {
 
             <p className="text-gray-300 leading-relaxed text-base sm:text-lg mt-4">
               One of the flagship events of Catharsis, Spoiler Alert is a film quiz that tests the
-              participants' knowledge of cinema, organised in close collaboration with our homies
-              from Quiz Club BPHC.
+              participants&apos; knowledge of cinema, organised in close collaboration with our
+              homies from Quiz Club BPHC.
             </p>
           </div>
 
@@ -186,7 +186,7 @@ export default function FestivalPage() {
           <h3 className="text-2xl sm:text-3xl font-semibold mb-4">Be a Part of It</h3>
           <p className="text-gray-300 leading-relaxed text-base sm:text-lg mb-4">
             Whether you want to submit your short film, attend a session, or just enjoy a night of
-            cinema, there is something for everyone.
+            cinema, there&apos; something for everyone.
           </p>
           <p className="text-gray-300 leading-relaxed text-base sm:text-lg">
             Follow us on our social media for updates and submission calls.
