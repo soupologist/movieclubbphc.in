@@ -1,4 +1,6 @@
-import Image from 'next/image';
+'use client';
+
+import EmblaCarousel from '@/components/EmblaCarousel';
 import { Instrument_Serif } from 'next/font/google';
 
 const instrument = Instrument_Serif({
@@ -9,132 +11,188 @@ const instrument = Instrument_Serif({
 
 export default function FestivalPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
-      <h1 className={`text-9xl mb-10 ${instrument.className}`}>Catharsis Film Festival</h1>
+    <div className="min-h-screen bg-black text-white px-4 sm:px-6 md:px-12 py-12 sm:py-16 md:py-20 font-gotham">
+      <div className="max-w-5xl mx-auto">
+        {/* Heading */}
+        <h1
+          className={`text-7xl sm:text-7xl md:text-8xl lg:text-9xl mb-10 ${instrument.className}`}
+        >
+          Catharsis Film Festival
+        </h1>
 
-      {/* Intro */}
-      <section className="mb-16">
-        <p className="text-xl text-gray-300 leading-relaxed">
-          Every year during Pearl, the Cultural Festival of BPHC, we organize a vibrant, multi-day
-          film festival that celebrates cinema through a plethora of engaging events.
-        </p>
-      </section>
+        {/* Intro */}
+        <section className="mb-12 sm:mb-16">
+          <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
+            Every year during Pearl, the Cultural Festival of BPHC, we organize a vibrant, multi-day
+            film festival that celebrates cinema through a variety of engaging events.
+          </p>
+        </section>
 
-      {/* Events */}
-      <section className="mb-16">
-        <h2 className="text-5xl font-bold text-yellow-200 mb-12">Events</h2>
-
-        <div className="space-y-16">
-          {/* Event 1 */}
-          <div className="flex flex-col md:flex-row gap-8">
-            <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744187680/kaleidoscope_ary62s.png"
-              alt="Kaleidoscope - Short Film Competition"
-              width={500}
-              height={300}
-              className="rounded-xl object-cover shadow-lg w-full md:w-1/2"
+        {/* Events Outline */}
+        <section className="space-y-12">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-yellow-100">
+              Kaleidoscope
+            </h2>
+            <p className="text-gray-200 leading-relaxed text-base sm:text-lg mb-8">
+              The Annual Shortfilm Competition of BPHC
+            </p>
+            <EmblaCarousel
+              slides={[
+                {
+                  src: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744187680/kaleidoscope_ary62s.png',
+                  caption: 'Poster for Kaleidoscope 2025',
+                },
+                {
+                  src: '/images/catharsis/award.jpg',
+                  caption: 'SPIRIT - Winner of Best Picture at Kaleidoscope 2025',
+                },
+              ]}
             />
-            <div className="flex flex-col justify-center text-gray-300 md:w-1/2">
-              <h3 className="text-3xl font-semibold text-white">Kaleidoscope</h3>
-              <p className="text-lg text-gray-400 mb-2 italic">Short Film Competition</p>
-              <p>
-                A showcase of original short films from across India, where all submissions follow a
-                unifying theme. Creative boundaries are pushed as filmmakers respond to a single
-                idea in their own distinct styles.
-              </p>
-            </div>
+
+            <p className="text-gray-300 leading-relaxed text-base sm:text-lg mt-4">
+              Every year, we invite filmmakers from across the country to submit their short films
+              revolving around a particular theme. After a rigorous selection process, the
+              shortlisted films are screened on campus during the festival, with awards being given
+              to the best entries.
+            </p>
           </div>
 
-          {/* Event 2 */}
-          <div className="flex flex-col md:flex-row gap-8">
-            <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1745131713/day1-left_hj3xdq.png"
-              alt="Slumber Party Screenings"
-              width={500}
-              height={300}
-              className="rounded-xl object-cover shadow-lg w-full md:w-1/2"
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-red-200">Slumber Party</h2>
+            <p className="text-gray-200 leading-relaxed text-base sm:text-lg mb-8">
+              All Night Screenings
+            </p>
+            <EmblaCarousel
+              slides={[
+                {
+                  src: 'https://res.cloudinary.com/dlglodixp/image/upload/v1754635501/day1-combined_u38f3a.webp',
+                  caption: 'Slumber Party List for Pearl 2025 - Day 1',
+                },
+                {
+                  src: '/images/screen/aaveshamscreening.jpg',
+                  caption: 'Crowd for Aavesham Screening',
+                },
+              ]}
             />
-            <div className="flex flex-col justify-center text-gray-300 md:w-1/2">
-              <h3 className="text-3xl font-semibold text-white">Slumber Party</h3>
-              <p className="text-lg text-gray-400 mb-2 italic">All-Night Screenings</p>
-              <p>
-                We turn the lecture halls into a cineplex, curating a wide assortment of cinema
-                ranging different genres and languages, screening films all night long.
-              </p>
-            </div>
+
+            <p className="text-gray-300 leading-relaxed text-base sm:text-lg mt-4">
+              Slumber Party is the crowd favourite event for Catharsis Film Festival and one of the
+              highlights of every fest in BPHC. With a lineup of curated films from various genres
+              and languages, we host all-night screenings that even go until 5AM for every day of
+              the fest.
+            </p>
           </div>
 
-          {/* Event 3 */}
-          <div className="flex flex-col md:flex-row gap-8">
-            <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744189662/Prepare_yourselves_BITS_Hyderabad_as_captivating_filmmaker_Rakeysh_Omprakash_Mehra_will_be_gracing_the_stage_on_the_BITS_PEARL_Fest_25_with_his_immeasurable_talents._He_has_not_only_engraved_his_name_in_our_hea_snjbl9.webp"
-              alt="Panel Discussions"
-              width={500}
-              height={300}
-              className="rounded-xl object-cover shadow-lg w-full md:w-1/2"
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-blue-100">
+              Panel Discussions
+            </h2>
+            <p className="text-gray-200 leading-relaxed text-base sm:text-lg mb-8">
+              Filmmaker sessions and conversations in collaboration with BITS Embryo.
+            </p>
+            <EmblaCarousel
+              slides={[
+                {
+                  src: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744189662/Prepare_yourselves_BITS_Hyderabad_as_captivating_filmmaker_Rakeysh_Omprakash_Mehra_will_be_gracing_the_stage_on_the_BITS_PEARL_Fest_25_with_his_immeasurable_talents._He_has_not_only_engraved_his_name_in_our_hea_snjbl9.webp',
+                  caption: 'Discussion with Rakeysh Omprakash Mehra',
+                },
+                {
+                  src: '/images/catharsis/rakeyshgroupphoto.jpg',
+                  caption: 'a few club members with Rakeysh Omprakash Mehra',
+                },
+              ]}
             />
-            <div className="flex flex-col justify-center text-gray-300 md:w-1/2">
-              <h3 className="text-3xl font-semibold text-white">Panel Discussions</h3>
-              <p className="text-lg text-gray-400 mb-2 italic">Conversations on Craft</p>
-              <p>
-                As a collaboration with BITS Embryo, we call renowned filmmakers to our campus for
-                interactive sessions and insightful conversations.
-              </p>
-            </div>
+
+            <p className="text-gray-300 leading-relaxed text-base sm:text-lg mt-4">
+              We often invite filmmakers and professionals from the industry to share their insights
+              in discussions with us, often in collaboration with BITS Embryo. These sessions
+              provide a unique opportunity for students to learn from and interact with experienced
+              filmmakers.
+            </p>
           </div>
 
-          {/* Event 4 */}
-          <div className="flex flex-col md:flex-row gap-8">
-            <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1744189042/SPOILER_ALERT_1_mwrykk.png"
-              alt="Spoiler Alert"
-              width={500}
-              height={300}
-              className="rounded-xl object-cover shadow-lg w-full md:w-1/2"
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-green-200">
+              Spoiler Alert
+            </h2>
+            <p className="text-gray-200 leading-relaxed text-base sm:text-lg mb-8">
+              A test of film trivia in collab with Quiz Club BPHC
+            </p>
+            <EmblaCarousel
+              slides={[
+                {
+                  src: 'https://res.cloudinary.com/dlglodixp/image/upload/v1744189042/SPOILER_ALERT_1_mwrykk.png',
+                  caption: 'Spoiler Alert 2025 Poster',
+                },
+                {
+                  src: '/images/catharsis/spoileralert-screen.jpg',
+                  caption: 'Spoiler Alert 2025 in action',
+                },
+                {
+                  src: '/images/catharsis/broflabbergasted.png',
+                  caption: 'blud being absolutely flabbergasted at the questions',
+                },
+              ]}
             />
-            <div className="flex flex-col justify-center text-gray-300 md:w-1/2">
-              <h3 className="text-3xl font-semibold text-white">Spoiler Alert</h3>
-              <p className="text-lg text-gray-400 mb-2 italic">Film Trivia Quiz</p>
-              <p>
-                A collab with Quiz Club BPHC to find the most knowledgeable film buff on campus.
-              </p>
-            </div>
+
+            <p className="text-gray-300 leading-relaxed text-base sm:text-lg mt-4">
+              One of the flagship events of Catharsis, Spoiler Alert is a film quiz that tests the
+              participants' knowledge of cinema, organised in close collaboration with our homies
+              from Quiz Club BPHC.
+            </p>
           </div>
 
-          {/* Event 5 */}
-          <div className="flex flex-col md:flex-row gap-8">
-            <Image
-              src="https://res.cloudinary.com/dlglodixp/image/upload/v1745132361/wall_iujbnn.jpg"
-              alt="Movie Wall"
-              width={500}
-              height={300}
-              className="rounded-xl object-cover shadow-lg w-full md:w-1/2"
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-blue-100">Movie Wall</h2>
+            <p className="text-gray-200 leading-relaxed text-base sm:text-lg mb-8">
+              The wall of film posters outside F104
+            </p>
+            <EmblaCarousel
+              slides={[
+                {
+                  src: '/images/review/moviewall2025.jpg',
+                  caption: 'Movie Wall at Pearl 2025 - Films of the 2020s',
+                },
+                {
+                  src: 'https://res.cloudinary.com/dlglodixp/image/upload/v1745132361/wall_iujbnn.jpg',
+                  caption: 'Movie Wall at Pearl 2024',
+                },
+                {
+                  src: '/images/catharsis/moviewall2023.jpg',
+                  caption: 'Movie Wall at Pearl 2023',
+                },
+                {
+                  src: '/images/catharsis/moviewall2022.jpg',
+                  caption: 'Movie Wall at Pearl 2022',
+                },
+                {
+                  src: '/images/catharsis/moviewall2014.jpg',
+                  caption: 'The first ever Movie Wall at Pearl 2014',
+                },
+              ]}
             />
-            <div className="flex flex-col justify-center text-gray-300 md:w-1/2">
-              <h3 className="text-3xl font-semibold text-white">The Movie Wall</h3>
-              <p className="text-lg text-gray-400 mb-2 italic">The Wall of Posters</p>
-              <p>
-                A yearly tradition where we take the wall next to F104 and completely fill it with
-                movie posters, usually following a centralised theme.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Call to Action */}
-      <section className="mt-10 border-t border-gray-700 pt-10">
-        <h2 className="text-3xl text-white mb-4">Be a Part of It</h2>
-        <p className="text-gray-300 leading-relaxed mb-4">
-          Whether you want to showcase your short film, attend a workshop, or just experience the
-          thrill of watching films with fellow cinephiles, there&apos;s something for everyone at
-          the festival.
-        </p>
-        <p className="text-gray-300 leading-relaxed">
-          Follow us on our social media for announcements, submission forms, and schedules.
-          Let&apos;s celebrate cinema, together.
-        </p>
-      </section>
+            <p className="text-gray-300 leading-relaxed text-base sm:text-lg mt-4">
+              Every year, we have an annual club tradition of creating a wall of film posters
+              outside F104. This wall is an expression of our love for cinema to wider audience
+              during the fest.
+            </p>
+          </div>
+        </section>
+
+        {/* Call to Action */}
+        <section className="mt-16 pt-10 border-t border-gray-700">
+          <h3 className="text-2xl sm:text-3xl font-semibold mb-4">Be a Part of It</h3>
+          <p className="text-gray-300 leading-relaxed text-base sm:text-lg mb-4">
+            Whether you want to submit your short film, attend a session, or just enjoy a night of
+            cinema, there’s something for everyone.
+          </p>
+          <p className="text-gray-300 leading-relaxed text-base sm:text-lg">
+            Follow us on our social media for updates and submission calls.
+          </p>
+        </section>
+      </div>
     </div>
   );
 }
