@@ -167,8 +167,8 @@ export default function FestivalPage() {
                   caption: 'Movie Wall at Pearl 2022',
                 },
                 {
-                  src: '/images/catharsis/moviewall2014.jpg',
-                  caption: 'The first ever Movie Wall at Pearl 2014',
+                  src: '/images/catharsis/moviewall2015.JPG',
+                  caption: 'The first ever Movie Wall at Pearl 2015',
                 },
               ]}
             />
