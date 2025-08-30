@@ -163,7 +163,7 @@ export default function FestivalPage() {
                   caption: 'Movie Wall at Pearl 2023',
                 },
                 {
-                  src: '/images/catharsis/moviewall2022.jpg',
+                  src: '/images/catharsis/moviewall2022group.jpg',
                   caption: 'Movie Wall at Pearl 2022',
                 },
                 {
