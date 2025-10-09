@@ -1,0 +1,90 @@
+// app/films/components/FilmCard.tsx
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+
+interface Film {
+  _id: string;
+  id: string;
+  title: string;
+  background: string;
+  generalCredits: string[];
+  description: string;
+  date: string;
+  poster: string;
+  awards: { title: string; details: string }[];
+  tags?: string[];
+}
+
+export default function FilmCard({ film }: { film: Film }) {
+  return (
+    <Link key={film._id} href={`/films/${film.id}`} className="block group">
+      <div className="relative flex flex-col md:flex-row items-start gap-12 md:gap-20 cursor-pointer group-hover:opacity-90 transition-opacity duration-300 overflow-hidden rounded-s px-4 py-16">
+        {film.background?.trim() !== '' && (
+          <video
+            src={film.background}
+            muted
+            autoPlay
+            loop
+            playsInline
+            preload="none"
+            className="absolute inset-0 w-full h-full object-cover opacity-30 z-0 pointer-events-none"
+          />
+        )}
+
+        <div className="relative w-full md:w-1/3 z-10">
+          <Image
+            src={film.poster}
+            alt={film.title}
+            width={400}
+            height={600}
+            className="w-full h-auto object-cover"
+          />
+        </div>
+
+        <div className="relative flex-1 z-10 space-y-6 md:space-y-8">
+          <div className="space-y-2 md:space-y-4">
+            <h2 className="text-4xl md:text-5xl font-semibold font-gotham">{film.title}</h2>
+            <p className="text-lg text-gray-300">A film by {film.generalCredits?.join(', ')}</p>
+            <p className="text-md text-gray-400 italic">Released on {film.date}</p>
+          </div>
+
+          {film.tags && film.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {film.tags.map((tag, i) => (
+                <span
+                  key={i}
+                  className="text-xs border border-blue-200 px-2 py-1 rounded-xl text-blue-200 uppercase tracking-wide"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className="text-lg text-gray-300 leading-relaxed line-clamp-4">{film.description}</p>
+
+          {film.awards?.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-2xl font-light font-gotham mb-2 text-yellow-100">AWARDS</h3>
+              <ul className="list-disc list-inside text-gray-300 space-y-1">
+                {film.awards.map((award, index) => (
+                  <li key={index}>
+                    <span className="font-bold">{award.title}</span> - {award.details}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div>
+            <span className="inline-block mt-2 px-5 py-2 border border-white text-white text-sm tracking-wide uppercase hover:bg-white hover:text-black transition">
+              Read More
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}

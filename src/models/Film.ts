@@ -1,3 +1,5 @@
+// Film entity schema definition acc to the MongoDB structure
+
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 interface Credit {
@@ -25,6 +27,7 @@ export interface IFilm extends Document {
   notes?: string;
   btsPhotos: string[];
   status?: string;
+  tags?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -61,6 +64,7 @@ const FilmSchema: Schema<IFilm> = new Schema(
     notes: { type: String, default: '' },
     btsPhotos: { type: [String], default: [] },
     status: { type: String, default: 'released' },
+    tags: { type: [String], default: [] },
   },
   { timestamps: true }
 );

@@ -91,5 +91,5 @@ body {
 
 .prose p,
 .prose-invert p {
-  @apply leading-snug; /* tighter line spacing */
+  @apply leading-snug;
 }

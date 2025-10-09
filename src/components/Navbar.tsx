@@ -3,10 +3,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { User } from 'lucide-react';
+import { User, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -17,28 +16,27 @@ export default function Navbar() {
 
   const { data: session, status } = useSession();
   const user = session?.user;
-
   const router = useRouter();
 
   const getRoleLabel = () => {
-    if (!user?.role) return 'User';
-    if (user.role === 'admin') return 'Admin';
-    if (user.role === 'club') return 'Club Member';
-    if (user.role === 'college') return 'BITS Student';
-    return 'General User';
+    switch (user?.role) {
+      case 'admin':
+        return 'Admin';
+      case 'club':
+        return 'Club Member';
+      case 'college':
+        return 'BITS Student';
+      default:
+        return 'User';
+    }
   };
 
+  // Hide navbar on scroll down
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setShowNavbar(false);
-      } else {
-        setShowNavbar(true);
-      }
+      setShowNavbar(currentScrollY < lastScrollY || currentScrollY < 50);
       setLastScrollY(currentScrollY);
-
-      // close dropdown on scroll
       setDropdownOpen(false);
     };
 
@@ -57,14 +55,30 @@ export default function Navbar() {
     };
   }, [lastScrollY]);
 
+  const navLinks = [
+    { href: '/about', label: 'About Us' },
+    { href: '/films', label: 'Films' },
+    { href: '/festival', label: 'Film Festival' },
+    { href: '/contact', label: 'Contact Us' },
+  ];
+
+  const handleUserClick = () => {
+    if (status === 'authenticated') {
+      setDropdownOpen((prev) => !prev);
+    } else {
+      router.push('/login');
+    }
+  };
+
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 transition-transform duration-300 ${
+        className={`fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 transition-transform duration-300 backdrop-blur-md bg-black/60 ${
           showNavbar ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
-        <Link href="/">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
           <Image
             src="/images/movieclub-white.png"
             alt="Movie Club Logo"
@@ -75,39 +89,42 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center space-x-10 text-lg font-regular">
-          <Link href="/about" className="hover:text-gray-300">
-            About Us
-          </Link>
-          <Link href="/films" className="hover:text-gray-300">
-            Films
-          </Link>
-          <Link href="/festival" className="hover:text-gray-300">
-            Film Festival
-          </Link>
-          <Link href="/contact" className="hover:text-gray-300">
-            Contact Us
-          </Link>
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center space-x-10 text-lg">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="hover:text-gray-300">
+              {link.label}
+            </Link>
+          ))}
 
           <div className="relative ml-6" ref={dropdownRef}>
             <button
-              onClick={() => {
-                if (status === 'authenticated') {
-                  setDropdownOpen((prev) => !prev);
-                } else {
-                  router.push('/login');
-                }
-              }}
-              className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-white/10"
+              onClick={handleUserClick}
+              className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-white/10 focus:outline-none"
+              aria-label="User menu"
             >
               <User size={20} />
             </button>
+
             {dropdownOpen && status === 'authenticated' && (
-              <div className="absolute right-0 mt-2 w-56 bg-gray-900 rounded-lg shadow-lg p-4 z-50 text-sm">
+              <div className="absolute right-0 mt-2 w-60 bg-gray-900 rounded-xl shadow-lg p-4 z-50 text-sm">
                 <p className="font-semibold truncate">{user?.email}</p>
-                <p className="text-gray-400">{getRoleLabel()}</p>
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>{getRoleLabel()}</span>
+
+                  {/* Inline admin link */}
+                  {user?.role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      className="text-blue-400 hover:underline flex items-center gap-1 text-xs"
+                    >
+                      Dashboard →
+                    </Link>
+                  )}
+                </div>
+
                 <hr className="my-2 border-gray-700" />
+
                 <button onClick={() => signOut()} className="text-red-400 hover:underline text-sm">
                   Sign Out
                 </button>
@@ -118,63 +135,73 @@ export default function Navbar() {
 
         {/* Hamburger */}
         <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden flex flex-col gap-[4px] p-2 group"
-          aria-label="Toggle menu"
+          onClick={() => setMenuOpen(true)}
+          className="md:hidden p-2 text-white"
+          aria-label="Open menu"
         >
-          <span className="w-6 h-[2px] bg-white transition-all group-hover:w-8" />
-          <span className="w-6 h-[2px] bg-white transition-all group-hover:w-8" />
-          <span className="w-6 h-[2px] bg-white transition-all group-hover:w-8" />
+          <Menu size={28} />
         </button>
       </nav>
 
-      {/* Mobile menu */}
+      {/* Mobile Overlay */}
       <div
-        className={`fixed top-0 right-0 h-full w-64 bg-black bg-opacity-95 transform transition-transform z-40 ${
-          menuOpen ? 'translate-x-0' : 'translate-x-full'
-        } md:hidden`}
-      >
-        <div className="flex flex-col items-end mt-16 p-6 space-y-6">
-          <button onClick={() => setMenuOpen(false)} className="text-white text-xl">
-            ✕
-          </button>
-          <Link
-            href="/about"
-            onClick={() => setMenuOpen(false)}
-            className="text-lg hover:text-gray-300"
-          >
-            About Us
-          </Link>
-          <Link
-            href="/films"
-            onClick={() => setMenuOpen(false)}
-            className="text-lg hover:text-gray-300"
-          >
-            Films
-          </Link>
-          <Link
-            href="/festival"
-            onClick={() => setMenuOpen(false)}
-            className="text-lg hover:text-gray-300"
-          >
-            Film Festival
-          </Link>
-          <Link
-            href="/contact"
-            onClick={() => setMenuOpen(false)}
-            className="text-lg hover:text-gray-300"
-          >
-            Contact Us
-          </Link>
+        className={`fixed inset-0 z-40 transition-all duration-300 ${
+          menuOpen ? 'bg-black/50 backdrop-blur-sm visible' : 'invisible'
+        }`}
+        onClick={() => setMenuOpen(false)}
+      />
 
-          {status === 'authenticated' && (
-            <div className="mt-6 text-sm text-white border-t pt-4 border-gray-700">
-              <p>{user?.email}</p>
-              <p className="text-xs text-gray-400">{getRoleLabel()}</p>
-              <button onClick={() => signOut()} className="text-red-400 underline text-xs mt-1">
+      {/* Mobile Drawer */}
+      <div
+        className={`fixed top-0 right-0 h-full w-72 bg-gray-950 shadow-xl transform transition-transform duration-300 z-50 ${
+          menuOpen ? 'translate-x-0' : 'translate-x-full'
+        } md:hidden flex flex-col`}
+      >
+        <div className="flex items-center justify-between p-6 border-b border-gray-800">
+          <span className="text-lg font-semibold">Menu</span>
+          <button onClick={() => setMenuOpen(false)} aria-label="Close menu">
+            <X size={26} />
+          </button>
+        </div>
+
+        <div className="flex flex-col p-6 space-y-4 text-base">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setMenuOpen(false)}
+              className="hover:text-gray-300"
+            >
+              {link.label}
+            </Link>
+          ))}
+
+          {user?.role === 'admin' && (
+            <Link
+              href="/admin"
+              onClick={() => setMenuOpen(false)}
+              className="hover:text-blue-400 font-medium mt-2"
+            >
+              Admin Dashboard
+            </Link>
+          )}
+
+          {status === 'authenticated' ? (
+            <div className="pt-6 border-t border-gray-800 text-sm text-gray-300">
+              <p className="truncate">{user?.email}</p>
+              <p className="text-gray-400 text-xs">{getRoleLabel()}</p>
+              <button onClick={() => signOut()} className="text-red-400 underline text-xs mt-2">
                 Sign Out
               </button>
             </div>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className="text-blue-400 underline mt-4 text-sm"
+            >
+              Sign In
+            </Link>
           )}
         </div>
       </div>

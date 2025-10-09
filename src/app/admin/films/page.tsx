@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import FilmForm from '@/components/admin/FilmForm';
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
@@ -112,152 +113,25 @@ export default function AdminFilmsPage() {
         </button>
       </div>
 
-      <div className="border border-gray-700 p-6 rounded-lg space-y-4">
-        <h2 className="text-2xl font-semibold mb-4">Add New Film</h2>
-
-        <input
-          name="id"
-          value={newFilm.id}
-          onChange={handleChange}
-          placeholder="ID (e.g. the-film-id)"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <input
-          name="title"
-          value={newFilm.title}
-          onChange={handleChange}
-          placeholder="Title (e.g. The Film Title)"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <input
-          name="date"
-          value={newFilm.date}
-          onChange={handleChange}
-          placeholder="Date (e.g. 2024-10-05)"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <input
-          name="poster"
-          value={newFilm.poster}
-          onChange={handleChange}
-          placeholder="Poster URL (e.g. https://...)"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <input
-          name="background"
-          value={newFilm.background}
-          onChange={handleChange}
-          placeholder="Background Video/Image URL"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <input
-          name="backgroundImage"
-          value={newFilm.backgroundImage}
-          onChange={handleChange}
-          placeholder="Optional Background Image URL"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <input
-          name="embed"
-          value={newFilm.embed}
-          onChange={handleChange}
-          placeholder="Embed URL (YouTube/Instagram)"
-          className="p-2 bg-gray-800 w-full"
-        />
-        <textarea
-          name="description"
-          value={newFilm.description}
-          onChange={handleChange}
-          placeholder="Description"
-          className="p-2 bg-gray-800 w-full"
-        />
-
-        <input
-          name="generalCredits"
-          value={newFilm.generalCredits}
-          onChange={handleChange}
-          placeholder="General Credits (comma-separated)"
-          className="p-2 bg-gray-800 w-full"
-        />
-
-        <textarea
-          name="btsPhotos"
-          value={newFilm.btsPhotos}
-          onChange={handleChange}
-          placeholder="Behind-the-scenes photo URLs (comma-separated)"
-          className="p-2 bg-gray-800 w-full"
-        />
-
-        <select
-          name="status"
-          value={newFilm.status}
-          onChange={handleChange}
-          className="p-2 bg-gray-800 w-full"
-        >
-          <option value="">Select Status</option>
-          <option value="released">Released</option>
-          <option value="shelved">Shelved</option>
-        </select>
-
-        <div className="space-y-2">
-          <label className="block text-sm text-gray-400">Awards</label>
-
-          {newFilm.awards.map((award, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Award Title"
-                value={award.title}
-                onChange={(e) => {
-                  const updatedAwards = [...newFilm.awards];
-                  updatedAwards[index].title = e.target.value;
-                  setNewFilm((prev) => ({ ...prev, awards: updatedAwards }));
-                }}
-                className="p-2 bg-gray-800 w-full"
-              />
-              <input
-                type="text"
-                placeholder="Award Details"
-                value={award.details}
-                onChange={(e) => {
-                  const updatedAwards = [...newFilm.awards];
-                  updatedAwards[index].details = e.target.value;
-                  setNewFilm((prev) => ({ ...prev, awards: updatedAwards }));
-                }}
-                className="p-2 bg-gray-800 w-full"
-              />
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={() =>
-              setNewFilm((prev) => ({
-                ...prev,
-                awards: [...prev.awards, { title: '', details: '' }],
-              }))
-            }
-            className="mt-2 text-sm mr-3 underline text-blue-400 hover:text-blue-200"
-          >
-            + Add Award
-          </button>
-        </div>
-
-        <div>
-          <label className="block mb-2 text-sm text-gray-400">Production Notes (Markdown)</label>
-          <div className="bg-gray-800 p-2 rounded">
-            <MDEditor
-              value={newFilm.notes}
-              onChange={(val) => setNewFilm((prev) => ({ ...prev, notes: val || '' }))}
-              height={300}
-            />
-          </div>
-        </div>
-
-        <button onClick={handleAdd} className="bg-green-600 px-6 py-3 font-bold mt-6">
-          Add Film
-        </button>
-      </div>
+      <FilmForm
+        film={{
+          id: '',
+          title: '',
+          date: '',
+          poster: '',
+          background: '',
+          backgroundImage: '',
+          embed: '',
+          description: '',
+          generalCredits: '',
+          notes: '',
+          btsPhotos: '',
+          status: '',
+          tags: [],
+          awards: [],
+        }}
+        onSubmit={handleAdd}
+      />
     </div>
   );
 }
