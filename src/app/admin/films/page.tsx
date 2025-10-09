@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import FilmForm from '@/components/admin/FilmForm';
 
-const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
-
 export default function AdminFilmsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -41,13 +39,6 @@ export default function AdminFilmsPage() {
     if (filmId) {
       router.push(`/admin/films/edit/${filmId}`);
     }
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setNewFilm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAdd = async () => {
