@@ -16,6 +16,7 @@
     "@uiw/react-md-editor": "^4.0.5",
     "@vercel/analytics": "^1.5.0",
     "class-variance-authority": "^0.7.1",
+    "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "embla-carousel-react": "^8.6.0",

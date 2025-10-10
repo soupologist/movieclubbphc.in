@@ -28,6 +28,8 @@ export interface IFilm extends Document {
   btsPhotos: string[];
   status?: string;
   tags?: string[];
+  visibility?: 'admin' | 'club' | 'campus' | 'public';
+  origin?: 'clubFilm' | 'clubProject' | 'clubAssociate';
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -65,6 +67,17 @@ const FilmSchema: Schema<IFilm> = new Schema(
     btsPhotos: { type: [String], default: [] },
     status: { type: String, default: 'released' },
     tags: { type: [String], default: [] },
+
+    visibility: {
+      type: String,
+      enum: ['admin', 'club', 'campus', 'public'],
+      default: 'public',
+    },
+    origin: {
+      type: String,
+      enum: ['clubFilm', 'clubProject', 'clubAssociate'],
+      default: 'clubFilm',
+    },
   },
   { timestamps: true }
 );

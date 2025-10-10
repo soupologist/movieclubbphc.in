@@ -11,6 +11,12 @@ interface Award {
   details: string;
 }
 
+interface Credit {
+  title: string;
+  names: string[];
+}
+
+// MAKE SURE THIS IS ALWAYS IN SYNC WITH src/models/Film.ts
 export interface FilmFormData {
   id: string;
   title: string;
@@ -21,9 +27,12 @@ export interface FilmFormData {
   embed: string;
   description: string;
   generalCredits: string;
+  credits: Credit[]; // ✅ added
   notes: string;
   btsPhotos: string;
   status: string;
+  visibility: string;
+  origin: string;
   awards: Award[];
   tags: string[];
 }
@@ -118,7 +127,7 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
         name="date"
         value={form.date}
         onChange={handleChange}
-        placeholder="Date (YYYY-MM-DD)"
+        placeholder="Date (eg. April 22, 2004)"
         className="p-2 bg-gray-800 w-full"
       />
       <input
@@ -182,10 +191,120 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
         <option value="shelved">Shelved</option>
       </select>
 
+      <select
+        name="visibility"
+        value={form.visibility}
+        onChange={handleChange}
+        className="p-2 bg-gray-800 w-full"
+      >
+        <option value="">Select Visibility</option>
+        <option value="public">Public</option>
+        <option value="campus">Campus</option>
+        <option value="club">Club</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <select
+        name="origin"
+        value={form.origin}
+        onChange={handleChange}
+        className="p-2 bg-gray-800 w-full"
+      >
+        <option value="">Select Origin</option>
+        <option value="clubFilm">Club Film</option>
+        <option value="clubProject">Club Project (Non Film)</option>
+        <option value="clubAssociate">Associate Film</option>
+      </select>
+
       <TagInput
         tags={form.tags || []}
         onChange={(newTags) => setForm((prev) => ({ ...prev, tags: newTags }))}
       />
+
+      {/* --- Credits Section --- */}
+      <div className="space-y-2">
+        <label className="block text-sm text-gray-400">Detailed Credits</label>
+        {form.credits.map((credit, cIndex) => (
+          <div key={cIndex} className="space-y-2 border border-gray-700 p-3 rounded-md">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Credit Title (e.g. Director, Editor)"
+                value={credit.title}
+                onChange={(e) => {
+                  const updated = [...form.credits];
+                  updated[cIndex].title = e.target.value;
+                  setForm((prev) => ({ ...prev, credits: updated }));
+                }}
+                className="p-2 bg-gray-800 flex-grow"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = form.credits.filter((_, i) => i !== cIndex);
+                  setForm((prev) => ({ ...prev, credits: updated }));
+                }}
+                className="text-red-400 hover:text-red-300"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="ml-2 space-y-2">
+              <label className="text-xs text-gray-400">Names</label>
+              {credit.names.map((name, nIndex) => (
+                <div key={nIndex} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={name}
+                    onChange={(e) => {
+                      const updated = [...form.credits];
+                      updated[cIndex].names[nIndex] = e.target.value;
+                      setForm((prev) => ({ ...prev, credits: updated }));
+                    }}
+                    className="p-2 bg-gray-800 flex-grow"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...form.credits];
+                      updated[cIndex].names = updated[cIndex].names.filter((_, i) => i !== nIndex);
+                      setForm((prev) => ({ ...prev, credits: updated }));
+                    }}
+                    className="text-gray-400 hover:text-red-400"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = [...form.credits];
+                  updated[cIndex].names.push('');
+                  setForm((prev) => ({ ...prev, credits: updated }));
+                }}
+                className="text-sm text-blue-400 hover:text-blue-200 underline"
+              >
+                + Add Name
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() =>
+            setForm((prev) => ({
+              ...prev,
+              credits: [...prev.credits, { title: '', names: [] }],
+            }))
+          }
+          className="mt-2 text-sm mr-3 underline text-blue-400 hover:text-blue-200"
+        >
+          + Add Credit
+        </button>
+      </div>
 
       <div className="space-y-2">
         <label className="block text-sm text-gray-400">Awards</label>

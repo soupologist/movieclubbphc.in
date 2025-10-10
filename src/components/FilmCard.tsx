@@ -3,23 +3,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { IFilm } from '@/models/Film';
 
-interface Film {
-  _id: string;
-  id: string;
-  title: string;
-  background: string;
-  generalCredits: string[];
-  description: string;
-  date: string;
-  poster: string;
-  awards: { title: string; details: string }[];
-  tags?: string[];
-}
-
-export default function FilmCard({ film }: { film: Film }) {
+export default function FilmCard({ film }: { film: IFilm }) {
+  const filmId = typeof film._id === 'string' ? film._id : String(film._id ?? '');
   return (
-    <Link key={film._id} href={`/films/${film.id}`} className="block group">
+    <Link key={filmId} href={`/films/${film.id}`} className="block group">
       <div className="relative flex flex-col md:flex-row items-start gap-12 md:gap-20 cursor-pointer group-hover:opacity-90 transition-opacity duration-300 overflow-hidden rounded-s px-4 py-16">
         {film.background?.trim() !== '' && (
           <video
