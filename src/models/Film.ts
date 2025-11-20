@@ -1,5 +1,8 @@
 // Film entity schema definition acc to the MongoDB structure
 
+// Make sure to keep this in sync with any other Film interfaces in the codebase listed below:
+// components/admin/FilmForm.tsx
+
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 interface Credit {

@@ -58,7 +58,7 @@ export default function FestivalPage() {
             </p>
           </div>
 
-          <div>
+          {/* <div>
             <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-red-200">Slumber Party</h2>
             <p className="text-gray-200 leading-relaxed text-base sm:text-lg mb-8">
               All Night Screenings
@@ -82,7 +82,7 @@ export default function FestivalPage() {
               and languages, we host all-night screenings that even go until 5AM for every day of
               the fest.
             </p>
-          </div>
+          </div> */}
 
           <div>
             <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-blue-100">

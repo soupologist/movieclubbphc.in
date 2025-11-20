@@ -2,6 +2,8 @@ import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import type { Session } from 'next-auth';
 
+// TODO: fix naming
+
 const ADMIN_EMAILS = [
   'f20220016@hyderabad.bits-pilani.ac.in',
   'movieclub@hyderabad.bits-pilani.ac.in',
