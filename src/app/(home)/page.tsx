@@ -37,7 +37,7 @@ const sections = [
   //   heading: 'We screen film.',
   //   before: 'We',
   //   middle: 'screen',
-  //   after: 'film.',
+  //   after: 'film.',    5
   //   middleColor: 'text-red-500',
   //   images: [
   //     // './images/screen/legobatman.jpg',
