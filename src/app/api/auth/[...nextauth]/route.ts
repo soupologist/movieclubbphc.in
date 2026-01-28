@@ -7,6 +7,7 @@ import type { Session } from 'next-auth';
 const ADMIN_EMAILS = [
   'f20220016@hyderabad.bits-pilani.ac.in',
   'movieclub@hyderabad.bits-pilani.ac.in',
+  'ronilborah@gmail.com',
 ];
 const CLUB_EMAILS = ['f20230177@hyderabad.bits-pilani.ac.in'];
 
