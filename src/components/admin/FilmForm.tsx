@@ -92,12 +92,39 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[
 
 export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
   const [form, setForm] = useState<FilmFormData>(film);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(fieldName);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        setForm((prev) => ({ ...prev, [fieldName]: data.url }));
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Upload failed. Please try again.');
+    } finally {
+      setUploading(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -130,27 +157,76 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
         placeholder="Date (eg. April 22, 2004)"
         className="p-2 bg-gray-800 w-full"
       />
-      <input
-        name="poster"
-        value={form.poster}
-        onChange={handleChange}
-        placeholder="Poster URL"
-        className="p-2 bg-gray-800 w-full"
-      />
-      <input
-        name="background"
-        value={form.background}
-        onChange={handleChange}
-        placeholder="Background Video/Image URL"
-        className="p-2 bg-gray-800 w-full"
-      />
-      <input
-        name="backgroundImage"
-        value={form.backgroundImage}
-        onChange={handleChange}
-        placeholder="Optional Background Image URL"
-        className="p-2 bg-gray-800 w-full"
-      />
+
+      {/* Poster Upload */}
+      <div className="space-y-2">
+        <label className="block text-sm text-gray-400">Poster Image</label>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e, 'poster')}
+            disabled={uploading === 'poster'}
+            className="p-2 bg-gray-800 flex-grow"
+          />
+          {uploading === 'poster' && <span className="text-blue-400">Uploading...</span>}
+        </div>
+        <input
+          name="poster"
+          value={form.poster}
+          onChange={handleChange}
+          placeholder="Or paste Poster URL directly"
+          className="p-2 bg-gray-800 w-full text-sm"
+        />
+        {form.poster && (
+          <img src={form.poster} alt="Preview" className="h-32 object-cover rounded" />
+        )}
+      </div>
+
+      {/* Background Upload */}
+      <div className="space-y-2">
+        <label className="block text-sm text-gray-400">Background Video/Image</label>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            accept="image/*,video/*"
+            onChange={(e) => handleFileUpload(e, 'background')}
+            disabled={uploading === 'background'}
+            className="p-2 bg-gray-800 flex-grow"
+          />
+          {uploading === 'background' && <span className="text-blue-400">Uploading...</span>}
+        </div>
+        <input
+          name="background"
+          value={form.background}
+          onChange={handleChange}
+          placeholder="Or paste Background URL directly"
+          className="p-2 bg-gray-800 w-full text-sm"
+        />
+      </div>
+
+      {/* Background Image Upload */}
+      <div className="space-y-2">
+        <label className="block text-sm text-gray-400">Optional Background Image</label>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e, 'backgroundImage')}
+            disabled={uploading === 'backgroundImage'}
+            className="p-2 bg-gray-800 flex-grow"
+          />
+          {uploading === 'backgroundImage' && <span className="text-blue-400">Uploading...</span>}
+        </div>
+        <input
+          name="backgroundImage"
+          value={form.backgroundImage}
+          onChange={handleChange}
+          placeholder="Or paste Background Image URL directly"
+          className="p-2 bg-gray-800 w-full text-sm"
+        />
+      </div>
+
       <input
         name="embed"
         value={form.embed}

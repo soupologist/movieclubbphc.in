@@ -26,13 +26,11 @@ export const metadata = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="font-gotham bg-black text-white">
-        <Navbar />
-        <main className="pt-20 pb-16 min-h-screen">{children}</main>
-        <Footer />
-        <Analytics />
-      </body>
-    </html>
+    <>
+      <Navbar />
+      <main className="pt-20 pb-16 min-h-screen">{children}</main>
+      <Footer />
+      <Analytics />
+    </>
   );
 }

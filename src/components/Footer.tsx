@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="w-full px-6 md:px-12 py-10 border-t border-gray-800 text-sm text-gray-400">
+    <footer className="w-full px-6 md:px-12 py-10 border-t border-gray-800 text-sm text-gray-400 bg-black">
       <div className="max-w-screen-xl mx-auto flex flex-col md:flex-row justify-between gap-8">
         {/* Left Section */}
         <div className="space-y-2">

@@ -73,7 +73,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 transition-transform duration-300 backdrop-blur-md bg-black/60 ${
+        className={`fixed top-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 transition-transform duration-300 backdrop-blur-md bg-black/60 text-white ${
           showNavbar ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
@@ -96,6 +96,12 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          
+          {status === 'authenticated' && (
+            <Link href="/club/filmoftheweek" className="hover:text-gray-300">
+              Film of the Week
+            </Link>
+          )}
 
           <div className="relative ml-6" ref={dropdownRef}>
             <button
@@ -175,6 +181,16 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          
+          {status === 'authenticated' && (
+            <Link
+              href="/club/filmoftheweek"
+              onClick={() => setMenuOpen(false)}
+              className="hover:text-gray-300"
+            >
+              Film of the Week
+            </Link>
+          )}
 
           {user?.role === 'admin' && (
             <Link
