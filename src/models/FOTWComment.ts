@@ -2,7 +2,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IFOTWComment extends Document {
   filmId: string;
-  userId: string;
   userName: string;
   userEmail: string;
   content: string;
@@ -21,7 +20,6 @@ export interface IFOTWComment extends Document {
 const FOTWCommentSchema = new Schema<IFOTWComment>(
   {
     filmId: { type: String, required: true, index: true },
-    userId: { type: String, required: true },
     userName: { type: String, required: true },
     userEmail: { type: String, required: true },
     content: { type: String, required: true },

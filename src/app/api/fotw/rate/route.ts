@@ -4,10 +4,11 @@ import dbConnect from '@/lib/dbConnect';
 import FOTWRating from '@/models/FOTWRating';
 import FOTWUser from '@/models/FOTWUser';
 import FOTWFilm from '@/models/FOTWFilm';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     await dbConnect();
     const { filmId, rating } = await req.json();
 
-    if (rating < 0 || rating > 5) {
+    if (rating < 0.5 || rating > 5) {
       return NextResponse.json({ message: 'Invalid rating' }, { status: 400 });
     }
 
@@ -25,39 +26,82 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
 
-    // Check if already rated
+    // Gating: user must have marked film as watched before rating
+    const hasWatched = Array.isArray(film.watchedBy) &&
+      film.watchedBy.some((w: any) => w.userEmail === session.user.email);
+    if (!hasWatched) {
+      return NextResponse.json(
+        { error: 'You must mark the film as watched before rating.' },
+        { status: 403 }
+      );
+    }
+
+    // Check if already rated — if so, update; otherwise create
     const existingRating = await FOTWRating.findOne({
       userEmail: session.user.email,
       filmId,
     });
 
     if (existingRating) {
-      return NextResponse.json({ message: 'Already rated' }, { status: 400 });
+      // Update existing rating
+      existingRating.rating = rating;
+      await existingRating.save();
+    } else {
+      // Create new rating
+      await FOTWRating.create({
+        userEmail: session.user.email,
+        filmId,
+        rating,
+      });
+
+      // Only increment watch count on FIRST rating
+      await FOTWUser.findOneAndUpdate(
+        { email: session.user.email },
+        {
+          $set: {
+            name: session.user.name,
+            image: session.user.image,
+          },
+          $inc: { ratingsCount: 1 },
+        },
+        { upsert: true, new: true }
+      );
     }
 
-    // Create Rating
-    await FOTWRating.create({
+    return NextResponse.json({ success: true, updated: !!existingRating });
+  } catch (error) {
+    console.error('Error rating film:', error);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// DELETE: Remove user's rating for a film
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    await dbConnect();
+    const { filmId } = await req.json();
+
+    const deleted = await FOTWRating.findOneAndDelete({
       userEmail: session.user.email,
       filmId,
-      rating,
     });
 
-    // Update or Create User and increment count
-    await FOTWUser.findOneAndUpdate(
-      { email: session.user.email },
-      {
-        $set: {
-          name: session.user.name,
-          image: session.user.image,
-        },
-        $inc: { ratingsCount: 1 },
-      },
-      { upsert: true, new: true }
-    );
+    if (deleted) {
+      // Decrement watch count
+      await FOTWUser.findOneAndUpdate(
+        { email: session.user.email },
+        { $inc: { ratingsCount: -1 } }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error rating film:', error);
+    console.error('Error deleting rating:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

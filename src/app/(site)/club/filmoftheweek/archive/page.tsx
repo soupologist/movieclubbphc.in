@@ -3,9 +3,44 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, MessageCircle, ArrowLeft, Eye, Users, X, ExternalLink } from 'lucide-react';
+import { Star, Eye, X } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
 import { instrumentSerif } from '@/app/fonts';
+
+const C = {
+  bg: '#000000',
+  card: '#0f0f0f',
+  nested: '#141414',
+  border: '#1e1e1e',
+  green: '#00e054',
+  orange: '#ff8000',
+  blue: '#40bcf4',
+  muted: '#8a9bb0',
+  dim: '#4a5568',
+};
+
+function MiniStars({ value, size = 12 }: { value: number; size?: number }) {
+  return (
+    <span className="inline-flex">
+      {[1, 2, 3, 4, 5].map((i) => {
+        const fill = value >= i ? 1 : value >= i - 0.5 ? 0.5 : 0;
+        return (
+          <span key={i} className="relative" style={{ width: size, height: size }}>
+            <Star style={{ width: size, height: size }} className="absolute" color={C.dim} strokeWidth={1.5} />
+            {fill > 0 && (
+              <span
+                className="absolute top-0 left-0 overflow-hidden"
+                style={{ width: fill === 1 ? '100%' : '50%', height: size }}
+              >
+                <Star style={{ width: size, height: size }} fill={C.green} color={C.green} strokeWidth={1.5} />
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 interface ArchiveFilm {
   _id: string;
@@ -16,14 +51,23 @@ interface ArchiveFilm {
   ratingsCount: number;
   watchedCount: number;
   averageRating: number;
-  commentsCount: number;
+  allRatings: {
+    userEmail: string;
+    name: string;
+    rating: number;
+    createdAt: string;
+  }[];
+  watchedBy: {
+    userEmail: string;
+    watchedAt: string;
+  }[];
   chosenBy?: string;
 }
 
 export default function FOTWArchivePage() {
   const [films, setFilms] = useState<ArchiveFilm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFilm, setSelectedFilm] = useState<ArchiveFilm | null>(null);
+  const [flippedId, setFlippedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/fotw/archive')
@@ -35,227 +79,317 @@ export default function FOTWArchivePage() {
 
   if (loading) return <LoadingScreen />;
 
+  const starValues = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+
   return (
-    <div className="pb-20">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-10">
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh' }} className="pb-20">
+      {/* ── Page Header ──────────────────────────────────────── */}
+      <div className="flex flex-col mb-10 pt-8" style={{ gap: 8 }}>
         <Link
           href="/club/filmoftheweek"
-          className="text-zinc-500 hover:text-white transition-colors p-2 hover:bg-zinc-800/60 rounded-lg"
+          className="hover:text-white transition-colors"
+          style={{ color: C.muted, fontSize: 14 }}
         >
-          <ArrowLeft size={20} />
+          ← Film of the Week
         </Link>
-        <div>
-          <h1
-            className={`text-4xl sm:text-5xl font-bold text-white tracking-tight ${instrumentSerif.className}`}
-          >
-            Archive
-          </h1>
-          <p className="text-zinc-600 mt-1 text-sm">
-            {films.length} {films.length === 1 ? 'film' : 'films'} featured
-          </p>
-        </div>
+        <h1 className={`text-4xl sm:text-5xl font-bold text-white tracking-tight m-0 ${instrumentSerif.className}`}>
+          Archive
+        </h1>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {films.map((film, index) => (
-          <div
-            key={film._id}
-            onClick={() => setSelectedFilm(film)}
-            className="cursor-pointer group"
-          >
-            <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden ring-1 ring-white/5 group-hover:ring-white/15 transition-all duration-300">
-              <Image
-                src={film.posterUrl}
-                alt={film.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                unoptimized
-              />
-              {/* Overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1">
-                      <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                      <span className="font-semibold text-white">
-                        {film.averageRating > 0 ? film.averageRating.toFixed(1) : '—'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-zinc-400">
-                      <span className="flex items-center gap-0.5">
-                        <Eye size={11} />
-                        {film.watchedCount}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <MessageCircle size={11} />
-                        {film.commentsCount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {/* ── Grid ────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {films.map((film, index) => {
+          const isFlipped = flippedId === film._id;
 
-              {/* Week number badge */}
-              {index === 0 && (
-                <div className="absolute top-2 left-2 bg-yellow-500/90 text-black text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
-                  Current
-                </div>
-              )}
-            </div>
+          const counts = starValues.map((v) =>
+            film.allRatings.filter((r) => r.rating === v).length
+          );
+          const maxCount = Math.max(...counts, 0);
 
-            <div className="mt-2 px-0.5">
-              <h3 className="font-medium text-white text-sm line-clamp-1 group-hover:text-zinc-200 transition-colors">
-                {film.title}
-              </h3>
-              <p className="text-[11px] text-zinc-600 mt-0.5">
-                {new Date(film.createdAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-                {film.chosenBy && (
-                  <span>
-                    {' '}
-                    · <span className="text-zinc-500">{film.chosenBy}</span>
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {films.length === 0 && (
-        <div className="text-center text-zinc-600 py-24">
-          <p className="text-sm">No films in the archive yet.</p>
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {selectedFilm && (
-        <div
-          className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedFilm(null)}
-        >
-          <div
-            className="bg-zinc-950 border border-zinc-800/60 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal content */}
-            <div className="relative">
-              {/* Background blur header */}
-              <div className="absolute inset-0 h-48 overflow-hidden rounded-t-2xl">
-                <Image
-                  src={selectedFilm.posterUrl}
-                  alt=""
-                  fill
-                  className="object-cover blur-3xl opacity-20 scale-125"
-                  unoptimized
-                />
-              </div>
-
-              {/* Close */}
-              <button
-                onClick={() => setSelectedFilm(null)}
-                className="absolute top-4 right-4 z-20 text-zinc-500 hover:text-white transition-colors w-8 h-8 rounded-lg hover:bg-zinc-800/60 flex items-center justify-center"
+          return (
+            <div
+              key={film._id}
+              style={{ perspective: '1000px', width: '100%', minWidth: 180 }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  transformStyle: 'preserve-3d',
+                  transition: 'transform 0.45s ease',
+                  transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                }}
               >
-                <X size={18} />
-              </button>
-
-              <div className="relative flex flex-col sm:flex-row gap-6 p-6">
-                {/* Poster */}
-                <div className="flex-shrink-0 w-40 sm:w-48">
-                  <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/5">
+                {/* ── Front Face ──────────────────────────────── */}
+                <div
+                  style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    position: 'relative',
+                    width: '100%',
+                    zIndex: isFlipped ? 0 : 2,
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isFlipped) setFlippedId(film._id);
+                  }}
+                >
+                  <div
+                    className="group relative overflow-hidden"
+                    style={{ borderRadius: 12, aspectRatio: '2/3', width: '100%' }}
+                  >
                     <Image
-                      src={selectedFilm.posterUrl}
-                      alt={selectedFilm.title}
+                      src={film.posterUrl}
+                      alt={film.title}
                       fill
                       className="object-cover"
                       unoptimized
                     />
+
+                    {index === 0 && (
+                      <div
+                        className="absolute top-2 left-2 z-10"
+                        style={{
+                          background: C.green,
+                          color: '#000',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          borderRadius: 999,
+                          padding: '3px 8px',
+                        }}
+                      >
+                        Current
+                      </div>
+                    )}
+
+                    {/* Hover Overlay */}
+                    <div
+                      className="absolute inset-0 z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                      style={{
+                        backgroundColor: 'rgba(0,0,0,0.88)',
+                        borderRadius: 12,
+                      }}
+                    >
+                      <div className="text-center">
+                        <span style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1 }}>
+                          {film.averageRating.toFixed(1)}
+                        </span>
+                        <div className="flex items-center justify-center gap-1 mt-1 mb-4">
+                          <MiniStars value={film.averageRating} size={14} />
+                        </div>
+
+                        <div className="flex items-center justify-center gap-4">
+                          <div className="flex items-center gap-1.5" style={{ color: C.muted }}>
+                            <Eye size={14} />
+                            <span style={{ fontSize: 13, fontWeight: 500 }}>{film.watchedCount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text Below Poster */}
+                  <div className="mt-2 text-left">
+                    <h3
+                      className="m-0 text-white truncate"
+                      style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.2 }}
+                    >
+                      {film.title}
+                    </h3>
+                    {film.chosenBy && (
+                      <div style={{ color: C.blue, fontSize: 11, marginTop: 2 }}>
+                        chosen by {film.chosenBy}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Info */}
-                <div className="flex-grow">
-                  <h2
-                    className={`text-3xl font-bold text-white mb-3 ${instrumentSerif.className}`}
+                {/* ── Back Face ───────────────────────────────── */}
+                <div
+                  style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: '#0f0f0f',
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 12,
+                    zIndex: isFlipped ? 2 : 0,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      padding: 14,
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
                   >
-                    {selectedFilm.title}
-                  </h2>
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3
+                        className="m-0 text-white truncate"
+                        style={{ fontSize: 13, fontWeight: 600, flex: 1 }}
+                      >
+                        {film.title}
+                      </h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlippedId(null);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: C.muted,
+                          cursor: 'pointer',
+                          padding: 2,
+                          flexShrink: 0,
+                        }}
+                        className="hover:text-white"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
 
-                  {/* Meta */}
-                  <div className="space-y-2 mb-6">
-                    <p className="text-zinc-500 text-sm">
-                      {new Date(selectedFilm.createdAt).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </p>
-                    {selectedFilm.chosenBy && (
-                      <p className="text-sm text-amber-400/80 flex items-center gap-1.5">
-                        <Users size={14} />
-                        Chosen by{' '}
-                        <span className="font-semibold">{selectedFilm.chosenBy}</span>
-                      </p>
+                    {/* Chosen By Row */}
+                    {film.chosenBy && (
+                      <div className="flex items-center gap-1">
+                        <span style={{ color: C.dim, fontSize: 10 }}>chosen by</span>
+                        <span style={{ color: C.blue, fontSize: 11 }}>{film.chosenBy}</span>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Stats */}
-                  <div className="flex gap-6 mb-6">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <Star size={16} className="text-yellow-400 fill-yellow-400" />
-                        <span className="text-2xl font-bold text-white">
-                          {selectedFilm.averageRating > 0
-                            ? selectedFilm.averageRating.toFixed(1)
-                            : '—'}
-                        </span>
+                    {/* Stats Row */}
+                    <div className="flex items-center gap-3 my-3">
+                      <div className="flex items-center gap-1" style={{ color: C.muted, fontSize: 11 }}>
+                        <Eye size={11} style={{ color: C.dim }} />
+                        {film.watchedCount} watched
                       </div>
-                      <span className="text-xs text-zinc-600 uppercase tracking-wider">
-                        Avg Rating
-                      </span>
+                      <div className="flex items-center gap-1" style={{ color: C.muted, fontSize: 11 }}>
+                        <Star size={11} style={{ color: C.dim }} />
+                        {film.ratingsCount} ratings
+                      </div>
+                      <div style={{ color: C.green, fontSize: 13, fontWeight: 600, marginLeft: 'auto' }}>
+                        {film.averageRating.toFixed(1)}
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <Eye size={16} className="text-blue-400" />
-                        <span className="text-2xl font-bold text-white">
-                          {selectedFilm.watchedCount}
-                        </span>
+
+                    {/* Ratings Breakdown Section */}
+                    <div className="mb-4">
+                      <div style={{ color: C.dim, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                        RATINGS
                       </div>
-                      <span className="text-xs text-zinc-600 uppercase tracking-wider">
-                        Watched
-                      </span>
+                      {/* Mini Histogram */}
+                      <div className="flex items-end mb-2" style={{ height: 32, gap: 2 }}>
+                        {starValues.map((v, i) => {
+                          const count = counts[i];
+                          const heightPercent = maxCount > 0 ? (count / maxCount) : 0;
+                          const heightPx = Math.max(2, heightPercent * 32); 
+                          const isPeak = maxCount > 0 && count === maxCount && count > 0;
+                          return (
+                            <div
+                              key={v}
+                              style={{
+                                width: 'calc(10% - 2px)',
+                                height: heightPx,
+                                backgroundColor: isPeak ? C.green : '#1e1e1e',
+                                borderRadius: '2px 2px 0 0',
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                      {/* Ratings List */}
+                      <div style={{ maxHeight: 80, overflowY: 'auto' }} className="space-y-1.5 pr-1">
+                        {film.allRatings.map((r, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <div
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: '50%',
+                                backgroundColor: '#1a1a3a',
+                                color: C.blue,
+                                fontSize: 9,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {r.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="truncate text-white" style={{ fontSize: 10, flex: 1 }}>
+                              {r.name}
+                            </div>
+                            <div style={{ color: C.green, fontSize: 10, fontWeight: 600 }}>
+                              {r.rating}
+                            </div>
+                            <div style={{ color: C.dim, fontSize: 9 }}>
+                              {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                            </div>
+                          </div>
+                        ))}
+                        {film.allRatings.length === 0 && (
+                          <div style={{ color: C.dim, fontSize: 10 }}>No ratings yet</div>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <MessageCircle size={16} className="text-zinc-400" />
-                        <span className="text-2xl font-bold text-white">
-                          {selectedFilm.commentsCount}
-                        </span>
+
+                    {/* Who Watched Section */}
+                    {film.watchedBy.length > 0 && (
+                      <div className="mb-4">
+                        <div style={{ color: C.dim, fontSize: 9, textTransform: 'uppercase', marginBottom: 4 }}>
+                          WATCHED BY
+                        </div>
+                        <div className="flex flex-wrap" style={{ gap: 4 }}>
+                          {film.watchedBy.map((w, idx) => (
+                            <div
+                              key={idx}
+                              title={w.userEmail}
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: '50%',
+                                backgroundColor: C.border,
+                                color: 'white',
+                                fontSize: 9,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {w.userEmail.charAt(0).toUpperCase()}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <span className="text-xs text-zinc-600 uppercase tracking-wider">
-                        Comments
-                      </span>
+                    )}
+
+                    <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+                      <div style={{ color: C.dim, fontSize: 10 }}>
+                        Added {new Date(film.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Watch button */}
-                  <a
-                    href={selectedFilm.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-white hover:bg-zinc-200 text-black px-6 py-2.5 rounded-xl font-bold transition-all duration-200 text-sm"
-                  >
-                    <ExternalLink size={16} />
-                    Watch on Drive
-                  </a>
                 </div>
               </div>
             </div>
-          </div>
+          );
+        })}
+      </div>
+
+      {films.length === 0 && (
+        <div className="text-center py-24">
+          <p className="text-sm" style={{ color: C.dim }}>No films in the archive yet.</p>
         </div>
       )}
     </div>

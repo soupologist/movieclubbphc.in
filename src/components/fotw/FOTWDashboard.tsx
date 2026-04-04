@@ -5,20 +5,35 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import StarRating from './StarRating';
-import CommentSection from './CommentSection';
 import {
-  ExternalLink,
   Trophy,
   Eye,
   ChevronDown,
   ChevronUp,
-  Users,
   Star,
   Film,
   Clock,
+  Heart,
+  X,
+  Activity,
+  BookOpen,
 } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
 import { instrumentSerif } from '@/app/fonts';
+
+/* ── Design tokens ───────────────────────────────────────── */
+const C = {
+  bg: '#000000',
+  card: '#0f0f0f',
+  nested: '#141414',
+  border: '#1e1e1e',
+  green: '#00e054',
+  orange: '#ff8000',
+  blue: '#40bcf4',
+  muted: '#8a9bb0',
+  dim: '#4a5568',
+  inputBg: '#0a0a0a',
+};
 
 interface FOTWData {
   currentFilm: {
@@ -42,25 +57,67 @@ interface FOTWData {
     _id: string;
     rating: number;
     userEmail: string;
-    userId: {
-      name: string;
-      image?: string;
-    };
+    userId: { name: string; image?: string };
     createdAt: string;
   }[];
   averageRating: number;
   watchedCount: number;
+  hasWatched: boolean;
+}
+
+interface ActivityData {
+  ratings: {
+    _id: string;
+    rating: number;
+    ratedAt: string;
+    filmId: string;
+    filmTitle: string;
+    filmPosterUrl: string;
+  }[];
+  totalWatched: number;
+}
+
+/* ── Shared simple MiniStars ──────────────────────────────── */
+function MiniStars({ value, size = 14 }: { value: number; size?: number }) {
+  return (
+    <span className="inline-flex">
+      {[1, 2, 3, 4, 5].map((i) => {
+        const fill = value >= i ? 1 : value >= i - 0.5 ? 0.5 : 0;
+        return (
+          <span key={i} className="relative" style={{ width: size, height: size }}>
+            <Star style={{ width: size, height: size }} className="absolute" strokeWidth={1.5} color={C.dim} />
+            {fill > 0 && (
+              <span className="absolute top-0 left-0 overflow-hidden" style={{ width: fill === 1 ? '100%' : '50%', height: size }}>
+                <Star style={{ width: size, height: size }} fill={C.green} color={C.green} strokeWidth={1.5} />
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 export default function FOTWDashboard() {
   const { data: session } = useSession();
   const [data, setData] = useState<FOTWData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [rating, setRating] = useState(0);
+  const [pendingRating, setPendingRating] = useState(0);
   const [rateLoading, setRateLoading] = useState(false);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showAllRatings, setShowAllRatings] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [activity, setActivity] = useState<ActivityData | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  // TODO: persist like to DB
+  const [liked, setLiked] = useState(false);
+
+  // Log modal state
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [modalRating, setModalRating] = useState(0);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
 
   const fetchData = useCallback(() => {
     fetch('/api/fotw/data')
@@ -72,7 +129,12 @@ export default function FOTWDashboard() {
           allRatings: d.allRatings || [],
           averageRating: d.averageRating || 0,
           watchedCount: d.watchedCount || 0,
+          hasWatched: d.hasWatched || false,
         });
+        if (d.userRating) {
+          setPendingRating(d.userRating);
+          setModalRating(d.userRating);
+        }
       })
       .catch((e) => console.error(e))
       .finally(() => setLoading(false));
@@ -82,70 +144,142 @@ export default function FOTWDashboard() {
     fetchData();
   }, [fetchData]);
 
-  const handleRate = async () => {
-    if (!data?.currentFilm || rating === 0) return;
-    setRateLoading(true);
+  const fetchActivity = async () => {
+    if (activity) {
+      setShowActivity(true);
+      return;
+    }
+    setActivityLoading(true);
+    setShowActivity(true);
     try {
-      const res = await fetch('/api/fotw/rate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filmId: data.currentFilm._id,
-          rating,
-        }),
-      });
-      if (res.ok) {
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                userRating: rating,
-                watchedCount: prev.watchedCount + 1,
-              }
-            : null
-        );
-        // Reload data to reflect all changes
-        fetchData();
-      }
+      const res = await fetch('/api/fotw/activity');
+      const d = await res.json();
+      setActivity(d);
     } catch (e) {
       console.error(e);
     } finally {
-      setRateLoading(false);
+      setActivityLoading(false);
     }
   };
+
+  const handleRate = async (newRating: number) => {
+    if (!data?.currentFilm) return;
+    setPendingRating(newRating); // optimistic update
+    try {
+      await fetch('/api/fotw/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filmId: data.currentFilm._id, rating: newRating }),
+      });
+      // re-fetch main data to update histogram and stats
+      fetchData();
+    } catch (e) {
+      console.error('Rating failed', e);
+    }
+  };
+
+  const handleLogSave = async () => {
+    if (!data?.currentFilm) return;
+    setLogLoading(true);
+    setLogError(null);
+    try {
+      // 1. Mark watched
+      let res = await fetch('/api/fotw/watch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filmId: data.currentFilm._id }),
+      });
+      if (!res.ok) throw new Error('Failed to log watch');
+
+      // 2. Rate (if > 0)
+      if (modalRating > 0) {
+        res = await fetch('/api/fotw/rate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filmId: data.currentFilm._id, rating: modalRating }),
+        });
+        if (!res.ok) throw new Error('Failed to save rating');
+      }
+
+      setShowLogModal(false);
+      fetchData();
+    } catch (e: any) {
+      setLogError(e.message || 'An error occurred while saving.');
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
+  const todayStr = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
 
   if (loading) return <LoadingScreen />;
 
   const film = data?.currentFilm;
+  const hasWatched = data?.hasWatched ?? false;
+
+  /* ── Histogram calculations ─────────────────────────────── */
+  const starValues = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+  const counts = starValues.map((v) => data?.allRatings.filter((r) => r.rating === v).length || 0);
+  const maxCount = Math.max(...counts, 0); // actual max, can be 0
+
+  /* ── Shared inline styles ─────────────────────────────────── */
+  const ghostBtnStyle: React.CSSProperties = {
+    border: `1px solid ${C.border}`,
+    background: 'transparent',
+    color: C.muted,
+    borderRadius: 8,
+    padding: '6px 14px',
+    fontSize: 13,
+    transition: 'all 0.2s',
+  };
+
+  const pillBtnStyle: React.CSSProperties = {
+    border: `1px solid ${C.border}`,
+    background: C.nested,
+    borderRadius: 999,
+    height: 38,
+    padding: '0 16px',
+    fontSize: 13,
+    color: C.muted,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  };
 
   return (
-    <div className="pb-20">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', paddingBottom: 80 }}>
+      {/* ── 1. Page Header ────────────────────────────────── */}
+      <div className="flex justify-between items-start mb-8 gap-4">
         <div>
-          <h1
-            className={`text-5xl sm:text-6xl font-bold text-white tracking-tight ${instrumentSerif.className}`}
-          >
+          <h1 className={`text-white m-0 ${instrumentSerif.className}`} style={{ fontSize: '3rem', lineHeight: 1 }}>
             Film of the Week
           </h1>
-          <p className="text-zinc-500 mt-1 text-sm tracking-wide uppercase">
+          <p
+            className="uppercase m-0 mt-2"
+            style={{ color: C.dim, letterSpacing: '0.1em', fontSize: 11 }}
+          >
             Watch · Rate · Discuss
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <Link
             href="/club/filmoftheweek/archive"
-            className="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-600 text-zinc-300 hover:text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+            style={ghostBtnStyle}
+            className="hover:!text-white hover:!border-[#2e2e2e]"
           >
-            <span className="flex items-center gap-2">
-              <Clock size={16} />
-              Archive
-            </span>
+            Archive
           </Link>
           {data?.isAdmin && (
             <Link
               href="/club/filmoftheweek/admin"
-              className="bg-red-950/60 hover:bg-red-900/60 border border-red-900/50 hover:border-red-700/50 text-red-400 hover:text-red-300 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+              style={ghostBtnStyle}
+              className="hover:!text-white hover:!border-[#2e2e2e]"
             >
               Admin
             </Link>
@@ -155,23 +289,27 @@ export default function FOTWDashboard() {
 
       {film ? (
         <>
-          {/* ───── Hero Film Card ───── */}
-          <div className="relative rounded-2xl overflow-hidden border border-zinc-800/60 bg-zinc-950">
-            {/* Background blur */}
-            <div className="absolute inset-0 overflow-hidden">
-              <Image
-                src={film.posterUrl}
-                alt=""
-                fill
-                className="object-cover blur-3xl opacity-15 scale-110"
-                unoptimized
-              />
-            </div>
-
-            <div className="relative flex flex-col md:flex-row gap-8 p-6 md:p-10">
-              {/* Poster */}
-              <div className="flex-shrink-0 w-full md:w-72 lg:w-80">
-                <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/5">
+          {/* ── 2. Hero Card ───────────────────────────────── */}
+          <div
+            style={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 16,
+              padding: 24,
+            }}
+          >
+            <div className="flex flex-row">
+              {/* Left Column: Poster */}
+              <div style={{ flexShrink: 0 }}>
+                <div
+                  className="relative"
+                  style={{
+                    width: 200,
+                    aspectRatio: '2/3',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                  }}
+                >
                   <Image
                     src={film.posterUrl}
                     alt={film.title}
@@ -182,399 +320,602 @@ export default function FOTWDashboard() {
                 </div>
               </div>
 
-              {/* Film Info */}
-              <div className="flex-grow flex flex-col justify-between min-w-0">
-                <div>
-                  {/* Title */}
-                  <h2
-                    className={`text-4xl md:text-5xl font-bold text-white leading-tight mb-4 ${instrumentSerif.className}`}
-                  >
-                    {film.title}
-                  </h2>
+              {/* Right Column */}
+              <div
+                style={{
+                  flex: 1,
+                  paddingLeft: 28,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                }}
+              >
+                {/* Title */}
+                <h2
+                  className={`m-0 text-white ${instrumentSerif.className}`}
+                  style={{ fontSize: '2.5rem', lineHeight: 1.1 }}
+                >
+                  {film.title}
+                </h2>
 
-                  {/* Meta badges */}
-                  <div className="flex flex-wrap gap-3 mb-8">
-                    {film.chosenBy && (
-                      <span className="inline-flex items-center gap-1.5 bg-amber-950/40 border border-amber-800/30 text-amber-400 px-3 py-1.5 rounded-lg text-sm">
-                        <Users size={14} />
-                        Chosen by <span className="font-semibold">{film.chosenBy}</span>
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1.5 bg-blue-950/40 border border-blue-800/30 text-blue-400 px-3 py-1.5 rounded-lg text-sm">
-                      <Eye size={14} />
-                      <span className="font-semibold">{data.watchedCount}</span>{' '}
-                      {data.watchedCount === 1 ? 'person' : 'people'} watched
+                {/* Metadata row */}
+                <div style={{ color: C.muted, fontSize: 13 }}>
+                  {film.createdAt && (
+                    <span>
+                      {new Date(film.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                      })}
                     </span>
-                    {film.createdAt && (
-                      <span className="inline-flex items-center gap-1.5 bg-zinc-800/40 border border-zinc-700/30 text-zinc-400 px-3 py-1.5 rounded-lg text-sm">
-                        <Clock size={14} />
-                        {new Date(film.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    )}
-                  </div>
+                  )}
+                  {film.chosenBy && (
+                    <>
+                      <span> · Chosen by </span>
+                      <span style={{ color: C.blue }}>{film.chosenBy}</span>
+                    </>
+                  )}
+                </div>
 
-                  {/* Average Rating */}
-                  {data.averageRating > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-end gap-3">
-                        <span className="text-6xl font-bold text-yellow-400 leading-none">
-                          {data.averageRating.toFixed(1)}
-                        </span>
-                        <div className="pb-1">
-                          <div className="flex mb-0.5">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                              <Star
-                                key={i}
-                                size={18}
-                                className={
-                                  i <= Math.round(data.averageRating)
-                                    ? 'text-yellow-400 fill-yellow-400'
-                                    : 'text-zinc-700'
-                                }
-                              />
-                            ))}
-                          </div>
-                          <span className="text-zinc-500 text-sm">
-                            {data.allRatings?.length || 0} ratings
-                          </span>
-                        </div>
+                {/* Action pills row */}
+                <div className="flex gap-[10px]">
+                  {/* Log button */}
+                  <button
+                    onClick={() => setShowLogModal(true)}
+                    style={{
+                      ...pillBtnStyle,
+                      color: hasWatched ? C.green : C.muted,
+                    }}
+                    className="hover:!text-white hover:!border-[#2e2e2e]"
+                  >
+                    <BookOpen size={15} color={hasWatched ? C.green : 'currentColor'} />
+                    {hasWatched ? 'Logged' : 'Log'}
+                  </button>
+                </div>
+
+                {/* Star rating row */}
+                <div id="rating-section">
+                  {hasWatched ? (
+                    <StarRating
+                      rating={pendingRating}
+                      setRating={handleRate}
+                      size="lg"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-start gap-1">
+                      <div style={{ pointerEvents: 'none', opacity: 0.5 }}>
+                        <StarRating rating={0} setRating={() => {}} size="lg" />
                       </div>
+                      <span style={{ color: C.dim, fontSize: 12 }}>
+                        Log the film first
+                      </span>
                     </div>
                   )}
                 </div>
 
-                {/* CTA & Rating */}
-                <div className="space-y-6">
-                  <a
-                    href={film.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2.5 bg-white hover:bg-zinc-100 text-black px-7 py-3.5 rounded-xl font-bold transition-all duration-200 shadow-lg shadow-white/5 hover:shadow-white/10 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <ExternalLink size={18} />
-                    Watch on Drive
-                  </a>
-
-                  {/* Your Rating */}
-                  <div className="bg-black/30 backdrop-blur-sm rounded-xl p-5 border border-zinc-800/50">
-                    <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-3">
-                      {data.userRating ? 'Your Rating' : 'Rate this Film'}
-                    </h3>
-
-                    <div className="flex items-center gap-4">
-                      <StarRating
-                        rating={data.userRating || rating}
-                        setRating={!data.userRating ? setRating : undefined}
-                        readonly={!!data.userRating}
-                      />
-                      {data.userRating && (
-                        <span className="text-yellow-400 font-bold text-xl">
-                          {data.userRating}/5
-                        </span>
-                      )}
-                    </div>
-
-                    {!data.userRating && (
-                      <button
-                        onClick={handleRate}
-                        disabled={rateLoading || rating === 0}
-                        className="mt-4 bg-yellow-500 hover:bg-yellow-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-bold py-2.5 px-8 rounded-lg transition-all duration-200 disabled:cursor-not-allowed text-sm"
-                      >
-                        {rateLoading ? 'Submitting...' : 'Submit Rating'}
-                      </button>
-                    )}
-                    {data.userRating && (
-                      <p className="mt-3 text-emerald-500/80 text-sm flex items-center gap-1.5">
-                        <Eye size={14} />
-                        Your watch has been counted on the leaderboard.
-                      </p>
-                    )}
+                {/* Stats row */}
+                <div className="flex items-center" style={{ gap: 16, color: C.dim, fontSize: 13 }}>
+                  <div className="flex items-center gap-1.5">
+                    <Eye size={14} />
+                    <span>{data.watchedCount} watched</span>
                   </div>
+                  <div className="flex items-center gap-1.5">
+                    <Star size={14} />
+                    <span>{data.allRatings?.length || 0} ratings</span>
+                  </div>
+                </div>
+
+                {/* View activity */}
+                <div>
+                  <button
+                    onClick={fetchActivity}
+                    style={{
+                      color: C.blue,
+                      fontSize: 13,
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                    }}
+                    className="hover:underline"
+                  >
+                    View your activity →
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ───── Ratings Distribution ───── */}
+          {/* ── 4. Ratings Histogram ────────────────────────── */}
           {data.allRatings && data.allRatings.length > 0 && (
-            <div className="mt-8">
-              <button
-                onClick={() => setShowAllRatings(!showAllRatings)}
-                className="w-full flex items-center justify-between bg-zinc-900/50 hover:bg-zinc-900/80 border border-zinc-800/60 rounded-2xl px-6 py-4 transition-all duration-200 group"
-              >
-                <div className="flex items-center gap-3">
-                  <Star size={20} className="text-yellow-400 fill-yellow-400" />
-                  <span className="text-lg font-semibold text-white">Ratings Breakdown</span>
-                  <span className="text-zinc-500 text-sm">
-                    {data.allRatings.length} {data.allRatings.length === 1 ? 'rating' : 'ratings'}
-                  </span>
+            <div
+              className="mt-6 flex items-center"
+              style={{
+                backgroundColor: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: 16,
+                padding: '20px 24px',
+                gap: 24,
+              }}
+            >
+              {/* Left Side: Chart */}
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    color: C.muted,
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: 12,
+                  }}
+                >
+                  RATINGS
                 </div>
-                {showAllRatings ? (
-                  <ChevronUp size={20} className="text-zinc-500 group-hover:text-white transition-colors" />
-                ) : (
-                  <ChevronDown size={20} className="text-zinc-500 group-hover:text-white transition-colors" />
-                )}
-              </button>
-
-              {showAllRatings && (
-                <div className="mt-2 bg-zinc-900/30 border border-zinc-800/40 rounded-2xl p-6 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="space-y-2">
-                    {[5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5].map((starValue) => {
-                      const count = data.allRatings.filter((r) => r.rating === starValue).length;
-                      const percentage = (count / data.allRatings.length) * 100;
-                      const allCounts = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5].map((v) =>
-                        data.allRatings.filter((r) => r.rating === v).length
-                      );
-                      const maxCount = Math.max(...allCounts);
-                      const barWidth = maxCount > 0 ? (count / maxCount) * 100 : 0;
-
-                      return (
-                        <div key={starValue} className="group">
-                          <div className="flex items-center gap-4">
-                            {/* Star label */}
-                            <div className="flex items-center gap-1 w-28 flex-shrink-0">
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => {
-                                  const fillValue = starValue - i;
-                                  return (
-                                    <span key={i} className="relative text-base">
-                                      {fillValue >= 1 ? (
-                                        <span className="text-yellow-400">★</span>
-                                      ) : fillValue === 0.5 ? (
-                                        <>
-                                          <span className="text-zinc-700">★</span>
-                                          <span
-                                            className="absolute left-0 top-0 overflow-hidden text-yellow-400"
-                                            style={{ width: '50%' }}
-                                          >
-                                            ★
-                                          </span>
-                                        </>
-                                      ) : (
-                                        <span className="text-zinc-800">★</span>
-                                      )}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            {/* Bar */}
-                            <div
-                              onClick={() => count > 0 && setSelectedRating(starValue)}
-                              className={`flex-grow relative h-6 bg-zinc-900/60 rounded-full overflow-hidden transition-colors ${
-                                count > 0
-                                  ? 'cursor-pointer group-hover:bg-zinc-800/60'
-                                  : 'cursor-default'
-                              }`}
-                            >
-                              <div
-                                className="absolute left-0 top-0 h-full bg-gradient-to-r from-yellow-500/70 to-yellow-400/70 rounded-full transition-all duration-500 ease-out"
-                                style={{ width: `${barWidth}%` }}
-                              />
-                              <div className="absolute inset-0 flex items-center justify-between px-3 text-xs font-semibold z-10">
-                                <span className={count > 0 ? 'text-white/90' : 'text-zinc-600'}>
-                                  {count > 0 && count}
-                                </span>
-                                {count > 0 && (
-                                  <span className="text-white/60">{percentage.toFixed(0)}%</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="flex items-end" style={{ height: 64, gap: 4 }}>
+                  {starValues.map((v, i) => {
+                    const count = counts[i];
+                    // At least 4px tall, scale up to 60px
+                    const heightPercent = maxCount > 0 ? (count / maxCount) : 0;
+                    const heightPx = Math.max(4, heightPercent * 60);
+                    const isPeak = maxCount > 0 && count === maxCount && count > 0;
+                    return (
+                      <div
+                        key={v}
+                        onClick={() => count > 0 && setSelectedRating(v)}
+                        style={{
+                          width: 'calc(10% - 4px)',
+                          height: heightPx,
+                          backgroundColor: isPeak ? C.green : '#1e1e1e',
+                          borderRadius: '4px 4px 0 0',
+                          cursor: count > 0 ? 'pointer' : 'default',
+                        }}
+                      />
+                    );
+                  })}
                 </div>
-              )}
+                <div className="flex justify-between mt-1">
+                  <span style={{ color: C.dim, fontSize: 11 }}>0.5</span>
+                  <span style={{ color: C.dim, fontSize: 11 }}>5.0</span>
+                </div>
+              </div>
+
+              {/* Right Side: Stats */}
+              <div className="flex flex-col items-end">
+                <span style={{ color: C.muted, fontSize: 11, textTransform: 'uppercase' }}>
+                  {data.allRatings.length} FANS
+                </span>
+                <span style={{ color: 'white', fontSize: 40, fontWeight: 600, lineHeight: 1 }}>
+                  {data.averageRating.toFixed(1)}
+                </span>
+              </div>
             </div>
           )}
 
-          {/* ───── Leaderboard (Collapsible) ───── */}
+          {/* ── 6. Leaderboard (Collapsible) ───────────────── */}
           <div className="mt-6">
             <button
               onClick={() => setShowLeaderboard(!showLeaderboard)}
-              className="w-full flex items-center justify-between bg-zinc-900/50 hover:bg-zinc-900/80 border border-zinc-800/60 rounded-2xl px-6 py-4 transition-all duration-200 group"
+              className="w-full flex items-center justify-between transition-colors"
+              style={{
+                backgroundColor: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: 16,
+                padding: '16px 24px',
+                cursor: 'pointer',
+              }}
             >
               <div className="flex items-center gap-3">
-                <Trophy size={20} className="text-yellow-500" />
-                <span className="text-lg font-semibold text-white">Leaderboard</span>
+                <span style={{ color: 'white', fontSize: 14, fontWeight: 500 }}>
+                  Leaderboard
+                </span>
                 {data?.leaderboard && data.leaderboard.length > 0 && (
-                  <span className="text-zinc-500 text-sm">
-                    {data.leaderboard.length} {data.leaderboard.length === 1 ? 'member' : 'members'}
+                  <span style={{ color: C.dim, fontSize: 13 }}>
+                    {data.leaderboard.length} members
                   </span>
                 )}
               </div>
-              {showLeaderboard ? (
-                <ChevronUp size={20} className="text-zinc-500 group-hover:text-white transition-colors" />
-              ) : (
-                <ChevronDown size={20} className="text-zinc-500 group-hover:text-white transition-colors" />
-              )}
+              <div style={{ color: C.muted }}>
+                {showLeaderboard ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
             </button>
 
             {showLeaderboard && (
-              <div className="mt-2 bg-zinc-900/30 border border-zinc-800/40 rounded-2xl p-6 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="space-y-2">
-                  {data?.leaderboard &&
-                    data.leaderboard.map((user, index) => (
-                      <div
-                        key={user._id}
-                        className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-200 ${
-                          index < 3
-                            ? 'bg-zinc-800/40 border border-zinc-700/40'
-                            : 'hover:bg-zinc-800/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <span
-                            className={`text-lg font-bold w-7 text-center ${
-                              index === 0
-                                ? 'text-yellow-400'
-                                : index === 1
-                                  ? 'text-zinc-300'
-                                  : index === 2
-                                    ? 'text-amber-700'
-                                    : 'text-zinc-600'
-                            }`}
-                          >
-                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
-                          </span>
-                          <div className="relative w-9 h-9 rounded-full overflow-hidden bg-zinc-700 ring-1 ring-white/5">
-                            {user.image && (
-                              <Image
-                                src={user.image}
-                                alt={user.name}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            )}
-                          </div>
-                          <span className="font-medium text-white text-sm">{user.name}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Film size={14} className="text-zinc-500" />
-                          <span className="text-lg font-bold text-white">{user.ratingsCount}</span>
-                        </div>
-                      </div>
-                    ))}
+              <div
+                className="mt-2"
+                style={{
+                  backgroundColor: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 16,
+                  padding: '12px 24px',
+                }}
+              >
+                {data?.leaderboard?.map((user, index) => {
+                  let rankColor = C.dim;
+                  if (index === 0) rankColor = '#f5c518';
+                  else if (index === 1) rankColor = '#a8a9ad';
+                  else if (index === 2) rankColor = '#cd7f32';
 
-                  {(!data?.leaderboard || data.leaderboard.length === 0) && (
-                    <p className="text-zinc-500 text-center py-6 text-sm">No stats yet.</p>
-                  )}
-                </div>
+                  return (
+                    <div
+                      key={user._id}
+                      className="flex items-center justify-between"
+                      style={{
+                        padding: '10px 0',
+                        borderBottom: index < (data.leaderboard.length - 1) ? `1px solid ${C.card}` : 'none',
+                      }}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span style={{ color: rankColor, fontSize: 13, width: 20 }}>
+                          {index + 1}
+                        </span>
+                        <div
+                          className="relative"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            backgroundColor: C.nested,
+                          }}
+                        >
+                          {user.image && (
+                            <Image src={user.image} alt={user.name} fill className="object-cover" unoptimized />
+                          )}
+                        </div>
+                        <span style={{ color: 'white', fontSize: 14 }}>{user.name}</span>
+                      </div>
+                      <span style={{ color: C.dim, fontSize: 13 }}>{user.ratingsCount}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* ───── Rating Detail Modal ───── */}
-          {selectedRating !== null && data?.allRatings && (
+          {/* ── 3. Log Modal ───────────────────────────────── */}
+          {showLogModal && (
             <div
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-              onClick={() => setSelectedRating(null)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                zIndex: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onClick={() => setShowLogModal(false)}
             >
               <div
-                className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl"
+                style={{
+                  backgroundColor: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 20,
+                  width: 'min(600px, 90vw)',
+                  padding: 0,
+                }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => {
-                        const fillValue = selectedRating - i;
-                        return (
-                          <span key={i} className="relative text-xl">
-                            {fillValue >= 1 ? (
-                              <span className="text-yellow-400">★</span>
-                            ) : fillValue === 0.5 ? (
-                              <>
-                                <span className="text-zinc-700">★</span>
-                                <span
-                                  className="absolute left-0 top-0 overflow-hidden text-yellow-400"
-                                  style={{ width: '50%' }}
-                                >
-                                  ★
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-zinc-700">★</span>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                    <span className="text-lg font-bold text-white">
-                      {data.allRatings.filter((r) => r.rating === selectedRating).length}{' '}
-                      {data.allRatings.filter((r) => r.rating === selectedRating).length === 1
-                        ? 'rating'
-                        : 'ratings'}
-                    </span>
-                  </div>
+                {/* Header */}
+                <div
+                  style={{
+                    padding: '20px 24px',
+                    borderBottom: `1px solid ${C.border}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>
+                    I watched...
+                  </span>
                   <button
-                    onClick={() => setSelectedRating(null)}
-                    className="text-zinc-500 hover:text-white transition-colors text-xl w-8 h-8 rounded-lg hover:bg-zinc-800 flex items-center justify-center"
+                    onClick={() => setShowLogModal(false)}
+                    style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 20 }}
+                    className="hover:!text-white p-0 flex"
                   >
-                    ×
+                    <X size={20} />
                   </button>
                 </div>
 
-                <div className="space-y-2">
-                  {data.allRatings
-                    .filter((r) => r.rating === selectedRating)
-                    .map((rating) => (
+                {/* Body */}
+                <div style={{ padding: 24, display: 'flex', gap: 20 }}>
+                  <div style={{ flexShrink: 0 }}>
+                    <div
+                      className="relative"
+                      style={{
+                        width: 120,
+                        aspectRatio: '2/3',
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Image src={film.posterUrl} alt={film.title} fill className="object-cover" unoptimized />
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div className="mb-1 flex items-baseline gap-2">
+                      <span style={{ color: 'white', fontSize: 20, fontWeight: 500 }}>{film.title}</span>
+                      {film.createdAt && (
+                        <span style={{ color: C.muted }}>
+                          {new Date(film.createdAt).getFullYear()}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Watch on Drive link */}
+                    <a
+                      href={film.driveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: C.blue, fontSize: 13, display: 'inline-block', marginBottom: 16 }}
+                      className="hover:underline"
+                    >
+                      Watch on Drive ↗
+                    </a>
+
+                    <div className="flex items-center gap-2 mb-4">
+                      <input type="checkbox" defaultChecked />
+                      <span style={{ color: C.muted, fontSize: 13 }}>Watched on</span>
                       <div
-                        key={rating._id}
-                        className="flex items-center gap-3 p-3.5 bg-zinc-900/50 rounded-xl border border-zinc-800/40"
+                        style={{
+                          background: C.nested,
+                          border: `1px solid ${C.border}`,
+                          borderRadius: 6,
+                          padding: '3px 10px',
+                          color: 'white',
+                          fontSize: 13,
+                        }}
                       >
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-zinc-700 flex-shrink-0 ring-1 ring-white/5">
-                          {rating.userId?.image && (
-                            <Image
-                              src={rating.userId.image}
-                              alt={rating.userId.name}
-                              fill
-                              className="object-cover"
-                              unoptimized
-                            />
-                          )}
-                        </div>
-                        <div className="flex-grow">
-                          <p className="font-medium text-white text-sm">
-                            {rating.userId?.name || 'Anonymous'}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {new Date(rating.createdAt).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </p>
-                        </div>
+                        {todayStr}
                       </div>
-                    ))}
+                      <input type="checkbox" className="ml-2" />
+                      <span style={{ color: C.muted, fontSize: 13 }}>
+                        I've watched this before
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                      <div className="flex items-center gap-3">
+                        <span style={{ color: C.muted, fontSize: 13 }}>Rating</span>
+                        <StarRating rating={modalRating} setRating={(r) => setModalRating(r)} size="md" />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span style={{ color: C.muted, fontSize: 13 }}>Like</span>
+                        <button
+                          onClick={() => setLiked(!liked)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: liked ? C.orange : C.muted,
+                            padding: 0,
+                            display: 'flex',
+                          }}
+                        >
+                          <Heart size={22} color={liked ? C.orange : 'currentColor'} fill={liked ? C.orange : 'none'} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div
+                  style={{
+                    padding: '16px 24px',
+                    borderTop: `1px solid ${C.border}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: 8,
+                  }}
+                >
+                  <button
+                    onClick={handleLogSave}
+                    disabled={logLoading}
+                    style={{
+                      backgroundColor: C.green,
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      fontSize: 14,
+                      padding: '10px 28px',
+                      cursor: logLoading ? 'not-allowed' : 'pointer',
+                      opacity: logLoading ? 0.7 : 1,
+                    }}
+                    className="hover:bg-[#00c94a] transition-colors"
+                  >
+                    {logLoading ? 'Saving...' : 'Save'}
+                  </button>
+                  {logError && <div style={{ color: '#ff4444', fontSize: 13 }}>{logError}</div>}
                 </div>
               </div>
             </div>
           )}
 
-          {/* ───── Discussion ───── */}
-          {session?.user && (
-            <CommentSection
-              filmId={film._id}
-              currentUserEmail={session.user.email || ''}
-              currentUserName={session.user.name || 'Anonymous'}
-            />
+          {/* ── 5. Rating Detail Modal ─────────────────────── */}
+          {selectedRating !== null && data?.allRatings && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                zIndex: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onClick={() => setSelectedRating(null)}
+            >
+              <div
+                style={{
+                  backgroundColor: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 20,
+                  maxWidth: 520,
+                  width: '90vw',
+                  maxHeight: '80vh',
+                  overflowY: 'auto',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  style={{
+                    padding: '20px 24px',
+                    borderBottom: `1px solid ${C.border}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>
+                    {data.allRatings.filter((r) => r.rating === selectedRating).length} ratings for {selectedRating} stars
+                  </span>
+                  <button
+                    onClick={() => setSelectedRating(null)}
+                    style={{ background: 'none', border: 'none', color: '#8a9bb0', cursor: 'pointer' }}
+                    className="flex p-0 hover:!text-white"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div style={{ padding: '20px 24px' }}>
+                  <div className="space-y-3">
+                    {data.allRatings
+                      .filter((r) => r.rating === selectedRating)
+                      .map((rating) => (
+                        <div key={rating._id} className="flex items-center gap-4">
+                          <div
+                            className="relative"
+                            style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', backgroundColor: C.nested }}
+                          >
+                            {rating.userId?.image && (
+                              <Image src={rating.userId.image} alt={rating.userId.name} fill className="object-cover" unoptimized />
+                            )}
+                          </div>
+                          <div>
+                            <p style={{ color: 'white', fontSize: 14, margin: 0 }}>{rating.userId?.name || 'Anonymous'}</p>
+                            <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
+                              {new Date(rating.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── 5. Activity Modal ──────────────────────────── */}
+          {showActivity && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                zIndex: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onClick={() => setShowActivity(false)}
+            >
+              <div
+                style={{
+                  backgroundColor: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 20,
+                  maxWidth: 520,
+                  width: '90vw',
+                  maxHeight: '80vh',
+                  overflowY: 'auto',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  style={{
+                    padding: '20px 24px',
+                    borderBottom: `1px solid ${C.border}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>
+                    Your Activity
+                  </span>
+                  <button
+                    onClick={() => setShowActivity(false)}
+                    style={{ background: 'none', border: 'none', color: '#8a9bb0', cursor: 'pointer' }}
+                    className="flex p-0 hover:!text-white"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div style={{ padding: '20px 24px' }}>
+                  {activityLoading ? (
+                    <div style={{ color: C.dim, textAlign: 'center', padding: '40px 0' }}>Loading...</div>
+                  ) : activity ? (
+                    <>
+                      <div className="flex gap-8 mb-6">
+                        <div>
+                          <span style={{ fontSize: 24, fontWeight: 700, color: 'white', display: 'block' }}>{activity.totalWatched}</span>
+                          <span style={{ fontSize: 11, textTransform: 'uppercase', color: C.dim }}>Films Watched</span>
+                        </div>
+                      </div>
+
+                      {activity.ratings.length > 0 && (
+                        <div className="mb-6">
+                          <h3 style={{ fontSize: 11, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}>Your Ratings</h3>
+                          <div className="space-y-3">
+                            {activity.ratings.map((r) => (
+                              <div key={r._id} className="flex items-center gap-3">
+                                <div className="relative" style={{ width: 40, height: 60, borderRadius: 6, overflow: 'hidden', backgroundColor: C.nested }}>
+                                  {r.filmPosterUrl && <Image src={r.filmPosterUrl} alt={r.filmTitle} fill className="object-cover" unoptimized />}
+                                </div>
+                                <div>
+                                  <p style={{ color: 'white', fontSize: 14, fontWeight: 500, margin: '0 0 2px 0' }}>{r.filmTitle}</p>
+                                  <div className="flex items-center gap-2">
+                                    <MiniStars value={r.rating} size={12} />
+                                    <span style={{ color: C.dim, fontSize: 12 }}>
+                                      {new Date(r.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           )}
         </>
       ) : (
-        <div className="text-center py-24 bg-zinc-900/30 rounded-2xl border border-zinc-800/40">
-          <Film size={48} className="text-zinc-700 mx-auto mb-4" />
-          <p className="text-zinc-500 text-lg">No film currently active.</p>
-          <p className="text-zinc-600 text-sm mt-1">Check back soon!</p>
+        /* ── 7. Empty State ──────────────────────────────── */
+        <div className="flex flex-col items-center justify-center py-20 mt-8">
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              backgroundColor: C.border,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 12,
+              marginBottom: 16,
+            }}
+          >
+            <Film size={28} color={C.dim} />
+          </div>
+          <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>No film this week</span>
+          <span style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>Check back soon</span>
         </div>
       )}
     </div>

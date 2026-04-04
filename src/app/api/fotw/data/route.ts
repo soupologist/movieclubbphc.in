@@ -5,11 +5,12 @@ import FOTWFilm from '@/models/FOTWFilm';
 import FOTWRating from '@/models/FOTWRating';
 import FOTWUser from '@/models/FOTWUser';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
+import { authOptions } from '@/lib/auth';
 
 // GET: Fetch current film, leaderboard, and user's rating status
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
     let allRatings: any[] = [];
     let averageRating = 0;
     let watchedCount = 0;
+    let hasWatched = false;
 
     if (currentFilm) {
       // 3. Check if current user rated this film
@@ -41,13 +43,18 @@ export async function GET(req: Request) {
         userRating = rating.rating;
       }
 
+      // Watched count from watchedBy array
+      watchedCount = Array.isArray(currentFilm.watchedBy) ? currentFilm.watchedBy.length : 0;
+
+      // Check if current user has watched
+      hasWatched = Array.isArray(currentFilm.watchedBy)
+        ? currentFilm.watchedBy.some((w: any) => w.userEmail === session.user.email)
+        : false;
+
       // 4. Get all ratings for current film
       const ratings = await FOTWRating.find({ filmId: currentFilm._id })
         .sort({ createdAt: -1 })
         .lean();
-
-      // Watched count = number of ratings
-      watchedCount = ratings.length;
 
       // Fetch user data for each rating
       allRatings = await Promise.all(
@@ -79,6 +86,7 @@ export async function GET(req: Request) {
       allRatings,
       averageRating,
       watchedCount,
+      hasWatched,
     });
   } catch (error) {
     console.error('Error fetching FOTW data:', error);
@@ -89,7 +97,7 @@ export async function GET(req: Request) {
 // POST: Admin creates a new film
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -112,6 +120,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, film: newFilm });
   } catch (error) {
     console.error('Error creating film:', error);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// PATCH: Admin updates current film
+export async function PATCH(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!FOTW_ADMINS.includes(session.user.email)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+    }
+
+    await dbConnect();
+    const { filmId, title, posterUrl, driveLink, chosenBy } = await req.json();
+
+    if (!filmId) {
+      return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
+    }
+
+    const updates: any = {};
+    if (title !== undefined) updates.title = title;
+    if (posterUrl !== undefined) updates.posterUrl = posterUrl;
+    if (driveLink !== undefined) updates.driveLink = driveLink;
+    if (chosenBy !== undefined) updates.chosenBy = chosenBy;
+
+    const updatedFilm = await FOTWFilm.findByIdAndUpdate(
+      filmId,
+      { $set: updates },
+      { new: true }
+    );
+
+    if (!updatedFilm) {
+      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, film: updatedFilm });
+  } catch (error) {
+    console.error('Error updating film:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -6,8 +6,8 @@ export interface IFOTWFilm extends Document {
   driveLink: string;
   addedBy: string; // email of admin who added it
   chosenBy: string; // name of the person who chose this film
+  watchedBy: { userEmail: string; watchedAt: Date }[];
   createdAt: Date;
-  active: boolean; // Is this the current film?
 }
 
 const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
@@ -17,7 +17,15 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
     driveLink: { type: String, required: true },
     addedBy: { type: String, required: true },
     chosenBy: { type: String, default: '' }, // Name of member who chose this week's film
-    active: { type: Boolean, default: true },
+    watchedBy: {
+      type: [
+        {
+          userEmail: { type: String, required: true },
+          watchedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
