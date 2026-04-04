@@ -85,7 +85,7 @@ export async function PATCH(request: NextRequest) {
     if (action === 'add') {
       // Remove existing reaction from this user for this emoji if any
       comment.reactions = comment.reactions.filter(
-        (r) => !(r.userId === session.user.email && r.emoji === emoji)
+        (r: { userId: string; emoji: string; userName: string }) => !(r.userId === session.user.email && r.emoji === emoji)
       );
       // Add new reaction
       comment.reactions.push({
@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest) {
       });
     } else if (action === 'remove') {
       comment.reactions = comment.reactions.filter(
-        (r) => !(r.userId === session.user.email && r.emoji === emoji)
+        (r: { userId: string; emoji: string; userName: string }) => !(r.userId === session.user.email && r.emoji === emoji)
       );
     }
 

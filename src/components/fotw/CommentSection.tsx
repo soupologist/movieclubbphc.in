@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Send, Smile, Image as ImageIcon, Reply, MoreVertical } from 'lucide-react';
+import { Send, Smile, Image as ImageIcon, Reply, MessageCircle } from 'lucide-react';
 import { GiphyFetch } from '@giphy/js-fetch-api';
 import { Grid } from '@giphy/react-components';
 
@@ -35,6 +35,21 @@ interface CommentSectionProps {
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function CommentSection({
   filmId,
   currentUserEmail,
@@ -45,10 +60,9 @@ export default function CommentSection({
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeEmojiPicker, setActiveEmojiPicker] = useState<string | false>(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch comments
   useEffect(() => {
     fetchComments();
   }, [filmId]);
@@ -95,7 +109,6 @@ export default function CommentSection({
 
   const handleReaction = async (commentId: string, emoji: string) => {
     try {
-      // Check if user already reacted with this emoji
       const comment = comments.find((c) => c._id === commentId);
       const userReaction = comment?.reactions.find(
         (r) => r.userId === currentUserEmail && r.emoji === emoji
@@ -146,33 +159,32 @@ export default function CommentSection({
   const renderComment = (comment: Comment, isReply = false) => (
     <div
       key={comment._id}
-      className={`${isReply ? 'ml-12 mt-3' : 'mt-4'} bg-zinc-900/50 rounded-lg p-4 border border-zinc-800 hover:border-zinc-700 transition-all duration-200`}
+      className={`${isReply ? 'ml-10 mt-2' : ''} group`}
     >
-      <div className="flex items-start gap-3">
-        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-zinc-700 flex-shrink-0">
-          {/* User avatar would go here */}
+      <div className="flex items-start gap-3 py-3">
+        {/* Avatar */}
+        <div className="relative w-8 h-8 rounded-full overflow-hidden bg-zinc-800 flex-shrink-0 ring-1 ring-white/5">
+          <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs font-bold">
+            {comment.userName.charAt(0).toUpperCase()}
+          </div>
         </div>
 
-        <div className="flex-grow">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <span className="font-bold text-white">{comment.userName}</span>
-              <span className="text-xs text-zinc-500 ml-2">
-                {new Date(comment.createdAt).toLocaleString()}
-              </span>
-            </div>
+        <div className="flex-grow min-w-0">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="font-semibold text-white text-sm">{comment.userName}</span>
+            <span className="text-xs text-zinc-600">{timeAgo(comment.createdAt)}</span>
           </div>
 
-          <p className="text-white whitespace-pre-wrap mb-3">{comment.content}</p>
+          <p className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">{comment.content}</p>
 
           {comment.gifUrl && (
-            <div className="mb-3 rounded overflow-hidden max-w-xs">
+            <div className="mt-2 rounded-lg overflow-hidden max-w-[240px] ring-1 ring-white/5">
               <img src={comment.gifUrl} alt="GIF" className="w-full" />
             </div>
           )}
 
-          {/* Reactions */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Reactions + Actions */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             {comment.reactions.length > 0 && (
               <div className="flex gap-1">
                 {Object.entries(
@@ -183,56 +195,68 @@ export default function CommentSection({
                     },
                     {} as Record<string, number>
                   )
-                ).map(([emoji, count]) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleReaction(comment._id, emoji)}
-                    className="bg-zinc-700 hover:bg-zinc-600 rounded-full px-2 py-1 text-sm text-white transition-colors"
-                  >
-                    {emoji} {count}
-                  </button>
-                ))}
+                ).map(([emoji, count]) => {
+                  const userReacted = comment.reactions.some(
+                    (r) => r.userId === currentUserEmail && r.emoji === emoji
+                  );
+                  return (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReaction(comment._id, emoji)}
+                      className={`rounded-full px-2 py-0.5 text-xs transition-colors ${
+                        userReacted
+                          ? 'bg-blue-950/60 border border-blue-800/40 text-blue-300'
+                          : 'bg-zinc-800/60 border border-zinc-700/30 text-zinc-400 hover:bg-zinc-700/60'
+                      }`}
+                    >
+                      {emoji} {count}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            {/* Reaction Picker */}
-            <div className="relative">
-              <button
-                onClick={() => setShowEmojiPicker(comment._id)}
-                className="text-zinc-400 hover:text-white text-sm transition-colors"
-              >
-                <Smile size={16} />
-              </button>
-              {showEmojiPicker === comment._id && (
-                <div className="absolute bottom-full left-0 mb-2 bg-zinc-800 border border-zinc-700 rounded-lg p-2 flex gap-1 z-10">
-                  {REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => {
-                        handleReaction(comment._id, emoji);
-                        setShowEmojiPicker(false);
-                      }}
-                      className="hover:bg-zinc-700 rounded p-1 text-xl transition-colors"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+            {/* Actions (visible on hover) */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setActiveEmojiPicker(activeEmojiPicker === comment._id ? false : comment._id)
+                  }
+                  className="text-zinc-600 hover:text-zinc-400 transition-colors p-1 rounded hover:bg-zinc-800/60"
+                >
+                  <Smile size={14} />
+                </button>
+                {activeEmojiPicker === comment._id && (
+                  <div className="absolute bottom-full left-0 mb-1 bg-zinc-900 border border-zinc-700/50 rounded-xl p-1.5 flex gap-0.5 z-10 shadow-xl">
+                    {REACTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          handleReaction(comment._id, emoji);
+                          setActiveEmojiPicker(false);
+                        }}
+                        className="hover:bg-zinc-800 rounded-lg p-1.5 text-base transition-colors hover:scale-110"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {!isReply && (
+                <button
+                  onClick={() => {
+                    setReplyingTo(comment._id);
+                    inputRef.current?.focus();
+                  }}
+                  className="text-zinc-600 hover:text-zinc-400 transition-colors p-1 rounded hover:bg-zinc-800/60 flex items-center gap-1 text-xs"
+                >
+                  <Reply size={14} />
+                </button>
               )}
             </div>
-
-            {!isReply && (
-              <button
-                onClick={() => {
-                  setReplyingTo(comment._id);
-                  inputRef.current?.focus();
-                }}
-                className="text-zinc-400 hover:text-white text-sm flex items-center gap-1 transition-colors"
-              >
-                <Reply size={16} />
-                Reply
-              </button>
-            )}
           </div>
 
           {/* Replies */}
@@ -242,20 +266,29 @@ export default function CommentSection({
     </div>
   );
 
-  if (loading) return <div className="text-center text-zinc-400 py-8">Loading comments...</div>;
+  if (loading) return <div className="text-center text-zinc-600 py-8 text-sm">Loading...</div>;
 
   return (
-    <div className="mt-12 bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-xl p-6 shadow-2xl">
-      <h2 className="text-2xl font-bold text-white mb-6">
-        Discussion
-      </h2>
+    <div className="mt-8 bg-zinc-900/30 border border-zinc-800/40 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-zinc-800/40 flex items-center gap-2">
+        <MessageCircle size={18} className="text-zinc-500" />
+        <h2 className="text-lg font-semibold text-white">Discussion</h2>
+        <span className="text-zinc-600 text-sm">{groupedComments.topLevel.length}</span>
+      </div>
 
-      {/* Comment Input */}
-      <div className="mb-8 bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
+      {/* Input */}
+      <div className="px-6 py-4 border-b border-zinc-800/30">
         {replyingTo && (
-          <div className="mb-2 text-sm text-blue-400 flex items-center justify-between bg-blue-950/30 p-2 rounded-lg border border-blue-900">
-            <span>Replying to comment...</span>
-            <button onClick={() => setReplyingTo(null)} className="text-zinc-400 hover:text-white">
+          <div className="mb-3 text-xs text-blue-400 flex items-center justify-between bg-blue-950/20 p-2.5 rounded-lg border border-blue-900/30">
+            <span className="flex items-center gap-1.5">
+              <Reply size={12} />
+              Replying to comment
+            </span>
+            <button
+              onClick={() => setReplyingTo(null)}
+              className="text-zinc-500 hover:text-white transition-colors"
+            >
               Cancel
             </button>
           </div>
@@ -264,32 +297,40 @@ export default function CommentSection({
           ref={inputRef}
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Share your thoughts... (use @ to mention someone)"
-          className="w-full bg-zinc-950 text-white rounded-lg p-3 outline-none resize-none border border-zinc-800 focus:border-zinc-700 transition-colors placeholder:text-zinc-600"
-          rows={3}
+          placeholder="Share your thoughts..."
+          className="w-full bg-zinc-950/50 text-white rounded-xl p-3 outline-none resize-none border border-zinc-800/50 focus:border-zinc-600/50 transition-colors placeholder:text-zinc-700 text-sm"
+          rows={2}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              handlePostComment();
+            }
+          }}
         />
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex gap-1">
             <button
               onClick={() => setShowGifPicker(!showGifPicker)}
-              className="text-zinc-400 hover:text-white transition-colors p-2 hover:bg-zinc-800 rounded-lg"
+              className="text-zinc-600 hover:text-zinc-400 transition-colors p-2 hover:bg-zinc-800/40 rounded-lg"
             >
-              <ImageIcon size={20} />
+              <ImageIcon size={16} />
             </button>
           </div>
-          <button
-            onClick={() => handlePostComment()}
-            disabled={!newComment.trim()}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg flex items-center gap-2 font-bold transition-all duration-200 shadow-lg hover:shadow-blue-900/50"
-          >
-            <Send size={16} />
-            Post
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-700 text-xs hidden sm:block">⌘ + Enter</span>
+            <button
+              onClick={() => handlePostComment()}
+              disabled={!newComment.trim()}
+              className="bg-white hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600 text-black px-4 py-1.5 rounded-lg flex items-center gap-1.5 font-semibold transition-all duration-200 text-sm disabled:cursor-not-allowed"
+            >
+              <Send size={14} />
+              Post
+            </button>
+          </div>
         </div>
 
         {/* GIF Picker */}
         {showGifPicker && (
-          <div className="mt-4 border border-zinc-700 rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+          <div className="mt-3 border border-zinc-800/50 rounded-xl overflow-hidden max-h-80 overflow-y-auto">
             <Grid
               key="fotw-gifs"
               width={500}
@@ -305,9 +346,9 @@ export default function CommentSection({
       </div>
 
       {/* Comments List */}
-      <div className="space-y-4">
+      <div className="px-6 py-2 divide-y divide-zinc-800/20">
         {groupedComments.topLevel.length === 0 ? (
-          <p className="text-center text-zinc-400 py-8">
+          <p className="text-center text-zinc-600 py-10 text-sm">
             No comments yet. Be the first to share your thoughts!
           </p>
         ) : (

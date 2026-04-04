@@ -35,8 +35,10 @@ export async function GET() {
         return {
           ...film,
           ratingsCount: ratings.length,
+          watchedCount: ratings.length,
           averageRating,
           commentsCount,
+          chosenBy: film.chosenBy || '',
         };
       })
     );

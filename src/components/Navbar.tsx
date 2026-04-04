@@ -96,7 +96,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          
+
           {status === 'authenticated' && (
             <Link href="/club/filmoftheweek" className="hover:text-gray-300">
               Film of the Week
@@ -181,7 +181,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          
+
           {status === 'authenticated' && (
             <Link
               href="/club/filmoftheweek"

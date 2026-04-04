@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     await dbConnect();
 
     // 1. Get Current Film (Latest one)
-    const currentFilm = await FOTWFilm.findOne().sort({ createdAt: -1 });
+    const currentFilm = await FOTWFilm.findOne().sort({ createdAt: -1 }).lean();
 
     // 2. Get Leaderboard (Top 50 users by rating count)
     const leaderboard = await FOTWUser.find()
@@ -27,8 +27,9 @@ export async function GET(req: Request) {
 
     let userRating = null;
     let isAdmin = FOTW_ADMINS.includes(session.user.email);
-    let allRatings = [];
+    let allRatings: any[] = [];
     let averageRating = 0;
+    let watchedCount = 0;
 
     if (currentFilm) {
       // 3. Check if current user rated this film
@@ -44,6 +45,9 @@ export async function GET(req: Request) {
       const ratings = await FOTWRating.find({ filmId: currentFilm._id })
         .sort({ createdAt: -1 })
         .lean();
+
+      // Watched count = number of ratings
+      watchedCount = ratings.length;
 
       // Fetch user data for each rating
       allRatings = await Promise.all(
@@ -74,6 +78,7 @@ export async function GET(req: Request) {
       isAdmin,
       allRatings,
       averageRating,
+      watchedCount,
     });
   } catch (error) {
     console.error('Error fetching FOTW data:', error);
@@ -94,12 +99,13 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, driveLink } = await req.json();
+    const { title, posterUrl, driveLink, chosenBy } = await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
       posterUrl,
       driveLink,
+      chosenBy: chosenBy || '',
       addedBy: session.user.email,
     });
 

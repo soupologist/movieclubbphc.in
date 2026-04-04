@@ -4,7 +4,8 @@ export interface IFOTWFilm extends Document {
   title: string;
   posterUrl: string;
   driveLink: string;
-  addedBy: string; // email of admin
+  addedBy: string; // email of admin who added it
+  chosenBy: string; // name of the person who chose this film
   createdAt: Date;
   active: boolean; // Is this the current film?
 }
@@ -15,6 +16,7 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
     posterUrl: { type: String, required: true }, // URL to image
     driveLink: { type: String, required: true },
     addedBy: { type: String, required: true },
+    chosenBy: { type: String, default: '' }, // Name of member who chose this week's film
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
