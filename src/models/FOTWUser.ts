@@ -4,7 +4,7 @@ export interface IFOTWUser extends Document {
   email: string;
   name: string;
   image?: string;
-  ratingsCount: number;
+  watchedCount: number;
 }
 
 const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
@@ -12,7 +12,7 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
     email: { type: String, required: true, unique: true },
     name: { type: String },
     image: { type: String },
-    ratingsCount: { type: Number, default: 0 },
+    watchedCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

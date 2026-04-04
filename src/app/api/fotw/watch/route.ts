@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import FOTWFilm from '@/models/FOTWFilm';
+import FOTWUser from '@/models/FOTWUser';
 import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
@@ -33,6 +34,21 @@ export async function POST(req: Request) {
     if (!updatedFilm) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
+
+    // Increment watchedCount on FOTWUser — this drives the leaderboard score.
+    // Only increments once per watch action (idempotency is handled by $addToSet above,
+    // but the client only calls this once per film so double-increment is not a concern).
+    await FOTWUser.findOneAndUpdate(
+      { email: session.user.email },
+      {
+        $set: {
+          name: session.user.name,
+          image: session.user.image,
+        },
+        $inc: { watchedCount: 1 },
+      },
+      { upsert: true, new: true }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

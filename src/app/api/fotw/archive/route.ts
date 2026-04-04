@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import FOTWFilm from '@/models/FOTWFilm';
 import FOTWRating from '@/models/FOTWRating';
 import FOTWUser from '@/models/FOTWUser';
+import FOTWLike from '@/models/FOTWLike';
 import { authOptions } from '@/lib/auth';
 
 // GET: Fetch all previous FOTWs with their stats
@@ -21,7 +22,10 @@ export async function GET() {
 
     const filmsWithStats = await Promise.all(
       films.map(async (film) => {
-        const ratings = await FOTWRating.find({ filmId: film._id }).lean();
+        const [ratings, likesCount] = await Promise.all([
+          FOTWRating.find({ filmId: film._id }).lean(),
+          FOTWLike.countDocuments({ filmId: film._id }),
+        ]);
 
         // fetch all rating details in parallel
         const allRatings = await Promise.all(
@@ -43,14 +47,26 @@ export async function GET() {
 
         const watchedBy = Array.isArray(film.watchedBy) ? film.watchedBy : [];
 
+        // Resolve display names for watchers
+        const watcherEmails = watchedBy.map((w: any) => w.userEmail);
+        const watchers = await FOTWUser.find({ email: { $in: watcherEmails } })
+          .select('email name image')
+          .lean();
+        const watchedByWithNames = watchedBy.map((w: any) => ({
+          userEmail: w.userEmail,
+          watchedAt: w.watchedAt,
+          name: (watchers as any[]).find((u) => u.email === w.userEmail)?.name ?? w.userEmail,
+        }));
+
         return {
           ...film,
           allRatings,
           ratingsCount: ratings.length,
           watchedCount: watchedBy.length,
-          watchedBy,
+          watchedBy: watchedByWithNames,
           averageRating,
           chosenBy: film.chosenBy || '',
+          likesCount,
         };
       })
     );

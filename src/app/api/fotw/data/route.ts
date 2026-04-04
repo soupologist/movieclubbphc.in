@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import FOTWFilm from '@/models/FOTWFilm';
 import FOTWRating from '@/models/FOTWRating';
 import FOTWUser from '@/models/FOTWUser';
+import FOTWLike from '@/models/FOTWLike';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 
@@ -20,11 +21,11 @@ export async function GET(req: Request) {
     // 1. Get Current Film (Latest one)
     const currentFilm = await FOTWFilm.findOne().sort({ createdAt: -1 }).lean();
 
-    // 2. Get Leaderboard (Top 50 users by rating count)
+    // 2. Get Leaderboard (Top 50 users by watched count)
     const leaderboard = await FOTWUser.find()
-      .sort({ ratingsCount: -1 })
+      .sort({ watchedCount: -1 })
       .limit(50)
-      .select('name image ratingsCount email');
+      .select('name image watchedCount email');
 
     let userRating = null;
     let isAdmin = FOTW_ADMINS.includes(session.user.email);
@@ -32,6 +33,8 @@ export async function GET(req: Request) {
     let averageRating = 0;
     let watchedCount = 0;
     let hasWatched = false;
+    let userLiked = false;
+    let likesCount = 0;
 
     if (currentFilm) {
       // 3. Check if current user rated this film
@@ -76,6 +79,14 @@ export async function GET(req: Request) {
         const sum = allRatings.reduce((acc, r: any) => acc + r.rating, 0);
         averageRating = Math.round((sum / allRatings.length) * 10) / 10;
       }
+
+      // 6. Likes for current film
+      const [likeDoc, likesTotal] = await Promise.all([
+        FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+        FOTWLike.countDocuments({ filmId: currentFilm._id }),
+      ]);
+      userLiked = !!likeDoc;
+      likesCount = likesTotal;
     }
 
     return NextResponse.json({
@@ -87,6 +98,8 @@ export async function GET(req: Request) {
       averageRating,
       watchedCount,
       hasWatched,
+      userLiked,
+      likesCount,
     });
   } catch (error) {
     console.error('Error fetching FOTW data:', error);

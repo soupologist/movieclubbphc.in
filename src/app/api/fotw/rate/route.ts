@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import FOTWRating from '@/models/FOTWRating';
-import FOTWUser from '@/models/FOTWUser';
 import FOTWFilm from '@/models/FOTWFilm';
 import { authOptions } from '@/lib/auth';
 
@@ -47,25 +46,12 @@ export async function POST(req: Request) {
       existingRating.rating = rating;
       await existingRating.save();
     } else {
-      // Create new rating
+      // Create new rating — leaderboard score is NOT affected by rating, only by watching
       await FOTWRating.create({
         userEmail: session.user.email,
         filmId,
         rating,
       });
-
-      // Only increment watch count on FIRST rating
-      await FOTWUser.findOneAndUpdate(
-        { email: session.user.email },
-        {
-          $set: {
-            name: session.user.name,
-            image: session.user.image,
-          },
-          $inc: { ratingsCount: 1 },
-        },
-        { upsert: true, new: true }
-      );
     }
 
     return NextResponse.json({ success: true, updated: !!existingRating });
@@ -86,18 +72,12 @@ export async function DELETE(req: Request) {
     await dbConnect();
     const { filmId } = await req.json();
 
-    const deleted = await FOTWRating.findOneAndDelete({
+    await FOTWRating.findOneAndDelete({
       userEmail: session.user.email,
       filmId,
     });
 
-    if (deleted) {
-      // Decrement watch count
-      await FOTWUser.findOneAndUpdate(
-        { email: session.user.email },
-        { $inc: { ratingsCount: -1 } }
-      );
-    }
+    // Leaderboard score is based on watches, not ratings — no FOTWUser update needed here.
 
     return NextResponse.json({ success: true });
   } catch (error) {

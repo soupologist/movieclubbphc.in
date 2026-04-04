@@ -45,21 +45,26 @@ export default function AdminDashboard() {
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // General State
-  const [leaderboard, setLeaderboard] = useState<{ name: string; ratingsCount: number }[]>([]);
+  const [leaderboard, setLeaderboard] = useState<{ name: string; watchedCount: number }[]>([]);
+  const [archiveFilms, setArchiveFilms] = useState<{ chosenBy?: string }[]>([]);
   const [winner, setWinner] = useState<string | null>(null);
+  const [cycleReset, setCycleReset] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetch('/api/fotw/data')
-      .then((res) => res.json())
-      .then((d) => {
+    Promise.all([
+      fetch('/api/fotw/data').then((r) => r.json()),
+      fetch('/api/fotw/archive').then((r) => r.json()),
+    ])
+      .then(([d, archive]) => {
         if (!d.isAdmin) {
           router.push('/club/filmoftheweek');
           return;
         }
         setLeaderboard(d.leaderboard || []);
+        setArchiveFilms(Array.isArray(archive) ? archive : []);
         if (d.currentFilm) {
           setEditData({
             filmId: d.currentFilm._id,
@@ -139,11 +144,22 @@ export default function AdminDashboard() {
     if (leaderboard.length === 0) return;
     setIsSpinning(true);
     setWinner(null);
-    
-    // Fallbacks if all zero, though usually people have ratings.
-    const maxScore = Math.max(...leaderboard.map((u) => u.ratingsCount), 0);
-    const candidates = leaderboard.filter((u) => u.ratingsCount === maxScore && maxScore > 0);
-    const pool = candidates.length > 0 ? candidates : leaderboard; // Fallback to all if no ratings
+    setCycleReset(false);
+
+    const alreadyChosen = archiveFilms
+      .map((f) => f.chosenBy)
+      .filter(Boolean) as string[];
+
+    const maxScore = Math.max(...leaderboard.map((u) => u.watchedCount), 0);
+    const topTied = leaderboard.filter((u) => u.watchedCount === maxScore && maxScore > 0);
+    const candidates = topTied.length > 0 ? topTied : leaderboard; // Fallback to all if none watched
+
+    let pool = candidates.filter((u) => !alreadyChosen.includes(u.name));
+    if (pool.length === 0) {
+      // Full cycle complete — resetting eligibility
+      pool = candidates;
+      setCycleReset(true);
+    }
 
     let elapsed = 0;
     if (timerRef.current) clearInterval(timerRef.current);
@@ -441,6 +457,11 @@ export default function AdminDashboard() {
               >
                 {winner}
               </p>
+              {!isSpinning && cycleReset && (
+                <p style={{ color: '#8a9bb0', fontSize: 12, marginTop: 8 }}>
+                  All eligible members have had a turn — starting a new cycle.
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-sm" style={{ color: C.dim }}>
