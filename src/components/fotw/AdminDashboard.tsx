@@ -181,16 +181,20 @@ export default function AdminDashboard() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Failed to fetch movie data');
-      if (d.success) {
-        setFetchedMovie({ title: d.title, posterUrl: d.posterUrl, year: d.year });
-        setFormData((prev) => ({
-          ...prev,
-          title: `${d.title} (${d.year})`,
-          posterUrl: d.posterUrl,
-          tmdbUrl: tmdbUrlInput,
-        }));
-        setFetchError(null);
+      const title = d.title;
+      const posterUrl = d.posterUrl;
+      const year = d.year;
+      if (!title || !posterUrl || !year) {
+        throw new Error('TMDB response missing movie data');
       }
+      setFetchedMovie({ title, posterUrl, year });
+      setFormData((prev) => ({
+        ...prev,
+        title: `${title} (${year})`,
+        posterUrl,
+        tmdbUrl: tmdbUrlInput,
+      }));
+      setFetchError(null);
     } catch (e: any) {
       setFetchError(e.message);
       setFetchedMovie(null);

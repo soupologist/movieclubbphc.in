@@ -28,16 +28,27 @@ export async function POST(req: Request) {
     let retries = 3;
     let lastError = null;
 
+    const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'TMDB API key is not configured' }, { status: 500 });
+    }
+
     while (retries > 0) {
       try {
-        const tmdbRes = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
+        const tmdbRes = await fetch(
+          `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
           }
-        });
+        );
 
         if (!tmdbRes.ok) {
+          if (tmdbRes.status === 401) {
+            return NextResponse.json({ error: 'TMDB API key is invalid' }, { status: 401 });
+          }
           if (tmdbRes.status === 404) {
             return NextResponse.json({ error: 'Movie not found on TMDB' }, { status: 404 });
           }
@@ -61,13 +72,12 @@ export async function POST(req: Request) {
     }
 
     const data = tmdbData;
-    
+
     return NextResponse.json({
       title: data.title,
       posterUrl: `https://image.tmdb.org/t/p/w500${data.poster_path}`,
-      year: new Date(data.release_date).getFullYear()
+      year: new Date(data.release_date).getFullYear(),
     });
-
   } catch (error) {
     console.error('Error resolving TMDB URL:', error);
     return NextResponse.json({ error: 'Failed to fetch movie data' }, { status: 500 });
