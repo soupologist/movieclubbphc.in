@@ -1169,16 +1169,10 @@ export default function FOTWLandingPage() {
         <div>
           <h1
             className={`text-white m-0 ${instrumentSerif.className}`}
-            style={{ fontSize: isMobile ? '2rem' : '3rem', lineHeight: 1 }}
+            style={{ fontSize: isMobile ? '5.5rem' : '7.5rem', lineHeight: 1 }}
           >
             Film of the Week
           </h1>
-          <p
-            className="uppercase m-0 mt-2"
-            style={{ color: C.dim, letterSpacing: '0.1em', fontSize: 11 }}
-          >
-            Watch · Rate · Discuss
-          </p>
         </div>
         <div className="flex gap-2">
           {data?.isAdmin && (
@@ -1215,7 +1209,7 @@ export default function FOTWLandingPage() {
             {/* ── Column A: Poster ── */}
             <div
               style={{
-                width: isMobile ? '140px' : isTablet ? '140px' : '220px',
+                width: isMobile ? '280px' : isTablet ? '180px' : '220px',
                 flexShrink: 0,
                 position: 'relative',
                 margin: isMobile ? '0 auto' : '0',
@@ -1706,14 +1700,14 @@ export default function FOTWLandingPage() {
               <div
                 style={{
                   width: '100%',
-                  overflowX: isMobile ? 'auto' : 'visible',
+                  overflowX: 'auto',
                   WebkitOverflowScrolling: 'touch',
                 }}
               >
                 <div
                   style={{
                     height: isMobile ? '240px' : '360px',
-                    minWidth: isMobile ? `${lb.length * 40}px` : 'max(100%, 0px)',
+                    minWidth: `max(100%, ${lb.length * (isMobile ? 32 : 40)}px)`,
                   }}
                 >
                   <Bar data={chartData} options={options as any} />

@@ -159,7 +159,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 bg-gray-950 shadow-xl transform transition-transform duration-300 z-50 ${
+        className={`fixed top-0 right-0 h-full w-72 bg-gray-950 text-white shadow-xl transform transition-transform duration-300 z-50 ${
           menuOpen ? 'translate-x-0' : 'translate-x-full'
         } md:hidden flex flex-col`}
       >
