@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import FOTWRating from '@/models/FOTWRating';
 import FOTWFilm from '@/models/FOTWFilm';
+import FOTWUser from '@/models/FOTWUser';
 import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
@@ -34,7 +35,8 @@ export async function POST(req: Request) {
     }
 
     // Gating: user must have marked film as watched before rating
-    const hasWatched = Array.isArray(film.watchedBy) &&
+    const hasWatched =
+      Array.isArray(film.watchedBy) &&
       film.watchedBy.some((w: any) => w.userEmail === session.user.email);
     if (!hasWatched) {
       return NextResponse.json(
@@ -43,24 +45,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if already rated — if so, update; otherwise create
+    // Check if already rated — if so, update; otherwise create.
+    // The compound unique index (userEmail + filmId) prevents duplicates at DB level.
     const existingRating = await FOTWRating.findOne({
       userEmail: session.user.email,
       filmId,
     });
 
     if (existingRating) {
-      // Update existing rating
       existingRating.rating = rating;
       await existingRating.save();
     } else {
-      // Create new rating — leaderboard score is NOT affected by rating, only by watching
-      await FOTWRating.create({
-        userEmail: session.user.email,
-        filmId,
-        rating,
-      });
+      // Leaderboard score is NOT affected by rating, only by watching.
+      await FOTWRating.create({ userEmail: session.user.email, filmId, rating });
     }
+
+    // Keep name/image in sync — user must already exist (they watched to reach here),
+    // so upsert: false avoids accidentally creating orphan records.
+    await FOTWUser.findOneAndUpdate(
+      { email: session.user.email },
+      { $set: { name: session.user.name, image: session.user.image } },
+      { upsert: false }
+    );
 
     return NextResponse.json({ success: true, updated: !!existingRating });
   } catch (error) {
@@ -69,27 +75,6 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE: Remove user's rating for a film
-export async function DELETE(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    await dbConnect();
-    const { filmId } = await req.json();
-
-    await FOTWRating.findOneAndDelete({
-      userEmail: session.user.email,
-      filmId,
-    });
-
-    // Leaderboard score is based on watches, not ratings — no FOTWUser update needed here.
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting rating:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
-  }
-}
+// DELETE /api/fotw/rate is intentionally removed.
+// Users change their rating by clicking a different star — the POST handler upserts.
+// There is no UI that triggers rating deletion, so the route is dead code.

@@ -29,6 +29,7 @@ export default function AdminDashboard() {
     posterUrl: '',
     driveLink: '',
     chosenBy: '',
+    chosenByEmail: '',
     tmdbUrl: '',
   });
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -51,6 +52,7 @@ export default function AdminDashboard() {
     posterUrl: '',
     driveLink: '',
     chosenBy: '',
+    chosenByEmail: '',
     timerPaused: false,
     tmdbUrl: '',
   });
@@ -58,9 +60,9 @@ export default function AdminDashboard() {
 
   // General State
   const [currentFilm, setCurrentFilm] = useState<any>(null);
-  const [leaderboard, setLeaderboard] = useState<{ name: string; watchedCount: number }[]>([]);
+  const [leaderboard, setLeaderboard] = useState<{ name: string; watchedCount: number; email: string }[]>([]);
   const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
-  const [winner, setWinner] = useState<string | null>(null);
+  const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
   const [cycleReset, setCycleReset] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
 
@@ -75,15 +77,12 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     Promise.all([
+      fetch('/api/fotw/admin/leaderboard').then((r) => r.json()),
       fetch('/api/fotw/data').then((r) => r.json()),
       fetch('/api/fotw/archive').then((r) => r.json()),
     ])
-      .then(([d, archive]) => {
-        if (!d.isAdmin) {
-          router.push('/club/filmoftheweek');
-          return;
-        }
-        setLeaderboard(d.leaderboard || []);
+      .then(([adminData, d, archive]) => {
+        setLeaderboard(adminData.leaderboard || []);
         setArchiveFilms(Array.isArray(archive) ? archive : []);
         if (d.currentFilm) {
           setCurrentFilm(d.currentFilm);
@@ -93,13 +92,14 @@ export default function AdminDashboard() {
             posterUrl: d.currentFilm.posterUrl || '',
             driveLink: d.currentFilm.driveLink || '',
             chosenBy: d.currentFilm.chosenBy || '',
+            chosenByEmail: d.currentFilm.chosenByEmail || '',
             timerPaused: d.currentFilm.timerPaused || false,
             tmdbUrl: d.currentFilm.tmdbUrl || '',
           });
         }
       })
       .catch((err) => console.error(err));
-  }, [router]);
+  }, []);
 
   const showAddMessage = (type: 'success' | 'error', text: string) => {
     setAddMsg({ type, text });
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         showAddMessage('success', 'Film added successfully! Redirecting...');
-        setFormData({ title: '', posterUrl: '', driveLink: '', chosenBy: '', tmdbUrl: '' });
+        setFormData({ title: '', posterUrl: '', driveLink: '', chosenBy: '', chosenByEmail: '', tmdbUrl: '' });
         setAutoFilled(false);
         setTimeout(() => {
           router.push('/club/filmoftheweek');
@@ -195,7 +195,11 @@ export default function AdminDashboard() {
   const handleResetLeaderboard = async () => {
     if (!window.confirm("Are you sure you want to reset all user scores to 0? This cannot be undone.")) return;
     try {
-      const res = await fetch('/api/fotw/admin/reset-leaderboard', { method: 'POST' });
+      const res = await fetch('/api/fotw/admin/reset-leaderboard', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET_LEADERBOARD' })
+      });
       if (res.ok) {
         setLeaderboard([]);
         alert("Leaderboard reset successfully.");
@@ -213,15 +217,23 @@ export default function AdminDashboard() {
     setWinner(null);
     setCycleReset(false);
 
-    const alreadyChosen = archiveFilms
-      .map((f) => f.chosenBy)
-      .filter(Boolean) as string[];
+    const alreadyChosenEmails = archiveFilms.map((f) => f.chosenByEmail).filter(Boolean) as string[];
+    const alreadyChosenNames = archiveFilms.filter((f) => !f.chosenByEmail).map((f) => f.chosenBy).filter(Boolean) as string[];
 
     const maxScore = Math.max(...leaderboard.map((u) => u.watchedCount), 0);
     const topTied = leaderboard.filter((u) => u.watchedCount === maxScore && maxScore > 0);
-    const candidates = topTied.length > 0 ? topTied : leaderboard; // Fallback to all if none watched
+    // Fallback to all if none watched
+    let candidates = topTied.length > 0 ? topTied : leaderboard;
+    
+    // Filter out candidates with no name
+    candidates = candidates.filter(u => u.name && u.name.trim() !== '');
+    if (candidates.length === 0) {
+      alert('Some top members have no display name — ask them to update their Google account name.');
+      setIsSpinning(false);
+      return;
+    }
 
-    let pool = candidates.filter((u) => !alreadyChosen.includes(u.name));
+    let pool = candidates.filter((u) => !alreadyChosenEmails.includes(u.email) && !alreadyChosenNames.includes(u.name));
     if (pool.length === 0) {
       // Full cycle complete — resetting eligibility
       pool = candidates;
@@ -232,18 +244,18 @@ export default function AdminDashboard() {
     if (timerRef.current) clearInterval(timerRef.current);
 
     // Pick the actual winner from the eligible pool
-    const finalWinner = pool[Math.floor(Math.random() * pool.length)].name;
+    const finalWinner = pool[Math.floor(Math.random() * pool.length)];
 
     timerRef.current = setInterval(() => {
       // Visually spin through ALL names for dramatic effect
-      const randomVisual = leaderboard[Math.floor(Math.random() * leaderboard.length)].name;
-      setWinner(randomVisual);
+      const randomVisual = leaderboard[Math.floor(Math.random() * leaderboard.length)];
+      setWinner({ name: randomVisual.name, email: randomVisual.email });
       elapsed += 100;
       if (elapsed >= 3000) {
         clearInterval(timerRef.current!);
         setIsSpinning(false);
-        setWinner(finalWinner);
-        setFormData((prev) => ({ ...prev, chosenBy: finalWinner }));
+        setWinner({ name: finalWinner.name, email: finalWinner.email });
+        setFormData((prev) => ({ ...prev, chosenBy: finalWinner.name, chosenByEmail: finalWinner.email }));
         setAutoFilled(true);
       }
     }, 100);
@@ -489,6 +501,7 @@ export default function AdminDashboard() {
                      posterUrl: currentFilm.posterUrl || '',
                      driveLink: currentFilm.driveLink || '',
                      chosenBy: currentFilm.chosenBy || '',
+                     chosenByEmail: currentFilm.chosenByEmail || '',
                      timerPaused: currentFilm.timerPaused || false,
                      tmdbUrl: currentFilm.tmdbUrl || '',
                    });
@@ -515,6 +528,7 @@ export default function AdminDashboard() {
                      posterUrl: f.posterUrl || '',
                      driveLink: f.driveLink || '',
                      chosenBy: f.chosenBy || '',
+                     chosenByEmail: f.chosenByEmail || '',
                      timerPaused: false,
                      tmdbUrl: f.tmdbUrl || '',
                    });
@@ -561,6 +575,7 @@ export default function AdminDashboard() {
                         posterUrl: f.posterUrl || '',
                         driveLink: f.driveLink || '',
                         chosenBy: f.chosenBy || '',
+                        chosenByEmail: f.chosenByEmail || '',
                         timerPaused: false,
                         tmdbUrl: f.tmdbUrl || '',
                       });
@@ -721,7 +736,7 @@ export default function AdminDashboard() {
                   fontSize: 32
                 }}
               >
-                {winner}
+                {winner.name}
               </p>
               {!isSpinning && cycleReset && (
                 <p style={{ color: '#8a9bb0', fontSize: 12, marginTop: 8 }}>

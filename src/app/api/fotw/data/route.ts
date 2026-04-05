@@ -30,11 +30,20 @@ export async function GET(req: Request) {
       }
     }
 
-    // 2. Get Leaderboard (Top 50 users by watched count)
-    const leaderboard = await FOTWUser.find()
-      .sort({ watchedCount: -1 })
-      .limit(50)
-      .select('name image watchedCount email');
+    // 2. Get Leaderboard (Top 50 users by watched count, tiebreak by oldest user)
+    // Filter out users with 0 watches (e.g. imported via CSV with 0 count)
+    const leaderboardRaw = await FOTWUser.find({ watchedCount: { $gt: 0 } })
+      .sort({ watchedCount: -1, createdAt: 1 })
+      .select('name image watchedCount email')
+      .lean();
+
+    // Remove email from the public response payload
+    const leaderboard = (leaderboardRaw as any[]).map((u) => ({
+      _id: u._id,
+      name: u.name,
+      image: u.image,
+      watchedCount: u.watchedCount,
+    }));
 
     let userRating = null;
     let isAdmin = FOTW_ADMINS.includes(session.user.email);
@@ -129,7 +138,7 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, driveLink, tmdbUrl, chosenBy } = await req.json();
+    const { title, posterUrl, driveLink, tmdbUrl, chosenBy, chosenByEmail } = await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
@@ -137,6 +146,7 @@ export async function POST(req: Request) {
       driveLink,
       tmdbUrl: tmdbUrl || '',
       chosenBy: chosenBy || '',
+      chosenByEmail: chosenByEmail || '',
       addedBy: session.user.email,
     });
 
@@ -161,7 +171,7 @@ export async function PATCH(req: Request) {
 
     await dbConnect();
     const body = await req.json();
-    const { filmId, title, posterUrl, driveLink, tmdbUrl, chosenBy, timerPaused } = body;
+    const { filmId, title, posterUrl, driveLink, tmdbUrl, chosenBy, chosenByEmail, timerPaused } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
@@ -173,6 +183,7 @@ export async function PATCH(req: Request) {
     if (driveLink !== undefined) updates.driveLink = driveLink;
     if (tmdbUrl !== undefined) updates.tmdbUrl = tmdbUrl;
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
+    if (chosenByEmail !== undefined) updates.chosenByEmail = chosenByEmail;
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
 
     const updatedFilm = await FOTWFilm.findByIdAndUpdate(

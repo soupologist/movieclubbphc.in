@@ -20,43 +20,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
     }
 
-    // Check lock status
-    const film = await FOTWFilm.findById(filmId);
-    if (!film) {
-      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
-    }
-    if (film.lockedAt !== null && film.lockedAt !== undefined) {
-      return NextResponse.json(
-        { error: 'This film has been archived and can no longer be updated.' },
-        { status: 403 }
-      );
-    }
-
-    // $addToSet safely pushes uniquely, and automatically initiates array if it somehow was missing.
-    const updatedFilm = await FOTWFilm.findByIdAndUpdate(
-      filmId,
+    // Attempt to atomically add the user to watchedBy ONLY if they aren't already there
+    // and the film is NOT locked.
+    const result = await FOTWFilm.findOneAndUpdate(
       {
-        $addToSet: {
-          watchedBy: { userEmail: session.user.email, watchedAt: new Date() },
-        },
+        _id: filmId,
+        lockedAt: null,
+        'watchedBy.userEmail': { $ne: session.user.email }, // atomic condition checks if already watched
+      },
+      {
+        $push: { watchedBy: { userEmail: session.user.email, watchedAt: new Date() } },
       },
       { new: true }
     );
 
-    if (!updatedFilm) {
-      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    // If result is null, either the film doesn't exist, is locked, or the user already watched it.
+    if (!result) {
+      const film = await FOTWFilm.findById(filmId).select('lockedAt watchedBy').lean();
+      if (!film) return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+      if (film.lockedAt !== null && film.lockedAt !== undefined) {
+        return NextResponse.json(
+          { error: 'This film has been archived and can no longer be updated.' },
+          { status: 403 }
+        );
+      }
+      // If it exists and isn't locked, the update failed only because the user was already in watchedBy.
+      return NextResponse.json({ success: true, alreadyWatched: true });
     }
 
-    // Increment watchedCount on FOTWUser — this drives the leaderboard score.
-    // Only increments once per watch action (idempotency is handled by $addToSet above,
-    // but the client only calls this once per film so double-increment is not a concern).
+    // Increment watchedCount exactly once per unique watch. (safe to do since atomic update succeeded)
     await FOTWUser.findOneAndUpdate(
       { email: session.user.email },
       {
-        $set: {
-          name: session.user.name,
-          image: session.user.image,
-        },
+        $set: { name: session.user.name, image: session.user.image },
         $inc: { watchedCount: 1 },
       },
       { upsert: true, new: true }

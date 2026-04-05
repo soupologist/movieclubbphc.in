@@ -7,7 +7,8 @@ import FOTWUser from '@/models/FOTWUser';
 import FOTWLike from '@/models/FOTWLike';
 import { authOptions } from '@/lib/auth';
 
-// GET: Fetch all previous FOTWs with their stats
+// GET: Fetch all previous (locked) FOTWs with their stats.
+// Performs exactly 4 DB queries total regardless of how many films or ratings exist.
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -17,61 +18,78 @@ export async function GET() {
 
     await dbConnect();
 
-    // Get all films sorted by newest first
-    const films = await FOTWFilm.find().sort({ createdAt: -1 }).lean();
+    // Identify the current film the same way GET /api/fotw/data does —
+    // newest document with lockedAt: null. We exclude it from the archive
+    // by _id so that old films (which may also have lockedAt: null because
+    // they predate the auto-lock system) still appear in the archive.
+    const currentFilm = await FOTWFilm.findOne({ lockedAt: null })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const filmsWithStats = await Promise.all(
-      films.map(async (film) => {
-        const [ratings, likesCount] = await Promise.all([
-          FOTWRating.find({ filmId: film._id }).lean(),
-          FOTWLike.countDocuments({ filmId: film._id }),
-        ]);
+    const archiveQuery = currentFilm ? { _id: { $ne: currentFilm._id } } : {};
+    const films = await FOTWFilm.find(archiveQuery)
+      .sort({ createdAt: -1 })
+      .lean();
 
-        // fetch all rating details in parallel
-        const allRatings = await Promise.all(
-          ratings.map(async (r: any) => {
-            const user = await FOTWUser.findOne({ email: r.userEmail }).select('name').lean();
-            return {
-              userEmail: r.userEmail,
-              name: user?.name || 'Anonymous',
-              rating: r.rating,
-              createdAt: r.createdAt,
-            };
-          })
-        );
+    const filmIds = films.map((f) => f._id);
 
-        const averageRating =
-          ratings.length > 0
-            ? Math.round((ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length) * 10) / 10
-            : 0;
+    // 2. Bulk-fetch ALL ratings, ALL users, and ALL likes in 3 parallel queries.
+    //    No per-film or per-rating sub-queries — everything resolved in memory.
+    const [allRatings, allUsers, allLikes] = await Promise.all([
+      FOTWRating.find({ filmId: { $in: filmIds } }).lean(),
+      FOTWUser.find().select('email name image').lean(),
+      FOTWLike.find({ filmId: { $in: filmIds } }).lean(),
+    ]);
 
-        const watchedBy = Array.isArray(film.watchedBy) ? film.watchedBy : [];
-
-        // Resolve display names for watchers
-        const watcherEmails = watchedBy.map((w: any) => w.userEmail);
-        const watchers = await FOTWUser.find({ email: { $in: watcherEmails } })
-          .select('email name image')
-          .lean();
-        const watchedByWithNames = watchedBy.map((w: any) => ({
-          userEmail: w.userEmail,
-          watchedAt: w.watchedAt,
-          name: (watchers as any[]).find((u) => u.email === w.userEmail)?.name ?? w.userEmail,
-        }));
-
-        return {
-          ...film,
-          allRatings,
-          ratingsCount: ratings.length,
-          watchedCount: watchedBy.length,
-          watchedBy: watchedByWithNames,
-          averageRating,
-          chosenBy: film.chosenBy || '',
-          likesCount,
-        };
-      })
+    // 3. Build O(1) lookup map: email → user document
+    const userMap = Object.fromEntries(
+      (allUsers as any[]).map((u) => [u.email, u])
     );
 
-    return NextResponse.json(filmsWithStats);
+    // 4. Assemble per-film stats in memory — zero additional DB queries
+    const result = films.map((film) => {
+      const filmIdStr = film._id.toString();
+
+      const filmRatings = (allRatings as any[]).filter(
+        (r) => r.filmId.toString() === filmIdStr
+      );
+      const filmLikes = (allLikes as any[]).filter(
+        (l) => l.filmId.toString() === filmIdStr
+      );
+
+      const avg =
+        filmRatings.length > 0
+          ? Math.round(
+              (filmRatings.reduce((s, r) => s + r.rating, 0) / filmRatings.length) * 10
+            ) / 10
+          : 0;
+
+      const watchedBy = Array.isArray(film.watchedBy) ? film.watchedBy : [];
+
+      return {
+        ...film,
+        averageRating: avg,
+        ratingsCount: filmRatings.length,
+        watchedCount: watchedBy.length,
+        likesCount: filmLikes.length,
+        allRatings: filmRatings.map((r) => ({
+          userEmail: r.userEmail,
+          name: userMap[r.userEmail]?.name ?? r.userEmail,
+          image: userMap[r.userEmail]?.image ?? null,
+          rating: r.rating,
+          createdAt: r.createdAt,
+        })),
+        watchedBy: watchedBy.map((w: any) => ({
+          userEmail: w.userEmail,
+          watchedAt: w.watchedAt,
+          name: userMap[w.userEmail]?.name ?? w.userEmail,
+          image: userMap[w.userEmail]?.image ?? null,
+        })),
+        chosenBy: film.chosenBy || '',
+      };
+    });
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching archive:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

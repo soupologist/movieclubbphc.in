@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import FOTWLike from '@/models/FOTWLike';
 import FOTWFilm from '@/models/FOTWFilm';
+import FOTWUser from '@/models/FOTWUser';
 import { authOptions } from '@/lib/auth';
 
 // POST: Like a film (idempotent)
@@ -36,6 +37,14 @@ export async function POST(req: Request) {
       { userEmail: session.user.email, filmId },
       { userEmail: session.user.email, filmId },
       { upsert: true, new: true }
+    );
+
+    // Keep name/image in sync. upsert: false — only update if the user already exists
+    // (they must have watched at least once to appear on the leaderboard).
+    await FOTWUser.findOneAndUpdate(
+      { email: session.user.email },
+      { $set: { name: session.user.name, image: session.user.image } },
+      { upsert: false }
     );
 
     return NextResponse.json({ liked: true });

@@ -106,6 +106,12 @@ export async function POST(req: Request) {
         continue;
       }
 
+      if (watchedCount < 0) {
+        skipped++;
+        errors.push({ row: i + 1, reason: 'watchedCount cannot be negative' });
+        continue;
+      }
+
       await FOTWUser.findOneAndUpdate(
         { email },
         { $set: { name, watchedCount } },

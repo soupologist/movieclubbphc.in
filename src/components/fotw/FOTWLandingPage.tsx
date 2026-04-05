@@ -364,7 +364,9 @@ export default function FOTWLandingPage() {
     try {
       const email = session?.user?.email;
       if (!email) return;
-      const res = await fetch(`/api/fotw/user-activity?email=${encodeURIComponent(email)}`);
+      const res = await fetch(`/api/fotw/user-activity?email=${encodeURIComponent(email)}`, {
+        cache: 'no-store',
+      });
       const d = await res.json();
       setMyActivity(d);
     } catch (e) {
@@ -380,7 +382,9 @@ export default function FOTWLandingPage() {
     setUserActivity(null);
     setUserActivityLoading(true);
     try {
-      const res = await fetch(`/api/fotw/user-activity?email=${encodeURIComponent(user.email)}`);
+      const res = await fetch(`/api/fotw/user-activity?userId=${encodeURIComponent(user._id)}`, {
+        cache: 'no-store',
+      });
       const d = await res.json();
       setUserActivity(d);
     } catch (e) {
@@ -453,7 +457,8 @@ export default function FOTWLandingPage() {
 
   const film = data?.currentFilm;
   const hasWatched = hasWatchedLocal || (data?.hasWatched ?? false);
-  const previousFilms = archiveFilms.filter((f) => f._id !== film?._id);
+  // Archive API already excludes the current film server-side (lockedAt: { $ne: null })
+  const previousFilms = archiveFilms;
 
   /* ── Histogram ───────────────────────────────────────────── */
   const counts = starValues.map((v) => data?.allRatings.filter((r) => r.rating === v).length || 0);
