@@ -256,6 +256,23 @@ interface UserActivityData {
 export default function FOTWLandingPage() {
   const { data: session } = useSession();
 
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsTablet(window.innerWidth >= 640 && window.innerWidth < 1024);
+    };
+    // Need to safely call check if window is available during SSR / mounting
+    if (typeof window !== 'undefined') {
+      check();
+      window.addEventListener('resize', check);
+      return () => window.removeEventListener('resize', check);
+    }
+  }, []);
+
   // Core data
   const [data, setData] = useState<FOTWData | null>(null);
   const [archiveFilms, setArchiveFilms] = useState<ArchiveFilm[]>([]);
@@ -670,11 +687,13 @@ export default function FOTWLandingPage() {
               style={{
                 width: `${100 / PANELS}%`,
                 flexShrink: 0,
-                padding: '14px 12px',
+                padding: isMobile ? '10px' : '14px 12px',
+                fontSize: isMobile ? '11px' : 'inherit',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
                 height: '100%',
+                maxHeight: '100%',
                 overflowY: 'auto',
                 boxSizing: 'border-box',
               }}
@@ -843,11 +862,13 @@ export default function FOTWLandingPage() {
               style={{
                 width: `${100 / PANELS}%`,
                 flexShrink: 0,
-                padding: '14px 12px',
+                padding: isMobile ? '10px' : '14px 12px',
+                fontSize: isMobile ? '11px' : 'inherit',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 6,
                 height: '100%',
+                maxHeight: '100%',
                 overflowY: 'auto',
                 boxSizing: 'border-box',
               }}
@@ -996,11 +1017,13 @@ export default function FOTWLandingPage() {
               style={{
                 width: `${100 / PANELS}%`,
                 flexShrink: 0,
-                padding: '14px 12px',
+                padding: isMobile ? '10px' : '14px 12px',
+                fontSize: isMobile ? '11px' : 'inherit',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
                 height: '100%',
+                maxHeight: '100%',
                 overflowY: 'auto',
                 boxSizing: 'border-box',
               }}
@@ -1122,13 +1145,31 @@ export default function FOTWLandingPage() {
 
   /* ═══════════════════════ RENDER ══════════════════════════ */
   return (
-    <div style={{ backgroundColor: C.bg, minHeight: '100vh', paddingBottom: 96 }}>
+    <div
+      style={{
+        backgroundColor: C.bg,
+        minHeight: '100vh',
+        paddingBottom: 96,
+        padding: isMobile ? '16px' : '24px',
+        maxWidth: '1400px',
+        margin: '0 auto',
+      }}
+    >
       {/* ── Page Header ──────────────────────────────────────── */}
-      <div className="flex justify-between items-start mb-10 gap-4">
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'flex-start' : 'flex-start',
+          flexWrap: 'wrap',
+          gap: '8px',
+          marginBottom: isMobile ? '16px' : '40px',
+        }}
+      >
         <div>
           <h1
             className={`text-white m-0 ${instrumentSerif.className}`}
-            style={{ fontSize: '3rem', lineHeight: 1 }}
+            style={{ fontSize: isMobile ? '2rem' : '3rem', lineHeight: 1 }}
           >
             Film of the Week
           </h1>
@@ -1162,17 +1203,24 @@ export default function FOTWLandingPage() {
               background: '#0f0f0f',
               border: '1px solid #1e1e1e',
               borderRadius: 20,
-              padding: 32,
               width: '100%',
               boxSizing: 'border-box',
               display: 'flex',
-              flexDirection: 'row',
-              gap: 32,
-              alignItems: 'flex-start',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '16px' : '32px',
+              alignItems: isMobile ? 'center' : 'flex-start',
+              padding: isMobile ? '16px' : '32px',
             }}
           >
             {/* ── Column A: Poster ── */}
-            <div style={{ width: 220, flexShrink: 0, position: 'relative' }}>
+            <div
+              style={{
+                width: isMobile ? '140px' : isTablet ? '140px' : '220px',
+                flexShrink: 0,
+                position: 'relative',
+                margin: isMobile ? '0 auto' : '0',
+              }}
+            >
               <div
                 style={{
                   display: 'block',
@@ -1183,7 +1231,7 @@ export default function FOTWLandingPage() {
               >
                 <div
                   style={{
-                    width: 220,
+                    width: '100%',
                     aspectRatio: '2/3',
                     position: 'relative',
                     borderRadius: 12,
@@ -1204,7 +1252,17 @@ export default function FOTWLandingPage() {
 
             {/* ── Column B: Film Info ── */}
             <div
-              style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                width: isMobile ? '100%' : 'auto',
+                paddingLeft: isMobile ? '0' : '0',
+                alignItems: isMobile ? 'center' : 'flex-start',
+                textAlign: isMobile ? 'center' : 'left',
+              }}
             >
               {/* Badge */}
               <div
@@ -1231,7 +1289,7 @@ export default function FOTWLandingPage() {
                 style={{
                   margin: 0,
                   color: 'white',
-                  fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
+                  fontSize: isMobile ? '1.6rem' : 'clamp(1.6rem, 3vw, 2.4rem)',
                   lineHeight: 1.1,
                 }}
               >
@@ -1258,14 +1316,29 @@ export default function FOTWLandingPage() {
               </p>
 
               {/* Countdown */}
-              <CountdownDisplay
-                createdAt={film.createdAt}
-                timerPaused={film.timerPaused}
-                onExpire={() => setTimeout(fetchData, 500)}
-              />
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: isMobile ? 'center' : 'flex-start',
+                }}
+              >
+                <CountdownDisplay
+                  createdAt={film.createdAt}
+                  timerPaused={film.timerPaused}
+                  onExpire={() => setTimeout(fetchData, 500)}
+                />
+              </div>
 
               {/* Action buttons */}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                  justifyContent: isMobile ? 'center' : 'flex-start',
+                }}
+              >
                 <button
                   id="btn-watched"
                   onClick={handleWatch}
@@ -1321,7 +1394,14 @@ export default function FOTWLandingPage() {
               </div>
 
               {/* Star rating */}
-              <div id="rating-section">
+              <div
+                id="rating-section"
+                style={{
+                  display: 'flex',
+                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  width: '100%',
+                }}
+              >
                 {hasWatched ? (
                   <StarRating rating={pendingRating} setRating={handleRate} size="lg" />
                 ) : (
@@ -1329,7 +1409,7 @@ export default function FOTWLandingPage() {
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      alignItems: 'flex-start',
+                      alignItems: isMobile ? 'center' : 'flex-start',
                       gap: 4,
                     }}
                   >
@@ -1349,6 +1429,8 @@ export default function FOTWLandingPage() {
                   gap: 12,
                   color: '#4a5568',
                   fontSize: 12,
+                  flexWrap: 'wrap',
+                  justifyContent: isMobile ? 'center' : 'flex-start',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1375,8 +1457,9 @@ export default function FOTWLandingPage() {
                   border: 'none',
                   padding: 0,
                   cursor: 'pointer',
-                  textAlign: 'left',
+                  textAlign: isMobile ? 'center' : 'left',
                   textDecoration: 'none',
+                  width: '100%',
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
                 onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
@@ -1386,7 +1469,15 @@ export default function FOTWLandingPage() {
             </div>
 
             {/* ── Column C: Histogram ── */}
-            <div style={{ width: 450, flexShrink: 0 }}>
+            <div
+              style={{
+                width: isMobile ? '100%' : '450px',
+                flexShrink: 0,
+                paddingLeft: isMobile ? '0' : '32px',
+                borderTop: isMobile ? '1px solid #1e1e1e' : 'none',
+                paddingTop: isMobile ? '24px' : '0',
+              }}
+            >
               {/* Top row: label + fan count */}
               <div
                 style={{
@@ -1411,55 +1502,69 @@ export default function FOTWLandingPage() {
                 </span>
               </div>
 
-              {/* Average rating number */}
               <div
                 style={{
-                  fontSize: 32,
-                  fontWeight: 700,
-                  color: '#8a9bb0',
-                  lineHeight: 1,
-                  marginBottom: 14,
+                  display: isMobile ? 'flex' : 'block',
+                  flexDirection: isMobile ? 'row' : 'column',
+                  alignItems: isMobile ? 'flex-end' : 'stretch',
+                  gap: isMobile ? '12px' : '0',
                 }}
               >
-                {data.averageRating ? data.averageRating.toFixed(1) : '—'}
-              </div>
+                {/* Average rating number */}
+                <div
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: '#8a9bb0',
+                    lineHeight: 1,
+                    marginBottom: isMobile ? 0 : 14,
+                    width: isMobile ? '60px' : 'auto',
+                    flexShrink: 0,
+                    textAlign: isMobile ? 'center' : 'left',
+                  }}
+                >
+                  {data.averageRating ? data.averageRating.toFixed(1) : '—'}
+                </div>
 
-              {/* Bars */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  height: 100,
-                  width: '100%',
-                  gap: 3,
-                }}
-              >
-                {starValues.map((v, i) => {
-                  const count = counts[i];
-                  const isPeak = maxCount > 0 && count === maxCount && count > 0;
-                  const hpx = maxCount > 0 ? Math.max(3, (count / maxCount) * 100) : 3;
-                  return (
-                    <div
-                      key={v}
-                      onClick={() => count > 0 && setSelectedRating(v)}
-                      style={{
-                        flex: 1,
-                        height: hpx,
-                        backgroundColor: isPeak ? '#00e054' : '#1e1e1e',
-                        borderRadius: '2px 2px 0 0',
-                        minHeight: 3,
-                        cursor: count > 0 ? 'pointer' : 'default',
-                        transition: 'background-color 0.15s',
-                      }}
-                    />
-                  );
-                })}
-              </div>
+                <div style={{ flex: 1, width: '100%' }}>
+                  {/* Bars */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      height: isMobile ? 60 : 100,
+                      width: '100%',
+                      gap: 3,
+                    }}
+                  >
+                    {starValues.map((v, i) => {
+                      const count = counts[i];
+                      const isPeak = maxCount > 0 && count === maxCount && count > 0;
+                      const hpx = maxCount > 0 ? Math.max(3, (count / maxCount) * 100) : 3;
+                      return (
+                        <div
+                          key={v}
+                          onClick={() => count > 0 && setSelectedRating(v)}
+                          style={{
+                            flex: 1,
+                            height: isMobile ? `${hpx}%` : `${hpx}%`,
+                            backgroundColor: isPeak ? '#00e054' : '#1e1e1e',
+                            borderRadius: '2px 2px 0 0',
+                            minHeight: 3,
+                            cursor: count > 0 ? 'pointer' : 'default',
+                            transition: 'background-color 0.15s',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
 
-              {/* Scale */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span style={{ color: '#4a5568', fontSize: 9 }}>0.5</span>
-                <span style={{ color: '#4a5568', fontSize: 9 }}>5.0</span>
+                  {/* Scale */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span style={{ color: '#4a5568', fontSize: 9 }}>0.5</span>
+                    <span style={{ color: '#4a5568', fontSize: 9 }}>5.0</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1510,7 +1615,7 @@ export default function FOTWLandingPage() {
               backgroundColor: barColors,
               borderRadius: 4,
               borderSkipped: false,
-              barThickness: 28,
+              barThickness: isMobile ? 20 : 28,
             },
           ],
         };
@@ -1539,7 +1644,7 @@ export default function FOTWLandingPage() {
               border: { display: false },
               ticks: {
                 color: '#8a9bb0',
-                font: { size: 11 },
+                font: { size: isMobile ? 9 : 11 },
                 maxRotation: 45,
                 minRotation: 45,
                 autoSkip: false,
@@ -1554,7 +1659,7 @@ export default function FOTWLandingPage() {
               border: { display: false, dash: [4, 4] },
               ticks: {
                 color: '#4a5568',
-                font: { size: 10 },
+                font: { size: isMobile ? 9 : 10 },
                 stepSize: Math.ceil(lbMax / 4),
               },
             },
@@ -1569,7 +1674,10 @@ export default function FOTWLandingPage() {
 
         return (
           <>
-            <div className="flex items-center justify-between" style={{ marginTop: 48 }}>
+            <div
+              className="flex items-center justify-between"
+              style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32 }}
+            >
               <span
                 style={{
                   color: 'white',
@@ -1591,12 +1699,23 @@ export default function FOTWLandingPage() {
                 background: '#0f0f0f',
                 border: `1px solid ${C.border}`,
                 borderRadius: '16px',
-                padding: '24px',
+                padding: isMobile ? '16px' : '24px',
                 marginTop: 16,
               }}
             >
-              <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <div style={{ height: '360px', minWidth: `max(100%, ${lb.length * 40}px)` }}>
+              <div
+                style={{
+                  width: '100%',
+                  overflowX: isMobile ? 'auto' : 'visible',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                <div
+                  style={{
+                    height: isMobile ? '240px' : '360px',
+                    minWidth: isMobile ? `${lb.length * 40}px` : 'max(100%, 0px)',
+                  }}
+                >
                   <Bar data={chartData} options={options as any} />
                 </div>
               </div>
@@ -1609,7 +1728,10 @@ export default function FOTWLandingPage() {
           SECTION 3: PREVIOUS FILMS (archive grid)
       ══════════════════════════════════════════════════════ */}
       <>
-        <div className="flex items-center justify-between" style={{ marginTop: 48 }}>
+        <div
+          className="flex items-center justify-between"
+          style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32 }}
+        >
           <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
           {previousFilms.length > 0 && (
             <span style={{ color: C.dim, fontSize: 13 }}>{previousFilms.length} films</span>
@@ -1621,8 +1743,12 @@ export default function FOTWLandingPage() {
             className="mt-4"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: 20,
+              gridTemplateColumns: isMobile
+                ? 'repeat(2, 1fr)'
+                : isTablet
+                  ? 'repeat(3, 1fr)'
+                  : 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: isMobile ? '12px' : '20px',
             }}
           >
             {previousFilms.map((af) => renderFlipCard(af))}
@@ -1671,10 +1797,11 @@ export default function FOTWLandingPage() {
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
               borderRadius: 20,
-              maxWidth: 520,
-              width: '90vw',
-              maxHeight: '80vh',
+              maxWidth: isMobile ? 'none' : '520px',
+              width: isMobile ? '95vw' : '90vw',
+              maxHeight: '85vh',
               overflowY: 'auto',
+              margin: isMobile ? '0' : 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1771,10 +1898,11 @@ export default function FOTWLandingPage() {
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
               borderRadius: 20,
-              maxWidth: 480,
-              width: '90vw',
-              maxHeight: '75vh',
+              maxWidth: isMobile ? 'none' : '480px',
+              width: isMobile ? '95vw' : '90vw',
+              maxHeight: '85vh',
               overflowY: 'auto',
+              margin: isMobile ? '0' : 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1849,10 +1977,11 @@ export default function FOTWLandingPage() {
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
               borderRadius: 20,
-              maxWidth: 480,
-              width: '90vw',
-              maxHeight: '75vh',
+              maxWidth: isMobile ? 'none' : '480px',
+              width: isMobile ? '95vw' : '90vw',
+              maxHeight: '85vh',
               overflowY: 'auto',
+              margin: isMobile ? '0' : 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
