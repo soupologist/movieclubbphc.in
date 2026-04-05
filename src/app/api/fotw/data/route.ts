@@ -138,12 +138,11 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, driveLink, tmdbUrl, chosenBy, chosenByEmail } = await req.json();
+    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail } = await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
       posterUrl,
-      driveLink,
       tmdbUrl: tmdbUrl || '',
       chosenBy: chosenBy || '',
       chosenByEmail: chosenByEmail || '',
@@ -171,7 +170,7 @@ export async function PATCH(req: Request) {
 
     await dbConnect();
     const body = await req.json();
-    const { filmId, title, posterUrl, driveLink, tmdbUrl, chosenBy, chosenByEmail, timerPaused } = body;
+    const { filmId, title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerPaused } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
@@ -180,17 +179,12 @@ export async function PATCH(req: Request) {
     const updates: any = {};
     if (title !== undefined) updates.title = title;
     if (posterUrl !== undefined) updates.posterUrl = posterUrl;
-    if (driveLink !== undefined) updates.driveLink = driveLink;
     if (tmdbUrl !== undefined) updates.tmdbUrl = tmdbUrl;
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
     if (chosenByEmail !== undefined) updates.chosenByEmail = chosenByEmail;
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
 
-    const updatedFilm = await FOTWFilm.findByIdAndUpdate(
-      filmId,
-      { $set: updates },
-      { new: true }
-    );
+    const updatedFilm = await FOTWFilm.findByIdAndUpdate(filmId, { $set: updates }, { new: true });
 
     if (!updatedFilm) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });

@@ -207,7 +207,6 @@ interface FOTWData {
     _id: string;
     title: string;
     posterUrl: string;
-    driveLink: string;
     chosenBy?: string;
     createdAt?: string;
     timerPaused?: boolean;
@@ -228,7 +227,6 @@ interface ArchiveFilm {
   _id: string;
   title: string;
   posterUrl: string;
-  driveLink: string;
   createdAt: string;
   ratingsCount: number;
   watchedCount: number;
@@ -582,7 +580,7 @@ export default function FOTWLandingPage() {
   };
 
   /* ── Archive multi-flip card ─────────────────────────────── */
-  // Panels: 0 = poster, 1 = info+drive, 2 = histogram+ratings, 3 = watched-by
+  // Panels: 0 = poster, 1 = info, 2 = histogram+ratings, 3 = watched-by
   const renderFlipCard = (af: ArchiveFilm) => {
     const step = flipStates[af._id] ?? 0;
     const afCounts = starValues.map((v) => af.allRatings.filter((r) => r.rating === v).length);
@@ -667,7 +665,7 @@ export default function FOTWLandingPage() {
               </div>
             </div>
 
-            {/* ── Panel 1: Info + drive link ── */}
+            {/* ── Panel 1: Info ── */}
             <div
               style={{
                 width: `${100 / PANELS}%`,
@@ -802,32 +800,7 @@ export default function FOTWLandingPage() {
                   </span>
                 </div>
               </div>
-              {/* Drive link */}
-              {af.driveLink && (
-                <a
-                  href={af.driveLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    backgroundColor: '#0a1a0a',
-                    border: `1px solid ${C.green}22`,
-                    borderRadius: 8,
-                    padding: '7px 10px',
-                    color: C.green,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    marginTop: 'auto',
-                  }}
-                >
-                  <ExternalLink size={12} />
-                  Watch on Drive
-                </a>
-              )}
+              {/* TMDB link */}
               {af.tmdbUrl && (
                 <a
                   href={af.tmdbUrl}
@@ -1200,23 +1173,12 @@ export default function FOTWLandingPage() {
           >
             {/* ── Column A: Poster ── */}
             <div style={{ width: 220, flexShrink: 0, position: 'relative' }}>
-              <a
-                href={film.driveLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <div
                 style={{
                   display: 'block',
                   position: 'relative',
                   borderRadius: 12,
                   overflow: 'hidden',
-                }}
-                onMouseEnter={(e) => {
-                  const overlay = e.currentTarget.querySelector('.poster-overlay') as HTMLElement;
-                  if (overlay) overlay.style.opacity = '1';
-                }}
-                onMouseLeave={(e) => {
-                  const overlay = e.currentTarget.querySelector('.poster-overlay') as HTMLElement;
-                  if (overlay) overlay.style.opacity = '0';
                 }}
               >
                 <div
@@ -1237,23 +1199,7 @@ export default function FOTWLandingPage() {
                     unoptimized
                   />
                 </div>
-                <div
-                  className="poster-overlay"
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: 12,
-                    background: 'rgba(0,0,0,0.4)',
-                    opacity: 0,
-                    transition: 'opacity 150ms',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ExternalLink size={20} color="white" />
-                </div>
-              </a>
+              </div>
             </div>
 
             {/* ── Column B: Film Info ── */}

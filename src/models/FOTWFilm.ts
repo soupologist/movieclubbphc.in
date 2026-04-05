@@ -3,7 +3,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IFOTWFilm extends Document {
   title: string;
   posterUrl: string;
-  driveLink: string;
   tmdbUrl: string;
   addedBy: string; // email of admin who added it
   chosenBy: string; // name of the person who chose this film
@@ -18,7 +17,6 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
   {
     title: { type: String, required: true },
     posterUrl: { type: String, required: true }, // URL to image
-    driveLink: { type: String, required: true },
     tmdbUrl: { type: String, default: '' },
     addedBy: { type: String, required: true },
     chosenBy: { type: String, default: '' }, // Name of member who chose this week's film
