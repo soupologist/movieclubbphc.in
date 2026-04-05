@@ -22,14 +22,10 @@ export async function GET() {
     // newest document with lockedAt: null. We exclude it from the archive
     // by _id so that old films (which may also have lockedAt: null because
     // they predate the auto-lock system) still appear in the archive.
-    const currentFilm = await FOTWFilm.findOne({ lockedAt: null })
-      .sort({ createdAt: -1 })
-      .lean();
+    const currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
 
     const archiveQuery = currentFilm ? { _id: { $ne: currentFilm._id } } : {};
-    const films = await FOTWFilm.find(archiveQuery)
-      .sort({ createdAt: -1 })
-      .lean();
+    const films = await FOTWFilm.find(archiveQuery).sort({ createdAt: -1 }).lean();
 
     const filmIds = films.map((f) => f._id);
 
@@ -42,33 +38,28 @@ export async function GET() {
     ]);
 
     // 3. Build O(1) lookup map: email → user document
-    const userMap = Object.fromEntries(
-      (allUsers as any[]).map((u) => [u.email, u])
-    );
+    const userMap = Object.fromEntries((allUsers as any[]).map((u) => [u.email, u]));
 
     // 4. Assemble per-film stats in memory — zero additional DB queries
     const result = films.map((film) => {
       const filmIdStr = film._id.toString();
 
-      const filmRatings = (allRatings as any[]).filter(
-        (r) => r.filmId.toString() === filmIdStr
-      );
-      const filmLikes = (allLikes as any[]).filter(
-        (l) => l.filmId.toString() === filmIdStr
-      );
+      const filmRatings = (allRatings as any[]).filter((r) => r.filmId.toString() === filmIdStr);
+      const filmLikes = (allLikes as any[]).filter((l) => l.filmId.toString() === filmIdStr);
 
       const avg =
         filmRatings.length > 0
-          ? Math.round(
-              (filmRatings.reduce((s, r) => s + r.rating, 0) / filmRatings.length) * 10
-            ) / 10
+          ? Math.round((filmRatings.reduce((s, r) => s + r.rating, 0) / filmRatings.length) * 10) /
+            10
           : 0;
 
       const watchedBy = Array.isArray(film.watchedBy) ? film.watchedBy : [];
 
       return {
         ...film,
-        timerDuration: film.timerDuration ?? (film.timerDurationDays ? film.timerDurationDays * 86400000 : 7 * 86400000),
+        timerDuration:
+          film.timerDuration ??
+          (film.timerDurationDays ? film.timerDurationDays * 86400000 : 7 * 86400000),
         averageRating: avg,
         ratingsCount: filmRatings.length,
         watchedCount: watchedBy.length,

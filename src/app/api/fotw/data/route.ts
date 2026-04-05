@@ -23,7 +23,9 @@ export async function GET(req: Request) {
 
     if (currentFilm) {
       // Ensure backwards compatibility by attaching a timerDuration explicitly
-      const fallbackMs = currentFilm.timerDurationDays ? currentFilm.timerDurationDays * 86400000 : 7 * 86400000;
+      const fallbackMs = currentFilm.timerDurationDays
+        ? currentFilm.timerDurationDays * 86400000
+        : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
     }
 
@@ -144,8 +146,7 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerDuration } =
-      await req.json();
+    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerDuration } = await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
