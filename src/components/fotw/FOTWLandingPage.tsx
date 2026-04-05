@@ -1061,7 +1061,7 @@ export default function FOTWLandingPage() {
                       fill={hasWatched ? C.green : 'none'}
                     />
                   )}
-                  {hasWatched ? 'Watched ✓' : 'Watched'}
+                  {hasWatched ? 'Watched' : 'Watched'}
                 </button>
 
                 <button
@@ -1079,7 +1079,7 @@ export default function FOTWLandingPage() {
                     color={liked ? C.orange : 'currentColor'}
                     fill={liked ? C.orange : 'none'}
                   />
-                  {liked ? 'Liked ♥' : 'Like'}
+                  {liked ? 'Liked' : 'Like'}
                 </button>
               </div>
 
@@ -1149,7 +1149,7 @@ export default function FOTWLandingPage() {
             </div>
 
             {/* ── Column C: Histogram ── */}
-            <div style={{ width: 320, flexShrink: 0 }}>
+            <div style={{ width: 450, flexShrink: 0 }}>
               {/* Top row: label + fan count */}
               <div
                 style={{
