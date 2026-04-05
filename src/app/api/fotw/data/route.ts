@@ -21,12 +21,15 @@ export async function GET(req: Request) {
     // 1. Get Current Film (Latest unlocked one)
     let currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
 
+    if (currentFilm) {
+      // Ensure backwards compatibility by attaching a timerDuration explicitly
+      const fallbackMs = currentFilm.timerDurationDays ? currentFilm.timerDurationDays * 86400000 : 7 * 86400000;
+      currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
+    }
+
     // Auto-lock if the timer duration has passed and timer is not paused
     if (currentFilm && !currentFilm.timerPaused) {
-      // Fallback: if timerDuration is not set, calculate from timerDurationDays or default 7 days.
-      const fallbackMs = currentFilm.timerDurationDays ? currentFilm.timerDurationDays * 86400000 : 7 * 86400000;
-      const duration = currentFilm.timerDuration ?? fallbackMs;
-      const deadline = new Date(currentFilm.createdAt).getTime() + duration;
+      const deadline = new Date(currentFilm.createdAt).getTime() + currentFilm.timerDuration;
       if (Date.now() > deadline) {
         await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
         currentFilm = null;

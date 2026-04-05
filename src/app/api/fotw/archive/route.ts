@@ -68,6 +68,7 @@ export async function GET() {
 
       return {
         ...film,
+        timerDuration: film.timerDuration ?? (film.timerDurationDays ? film.timerDurationDays * 86400000 : 7 * 86400000),
         averageRating: avg,
         ratingsCount: filmRatings.length,
         watchedCount: watchedBy.length,
