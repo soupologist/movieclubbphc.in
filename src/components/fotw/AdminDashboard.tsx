@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Sparkles, Edit2, Upload } from 'lucide-react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import { instrumentSerif } from '@/app/fonts';
 
 const C = {
@@ -79,6 +80,19 @@ export default function AdminDashboard() {
   const [importError, setImportError] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
+  // Rules Editor State
+  const [rulesContent, setRulesContent] = useState('');
+  const [rulesLoading, setRulesLoading] = useState(true);
+  const [rulesError, setRulesError] = useState<string | null>(null);
+  const [rulesSaving, setRulesSaving] = useState(false);
+  const [rulesMessage, setRulesMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [rulesUpdatedAt, setRulesUpdatedAt] = useState<string | null>(null);
+  const [rulesUpdatedBy, setRulesUpdatedBy] = useState<string | null>(null);
+  const [rulesPreview, setRulesPreview] = useState(false);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -104,6 +118,8 @@ export default function AdminDashboard() {
         }
       })
       .catch((err) => console.error(err));
+
+    loadRules();
   }, []);
 
   const showAddMessage = (type: 'success' | 'error', text: string) => {
@@ -114,6 +130,44 @@ export default function AdminDashboard() {
   const showEditMessage = (type: 'success' | 'error', text: string) => {
     setEditMsg({ type, text });
     setTimeout(() => setEditMsg(null), 4000);
+  };
+
+  const loadRules = async () => {
+    setRulesLoading(true);
+    setRulesError(null);
+    try {
+      const res = await fetch('/api/fotw/rules');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Failed to load rules');
+      setRulesContent(data.content || '');
+      setRulesUpdatedAt(data.updatedAt || null);
+      setRulesUpdatedBy(data.updatedBy || null);
+    } catch (error: any) {
+      setRulesError(error?.message || 'Failed to load rules');
+    } finally {
+      setRulesLoading(false);
+    }
+  };
+
+  const handleSaveRules = async () => {
+    setRulesSaving(true);
+    setRulesMessage(null);
+    try {
+      const res = await fetch('/api/fotw/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: rulesContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Failed to save rules');
+      setRulesUpdatedAt(data.updatedAt || null);
+      setRulesUpdatedBy(data.updatedBy || null);
+      setRulesMessage({ type: 'success', text: 'Rules saved successfully' });
+    } catch (error: any) {
+      setRulesMessage({ type: 'error', text: error?.message || 'Failed to save rules' });
+    } finally {
+      setRulesSaving(false);
+    }
   };
 
   const handleFetchMovie = async () => {
@@ -317,6 +371,79 @@ export default function AdminDashboard() {
     padding: '10px 14px',
     fontSize: 14,
   };
+
+  const lastSavedLabel = useMemo(() => {
+    if (!rulesUpdatedAt) return null;
+    const date = new Date(rulesUpdatedAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }, [rulesUpdatedAt]);
+
+  const markdownComponents = useMemo(
+    () => ({
+      h1: ({ children }: { children: React.ReactNode }) => (
+        <h1
+          className={instrumentSerif.className}
+          style={{ color: 'white', marginTop: 24, fontSize: '1.6rem' }}
+        >
+          {children}
+        </h1>
+      ),
+      h2: ({ children }: { children: React.ReactNode }) => (
+        <h2
+          className={instrumentSerif.className}
+          style={{ color: 'white', marginTop: 24, fontSize: '1.4rem' }}
+        >
+          {children}
+        </h2>
+      ),
+      h3: ({ children }: { children: React.ReactNode }) => (
+        <h3
+          className={instrumentSerif.className}
+          style={{ color: 'white', marginTop: 24, fontSize: '1.2rem' }}
+        >
+          {children}
+        </h3>
+      ),
+      p: ({ children }: { children: React.ReactNode }) => (
+        <p style={{ color: '#8a9bb0', lineHeight: 1.8, fontSize: 15 }}>{children}</p>
+      ),
+      ul: ({ children }: { children: React.ReactNode }) => (
+        <ul style={{ color: '#8a9bb0', paddingLeft: 20, lineHeight: 2 }}>{children}</ul>
+      ),
+      ol: ({ children }: { children: React.ReactNode }) => (
+        <ol style={{ color: '#8a9bb0', paddingLeft: 20, lineHeight: 2 }}>{children}</ol>
+      ),
+      li: ({ children }: { children: React.ReactNode }) => (
+        <li style={{ marginBottom: 4 }}>{children}</li>
+      ),
+      strong: ({ children }: { children: React.ReactNode }) => (
+        <strong style={{ color: 'white' }}>{children}</strong>
+      ),
+      hr: () => <hr style={{ borderColor: '#1e1e1e', margin: '24px 0' }} />,
+      code: ({ children }: { children: React.ReactNode }) => (
+        <code
+          style={{
+            background: '#141414',
+            border: '1px solid #1e1e1e',
+            borderRadius: 4,
+            padding: '2px 6px',
+            color: '#00e054',
+            fontSize: 13,
+          }}
+        >
+          {children}
+        </code>
+      ),
+    }),
+    []
+  );
 
   return (
     <div
@@ -915,6 +1042,117 @@ export default function AdminDashboard() {
             Reset Leaderboard
           </button>
         </div>
+      </section>
+
+      {/* ── Rules Editor ───────────────────────────────────── */}
+      <section
+        className="mb-12"
+        style={{
+          backgroundColor: C.card,
+          border: `1px solid ${C.border}`,
+          borderRadius: 16,
+          padding: 24,
+        }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white', margin: 0 }}>Edit Rules</h2>
+          <button
+            onClick={() => setRulesPreview((prev) => !prev)}
+            style={{
+              border: `1px solid ${C.border}`,
+              background: 'transparent',
+              color: C.muted,
+              borderRadius: 8,
+              padding: '6px 14px',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+            className="hover:text-white! hover:border-[#2e2e2e]!"
+          >
+            {rulesPreview ? 'Edit' : 'Preview'}
+          </button>
+        </div>
+
+        {rulesError && (
+          <p style={{ color: '#ff6464', fontSize: 12, marginBottom: 12 }}>{rulesError}</p>
+        )}
+
+        <div className={rulesPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : undefined}>
+          <div>
+            <textarea
+              value={rulesContent}
+              onChange={(e) => setRulesContent(e.target.value)}
+              placeholder="Enter rules in Markdown format..."
+              disabled={rulesLoading}
+              style={{
+                width: '100%',
+                minHeight: 400,
+                background: '#0a0a0a',
+                border: '1px solid #1e1e1e',
+                borderRadius: 8,
+                color: 'white',
+                fontFamily: 'monospace',
+                fontSize: 13,
+                padding: 14,
+                lineHeight: 1.6,
+                opacity: rulesLoading ? 0.6 : 1,
+              }}
+            />
+            <p style={{ color: '#4a5568', fontSize: 11, marginTop: 8, marginBottom: 0 }}>
+              Supports Markdown. Use ## for headings, **bold**, - for bullet points.
+            </p>
+          </div>
+
+          {rulesPreview && (
+            <div
+              style={{
+                background: '#0a0a0a',
+                border: '1px solid #1e1e1e',
+                borderRadius: 8,
+                padding: 16,
+                minHeight: 400,
+              }}
+            >
+              <ReactMarkdown components={markdownComponents}>{rulesContent}</ReactMarkdown>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={handleSaveRules}
+          disabled={rulesSaving || rulesLoading}
+          className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{
+            marginTop: 16,
+            backgroundColor: C.green,
+            color: '#000',
+            borderRadius: 8,
+            fontWeight: 600,
+            padding: '10px 24px',
+            fontSize: 14,
+            width: '100%',
+          }}
+        >
+          {rulesSaving ? 'Saving...' : 'Save Rules'}
+        </button>
+
+        {rulesMessage && (
+          <p
+            style={{
+              color: rulesMessage.type === 'success' ? C.green : '#ff6464',
+              fontSize: 12,
+              marginTop: 10,
+            }}
+          >
+            {rulesMessage.text}
+          </p>
+        )}
+
+        {lastSavedLabel && (
+          <p style={{ color: '#4a5568', fontSize: 11, marginTop: 8, marginBottom: 0 }}>
+            Last saved by {rulesUpdatedBy || 'system'} on {lastSavedLabel}
+          </p>
+        )}
       </section>
     </div>
   );

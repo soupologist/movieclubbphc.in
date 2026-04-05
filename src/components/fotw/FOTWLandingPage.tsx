@@ -1206,6 +1206,22 @@ export default function FOTWLandingPage() {
         </div>
       </div>
 
+      <Link
+        href="/club/filmoftheweek/rules"
+        style={{
+          color: '#4a5568',
+          fontSize: '13px',
+          textDecoration: 'none',
+          display: 'inline-block',
+          marginBottom: '24px',
+          letterSpacing: '0.02em',
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+      >
+        Rules →
+      </Link>
+
       {/* ══════════════════════════════════════════════════════
           SECTION 1: CURRENT FILM HERO
       ══════════════════════════════════════════════════════ */}
