@@ -19,35 +19,6 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip);
 
-const avgLinePlugin = {
-  id: 'avgLine',
-  afterDraw(chart: any) {
-    const { ctx, chartArea, scales } = chart;
-    const avgCount = chart.options.plugins?.avgLine?.value;
-    if (avgCount === undefined || !scales.y) return;
-    const y = scales.y.getPixelForValue(avgCount);
-
-    // Bounds check
-    if (y < chartArea.top || y > chartArea.bottom) return;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(chartArea.left, y);
-    ctx.lineTo(chartArea.right, y);
-    ctx.strokeStyle = '#2a2a2a';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 4]);
-    ctx.stroke();
-
-    ctx.fillStyle = '#4a5568';
-    ctx.font = '10px sans-serif';
-    ctx.fillText('avg', chartArea.right + 6, y + 4);
-    ctx.restore();
-  },
-};
-
-ChartJS.register(avgLinePlugin);
-
 /* ── Design tokens ───────────────────────────────────────── */
 const C = {
   bg: '#000000',
@@ -655,8 +626,17 @@ export default function FOTWLandingPage() {
                 height: '100%',
               }}
             >
-              <div className="group" style={{ position: 'relative', width: '100%', height: '100%' }}>
-                <Image src={af.posterUrl} alt={af.title} fill className="object-cover" unoptimized />
+              <div
+                className="group"
+                style={{ position: 'relative', width: '100%', height: '100%' }}
+              >
+                <Image
+                  src={af.posterUrl}
+                  alt={af.title}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
                 {/* Hover overlay on poster: rating + watch count */}
                 <div
                   className="absolute inset-0 z-10 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -672,7 +652,15 @@ export default function FOTWLandingPage() {
                     <Eye size={13} />
                     <span style={{ fontSize: 12, fontWeight: 500 }}>{af.watchedCount}</span>
                   </div>
-                  <div style={{ color: C.dim, fontSize: 9, marginTop: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      color: C.dim,
+                      fontSize: 9,
+                      marginTop: 10,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     click to explore
                   </div>
                 </div>
@@ -695,50 +683,123 @@ export default function FOTWLandingPage() {
             >
               {/* Step indicator */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
-                {[0,1,2,3].map(i => (
-                  <div key={i} style={{
-                    width: i === step - 1 ? 14 : 4,
-                    height: 3,
-                    borderRadius: 2,
-                    backgroundColor: i === step - 1 ? C.green : C.border,
-                    transition: 'all 0.3s',
-                  }} />
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i === step - 1 ? 14 : 4,
+                      height: 3,
+                      borderRadius: 2,
+                      backgroundColor: i === step - 1 ? C.green : C.border,
+                      transition: 'all 0.3s',
+                    }}
+                  />
                 ))}
               </div>
-              <h3 style={{ color: 'white', fontSize: 13, fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
+              <h3
+                style={{
+                  color: 'white',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  margin: 0,
+                  lineHeight: 1.3,
+                }}
+              >
                 {af.title}
               </h3>
               {af.chosenBy && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Film size={10} color={C.dim} />
                   <span style={{ color: C.dim, fontSize: 9 }}>chosen by</span>
-                  <span style={{ color: C.blue, fontSize: 10, fontWeight: 600 }}>{af.chosenBy}</span>
+                  <span style={{ color: C.blue, fontSize: 10, fontWeight: 600 }}>
+                    {af.chosenBy}
+                  </span>
                 </div>
               )}
               <div style={{ color: C.dim, fontSize: 10 }}>
-                {new Date(af.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                {new Date(af.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
               </div>
               {/* Key stats */}
-              <div style={{
-                display: 'flex',
-                gap: 10,
-                padding: '8px 0',
-                borderTop: `1px solid ${C.border}`,
-                borderBottom: `1px solid ${C.border}`,
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>{af.watchedCount}</span>
-                  <span style={{ color: C.dim, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Watched</span>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  padding: '8px 0',
+                  borderTop: `1px solid ${C.border}`,
+                  borderBottom: `1px solid ${C.border}`,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    flex: 1,
+                  }}
+                >
+                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>
+                    {af.watchedCount}
+                  </span>
+                  <span
+                    style={{
+                      color: C.dim,
+                      fontSize: 8,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    Watched
+                  </span>
                 </div>
                 <div style={{ width: 1, backgroundColor: C.border }} />
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>{af.ratingsCount}</span>
-                  <span style={{ color: C.dim, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ratings</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    flex: 1,
+                  }}
+                >
+                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>
+                    {af.ratingsCount}
+                  </span>
+                  <span
+                    style={{
+                      color: C.dim,
+                      fontSize: 8,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    Ratings
+                  </span>
                 </div>
                 <div style={{ width: 1, backgroundColor: C.border }} />
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                  <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>{af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}</span>
-                  <span style={{ color: C.dim, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avg</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    flex: 1,
+                  }}
+                >
+                  <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
+                    {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
+                  </span>
+                  <span
+                    style={{
+                      color: C.dim,
+                      fontSize: 8,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    Avg
+                  </span>
                 </div>
               </div>
               {/* Drive link */}
@@ -791,7 +852,17 @@ export default function FOTWLandingPage() {
                   TMDB
                 </a>
               )}
-              <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', marginTop: 4, letterSpacing: '0.08em' }}>CLICK FOR RATINGS →</div>
+              <div
+                style={{
+                  color: C.dim,
+                  fontSize: 9,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                CLICK FOR RATINGS →
+              </div>
             </div>
 
             {/* ── Panel 2: Histogram + ratings list ── */}
@@ -810,18 +881,32 @@ export default function FOTWLandingPage() {
             >
               {/* Step indicator */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
-                {[0,1,2,3].map(i => (
-                  <div key={i} style={{
-                    width: i === step - 1 ? 14 : 4,
-                    height: 3,
-                    borderRadius: 2,
-                    backgroundColor: i === step - 1 ? C.orange : C.border,
-                    transition: 'all 0.3s',
-                  }} />
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i === step - 1 ? 14 : 4,
+                      height: 3,
+                      borderRadius: 2,
+                      backgroundColor: i === step - 1 ? C.orange : C.border,
+                      transition: 'all 0.3s',
+                    }}
+                  />
                 ))}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: C.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ratings</span>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    color: C.muted,
+                    fontSize: 9,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  Ratings
+                </span>
                 <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
                   {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
                 </span>
@@ -829,23 +914,45 @@ export default function FOTWLandingPage() {
               {/* MiniStars for avg */}
               <div>
                 <MiniStars value={af.averageRating} size={12} />
-                <span style={{ color: C.dim, fontSize: 9, marginLeft: 4 }}>{af.ratingsCount} ratings</span>
+                <span style={{ color: C.dim, fontSize: 9, marginLeft: 4 }}>
+                  {af.ratingsCount} ratings
+                </span>
               </div>
               {/* Histogram bars */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', height: 36, gap: 2, marginBottom: 2 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  height: 36,
+                  gap: 2,
+                  marginBottom: 2,
+                }}
+              >
                 {starValues.map((v, i) => {
                   const c = afCounts[i];
                   const hp = afMax > 0 ? c / afMax : 0;
                   const isTop = afMax > 0 && c === afMax && c > 0;
                   return (
-                    <div key={v} title={`★${v}: ${c}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                      <div style={{
-                        width: '100%',
-                        height: Math.max(2, hp * 32),
-                        backgroundColor: isTop ? C.green : (c > 0 ? '#2a2a2a' : '#181818'),
-                        borderRadius: '2px 2px 0 0',
-                        transition: 'height 0.4s ease',
-                      }} />
+                    <div
+                      key={v}
+                      title={`★${v}: ${c}`}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '100%',
+                          height: Math.max(2, hp * 32),
+                          backgroundColor: isTop ? C.green : c > 0 ? '#2a2a2a' : '#181818',
+                          borderRadius: '2px 2px 0 0',
+                          transition: 'height 0.4s ease',
+                        }}
+                      />
                     </div>
                   );
                 })}
@@ -855,37 +962,60 @@ export default function FOTWLandingPage() {
                 <span style={{ color: C.dim, fontSize: 7 }}>5★</span>
               </div>
               {/* Individual ratings list */}
-              <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                borderTop: `1px solid ${C.border}`,
-                paddingTop: 6,
-              }} className="space-y-1 pr-1">
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  borderTop: `1px solid ${C.border}`,
+                  paddingTop: 6,
+                }}
+                className="space-y-1 pr-1"
+              >
                 {af.allRatings.length === 0 ? (
-                  <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', paddingTop: 8 }}>No ratings yet</div>
-                ) : af.allRatings.map((r, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <div style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      backgroundColor: avatarBg(r.name),
-                      color: C.blue,
-                      fontSize: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      fontWeight: 700,
-                    }}>
-                      {r.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="truncate" style={{ fontSize: 9, flex: 1, color: '#ccc' }}>{r.name}</div>
-                    <div style={{ color: C.green, fontSize: 9, fontWeight: 700 }}>★{r.rating}</div>
+                  <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', paddingTop: 8 }}>
+                    No ratings yet
                   </div>
-                ))}
+                ) : (
+                  af.allRatings.map((r, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          backgroundColor: avatarBg(r.name),
+                          color: C.blue,
+                          fontSize: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {r.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="truncate" style={{ fontSize: 9, flex: 1, color: '#ccc' }}>
+                        {r.name}
+                      </div>
+                      <div style={{ color: C.green, fontSize: 9, fontWeight: 700 }}>
+                        ★{r.rating}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-              <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', paddingTop: 4, letterSpacing: '0.08em' }}>CLICK FOR VIEWERS →</div>
+              <div
+                style={{
+                  color: C.dim,
+                  fontSize: 9,
+                  textAlign: 'center',
+                  paddingTop: 4,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                CLICK FOR VIEWERS →
+              </div>
             </div>
 
             {/* ── Panel 3: Watched by ── */}
@@ -904,48 +1034,80 @@ export default function FOTWLandingPage() {
             >
               {/* Step indicator */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
-                {[0,1,2,3].map(i => (
-                  <div key={i} style={{
-                    width: i === step - 1 ? 14 : 4,
-                    height: 3,
-                    borderRadius: 2,
-                    backgroundColor: i === step - 1 ? C.blue : C.border,
-                    transition: 'all 0.3s',
-                  }} />
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i === step - 1 ? 14 : 4,
+                      height: 3,
+                      borderRadius: 2,
+                      backgroundColor: i === step - 1 ? C.blue : C.border,
+                      transition: 'all 0.3s',
+                    }}
+                  />
                 ))}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: C.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Watched by</span>
-                <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>{af.watchedCount}</span>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    color: C.muted,
+                    fontSize: 9,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  Watched by
+                </span>
+                <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>
+                  {af.watchedCount}
+                </span>
               </div>
               {af.watchedBy.length === 0 ? (
-                <div style={{ color: C.dim, fontSize: 10, textAlign: 'center', paddingTop: 16 }}>No viewers yet</div>
+                <div style={{ color: C.dim, fontSize: 10, textAlign: 'center', paddingTop: 16 }}>
+                  No viewers yet
+                </div>
               ) : (
                 <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-2 pr-1">
                   {af.watchedBy.map((w, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        backgroundColor: avatarBg(w.name),
-                        color: 'white',
-                        fontSize: 9,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        fontWeight: 700,
-                        border: `1px solid ${C.border}`,
-                      }}>
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          backgroundColor: avatarBg(w.name),
+                          color: 'white',
+                          fontSize: 9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          fontWeight: 700,
+                          border: `1px solid ${C.border}`,
+                        }}
+                      >
                         {w.name.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: 'white', fontSize: 10, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div
+                          style={{
+                            color: 'white',
+                            fontSize: 10,
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
                           {w.name}
                         </div>
                         <div style={{ color: C.dim, fontSize: 8 }}>
-                          {new Date(w.watchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {new Date(w.watchedAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                         </div>
                       </div>
                       <Eye size={10} color={C.dim} />
@@ -954,7 +1116,16 @@ export default function FOTWLandingPage() {
                 </div>
               )}
               <div style={{ marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
-                <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', letterSpacing: '0.08em' }}>CLICK TO RESTART →</div>
+                <div
+                  style={{
+                    color: C.dim,
+                    fontSize: 9,
+                    textAlign: 'center',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  CLICK TO RESTART →
+                </div>
               </div>
             </div>
           </div>
@@ -962,7 +1133,10 @@ export default function FOTWLandingPage() {
 
         {/* Film title below card */}
         <div className="mt-2">
-          <h3 className="m-0 text-white truncate" style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}>
+          <h3
+            className="m-0 text-white truncate"
+            style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}
+          >
             {af.title}
           </h3>
           {step === 0 && af.chosenBy && (
@@ -1412,7 +1586,6 @@ export default function FOTWLandingPage() {
                 label: (item: any) => `${item.raw} films watched`,
               },
             },
-            avgLine: { value: avgCount },
           },
           scales: {
             x: {
@@ -1450,10 +1623,7 @@ export default function FOTWLandingPage() {
 
         return (
           <>
-            <div
-              className="flex items-center justify-between"
-              style={{ marginTop: 48 }}
-            >
+            <div className="flex items-center justify-between" style={{ marginTop: 48 }}>
               <span
                 style={{
                   color: 'white',
@@ -1493,10 +1663,7 @@ export default function FOTWLandingPage() {
           SECTION 3: PREVIOUS FILMS (archive grid)
       ══════════════════════════════════════════════════════ */}
       <>
-        <div
-          className="flex items-center justify-between"
-          style={{ marginTop: 48 }}
-        >
+        <div className="flex items-center justify-between" style={{ marginTop: 48 }}>
           <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
           {previousFilms.length > 0 && (
             <span style={{ color: C.dim, fontSize: 13 }}>{previousFilms.length} films</span>
