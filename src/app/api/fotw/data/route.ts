@@ -129,12 +129,13 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, driveLink, chosenBy } = await req.json();
+    const { title, posterUrl, driveLink, tmdbUrl, chosenBy } = await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
       posterUrl,
       driveLink,
+      tmdbUrl: tmdbUrl || '',
       chosenBy: chosenBy || '',
       addedBy: session.user.email,
     });
@@ -160,7 +161,7 @@ export async function PATCH(req: Request) {
 
     await dbConnect();
     const body = await req.json();
-    const { filmId, title, posterUrl, driveLink, chosenBy, timerPaused } = body;
+    const { filmId, title, posterUrl, driveLink, tmdbUrl, chosenBy, timerPaused } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
@@ -170,6 +171,7 @@ export async function PATCH(req: Request) {
     if (title !== undefined) updates.title = title;
     if (posterUrl !== undefined) updates.posterUrl = posterUrl;
     if (driveLink !== undefined) updates.driveLink = driveLink;
+    if (tmdbUrl !== undefined) updates.tmdbUrl = tmdbUrl;
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
 

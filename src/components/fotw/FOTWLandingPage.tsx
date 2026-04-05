@@ -239,6 +239,8 @@ interface FOTWData {
     driveLink: string;
     chosenBy?: string;
     createdAt?: string;
+    timerPaused?: boolean;
+    tmdbUrl?: string;
   } | null;
   leaderboard: LeaderboardUser[];
   userRating: number | null;
@@ -263,6 +265,7 @@ interface ArchiveFilm {
   allRatings: { userEmail: string; name: string; rating: number; createdAt: string }[];
   watchedBy: { userEmail: string; watchedAt: string; name: string }[];
   chosenBy?: string;
+  tmdbUrl?: string;
   likesCount?: number;
 }
 
@@ -309,15 +312,14 @@ export default function FOTWLandingPage() {
   const [userActivity, setUserActivity] = useState<UserActivityData | null>(null);
   const [userActivityLoading, setUserActivityLoading] = useState(false);
 
-  // Archive flip state — Set allows multiple simultaneous flips
-  const [flippedIds, setFlippedIds] = useState<Set<string>>(new Set());
+  // Archive multi-flip state — 0: poster, 1: info, 2: histogram, 3: watched-by
+  const [flipStates, setFlipStates] = useState<Record<string, number>>({});
 
-  const toggleFlip = (id: string) => {
-    setFlippedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const advanceFlip = (id: string) => {
+    setFlipStates((prev) => {
+      const current = prev[id] ?? 0;
+      const next = (current + 1) % 4;
+      return { ...prev, [id]: next };
     });
   };
 
@@ -603,260 +605,364 @@ export default function FOTWLandingPage() {
     );
   };
 
-  /* ── Archive flip-card ───────────────────────────────────── */
+  /* ── Archive multi-flip card ─────────────────────────────── */
+  // Panels: 0 = poster, 1 = info+drive, 2 = histogram+ratings, 3 = watched-by
   const renderFlipCard = (af: ArchiveFilm) => {
-    const isFlipped = flippedIds.has(af._id);
+    const step = flipStates[af._id] ?? 0;
     const afCounts = starValues.map((v) => af.allRatings.filter((r) => r.rating === v).length);
     const afMax = Math.max(...afCounts, 0);
 
+    const PANELS = 4;
+
     return (
-      <div key={af._id} style={{ perspective: '1000px', width: '100%', minWidth: 150 }}>
+      <div key={af._id} style={{ width: '100%', minWidth: 150 }}>
+        {/* Outer wrapper: clips overflow, sets visible size */}
         <div
           style={{
             position: 'relative',
             width: '100%',
-            height: '100%',
-            transformStyle: 'preserve-3d',
-            transition: 'transform 0.45s ease',
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+            overflow: 'hidden',
+            borderRadius: 12,
+            cursor: 'pointer',
+            aspectRatio: '2/3',
+            backgroundColor: C.card,
+            border: `1px solid ${step === 0 ? 'transparent' : C.border}`,
+            transition: 'border-color 0.3s',
           }}
+          onClick={() => advanceFlip(af._id)}
         >
-          {/* Front */}
+          {/* Sliding strip: 4 panels side-by-side */}
           <div
             style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              position: 'relative',
-              width: '100%',
-              zIndex: isFlipped ? 0 : 2,
-              cursor: 'pointer',
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isFlipped) toggleFlip(af._id);
+              display: 'flex',
+              width: `${PANELS * 100}%`,
+              height: '100%',
+              transform: `translateX(-${(step * 100) / PANELS}%)`,
+              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
+            {/* ── Panel 0: Poster ── */}
             <div
-              className="group relative overflow-hidden"
-              style={{ borderRadius: 12, aspectRatio: '2/3', width: '100%' }}
+              style={{
+                width: `${100 / PANELS}%`,
+                flexShrink: 0,
+                position: 'relative',
+                height: '100%',
+              }}
             >
-              <Image src={af.posterUrl} alt={af.title} fill className="object-cover" unoptimized />
-              {/* Hover overlay */}
-              <div
-                className="absolute inset-0 z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-                style={{ backgroundColor: 'rgba(0,0,0,0.88)', borderRadius: 12 }}
-              >
-                <div className="text-center">
-                  <span style={{ fontSize: 34, fontWeight: 700, color: 'white', lineHeight: 1 }}>
-                    {af.averageRating.toFixed(1)}
+              <div className="group" style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <Image src={af.posterUrl} alt={af.title} fill className="object-cover" unoptimized />
+                {/* Hover overlay on poster: rating + watch count */}
+                <div
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+                >
+                  <span style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1 }}>
+                    {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
                   </span>
                   <div className="flex items-center justify-center gap-1 mt-1 mb-3">
-                    <MiniStars value={af.averageRating} size={13} />
+                    <MiniStars value={af.averageRating} size={14} />
                   </div>
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="flex items-center gap-1" style={{ color: C.muted }}>
-                      <Eye size={13} />
-                      <span style={{ fontSize: 12, fontWeight: 500 }}>{af.watchedCount}</span>
-                    </div>
+                  <div className="flex items-center gap-2" style={{ color: C.muted }}>
+                    <Eye size={13} />
+                    <span style={{ fontSize: 12, fontWeight: 500 }}>{af.watchedCount}</span>
+                  </div>
+                  <div style={{ color: C.dim, fontSize: 9, marginTop: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    click to explore
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-2">
-              <h3
-                className="m-0 text-white truncate"
-                style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}
-              >
+
+            {/* ── Panel 1: Info + drive link ── */}
+            <div
+              style={{
+                width: `${100 / PANELS}%`,
+                flexShrink: 0,
+                padding: '14px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                height: '100%',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Step indicator */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+                {[0,1,2,3].map(i => (
+                  <div key={i} style={{
+                    width: i === step - 1 ? 14 : 4,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: i === step - 1 ? C.green : C.border,
+                    transition: 'all 0.3s',
+                  }} />
+                ))}
+              </div>
+              <h3 style={{ color: 'white', fontSize: 13, fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
                 {af.title}
               </h3>
               {af.chosenBy && (
-                <div style={{ color: C.blue, fontSize: 10, marginTop: 2 }}>
-                  chosen by {af.chosenBy}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Film size={10} color={C.dim} />
+                  <span style={{ color: C.dim, fontSize: 9 }}>chosen by</span>
+                  <span style={{ color: C.blue, fontSize: 10, fontWeight: 600 }}>{af.chosenBy}</span>
                 </div>
               )}
+              <div style={{ color: C.dim, fontSize: 10 }}>
+                {new Date(af.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+              {/* Key stats */}
+              <div style={{
+                display: 'flex',
+                gap: 10,
+                padding: '8px 0',
+                borderTop: `1px solid ${C.border}`,
+                borderBottom: `1px solid ${C.border}`,
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>{af.watchedCount}</span>
+                  <span style={{ color: C.dim, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Watched</span>
+                </div>
+                <div style={{ width: 1, backgroundColor: C.border }} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>{af.ratingsCount}</span>
+                  <span style={{ color: C.dim, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ratings</span>
+                </div>
+                <div style={{ width: 1, backgroundColor: C.border }} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                  <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>{af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}</span>
+                  <span style={{ color: C.dim, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avg</span>
+                </div>
+              </div>
+              {/* Drive link */}
+              {af.driveLink && (
+                <a
+                  href={af.driveLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: '#0a1a0a',
+                    border: `1px solid ${C.green}22`,
+                    borderRadius: 8,
+                    padding: '7px 10px',
+                    color: C.green,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    marginTop: 'auto',
+                  }}
+                >
+                  <ExternalLink size={12} />
+                  Watch on Drive
+                </a>
+              )}
+              {af.tmdbUrl && (
+                <a
+                  href={af.tmdbUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: '#0a0f1a',
+                    border: `1px solid ${C.blue}22`,
+                    borderRadius: 8,
+                    padding: '7px 10px',
+                    color: C.blue,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <ExternalLink size={12} />
+                  TMDB
+                </a>
+              )}
+              <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', marginTop: 4, letterSpacing: '0.08em' }}>CLICK FOR RATINGS →</div>
             </div>
-          </div>
 
-          {/* Back */}
-          <div
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)',
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: C.card,
-              border: `1px solid ${C.border}`,
-              borderRadius: 12,
-              zIndex: isFlipped ? 2 : 0,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+            {/* ── Panel 2: Histogram + ratings list ── */}
             <div
               style={{
-                position: 'absolute',
-                inset: 0,
-                padding: 12,
-                overflowY: 'auto',
+                width: `${100 / PANELS}%`,
+                flexShrink: 0,
+                padding: '14px 12px',
                 display: 'flex',
                 flexDirection: 'column',
+                gap: 6,
+                height: '100%',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
               }}
             >
-              {/* Back header */}
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h3
-                  className="m-0 text-white truncate"
-                  style={{ fontSize: 12, fontWeight: 600, flex: 1 }}
-                >
-                  {af.title}
-                </h3>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFlip(af._id);
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: C.muted,
-                    cursor: 'pointer',
-                    padding: 2,
-                    flexShrink: 0,
-                  }}
-                  className="hover:text-white"
-                >
-                  <X size={11} />
-                </button>
+              {/* Step indicator */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+                {[0,1,2,3].map(i => (
+                  <div key={i} style={{
+                    width: i === step - 1 ? 14 : 4,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: i === step - 1 ? C.orange : C.border,
+                    transition: 'all 0.3s',
+                  }} />
+                ))}
               </div>
-              {af.chosenBy && (
-                <div className="flex items-center gap-1 mb-1">
-                  <span style={{ color: C.dim, fontSize: 9 }}>chosen by</span>
-                  <span style={{ color: C.blue, fontSize: 10 }}>{af.chosenBy}</span>
-                </div>
-              )}
-              {/* Stats */}
-              <div className="flex items-center gap-3 my-2">
-                <div className="flex items-center gap-1" style={{ color: C.muted, fontSize: 10 }}>
-                  <Eye size={10} style={{ color: C.dim }} />
-                  {af.watchedCount}
-                </div>
-                <div className="flex items-center gap-1" style={{ color: C.muted, fontSize: 10 }}>
-                  <Star size={10} style={{ color: C.dim }} />
-                  {af.ratingsCount}
-                </div>
-                <div style={{ color: C.green, fontSize: 12, fontWeight: 600, marginLeft: 'auto' }}>
-                  {af.averageRating.toFixed(1)}
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: C.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ratings</span>
+                <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
+                  {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
+                </span>
               </div>
-              {/* Mini histogram */}
-              <div className="mb-3">
-                <div
-                  style={{
-                    color: C.dim,
-                    fontSize: 8,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    marginBottom: 3,
-                  }}
-                >
-                  RATINGS
-                </div>
-                <div className="flex items-end mb-1" style={{ height: 28, gap: 2 }}>
-                  {starValues.map((v, i) => {
-                    const c = afCounts[i];
-                    const hp = afMax > 0 ? c / afMax : 0;
-                    return (
-                      <div
-                        key={v}
-                        style={{
-                          width: 'calc(10% - 2px)',
-                          height: Math.max(2, hp * 28),
-                          backgroundColor: afMax > 0 && c === afMax && c > 0 ? C.green : '#1e1e1e',
-                          borderRadius: '2px 2px 0 0',
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-                {/* Ratings list */}
-                <div style={{ maxHeight: 72, overflowY: 'auto' }} className="space-y-1 pr-1">
-                  {af.allRatings.map((r, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <div
-                        style={{
-                          width: 16,
-                          height: 16,
-                          borderRadius: '50%',
-                          backgroundColor: '#1a1a3a',
-                          color: C.blue,
-                          fontSize: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {r.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="truncate text-white" style={{ fontSize: 9, flex: 1 }}>
-                        {r.name}
-                      </div>
-                      <div style={{ color: C.green, fontSize: 9, fontWeight: 600 }}>{r.rating}</div>
+              {/* MiniStars for avg */}
+              <div>
+                <MiniStars value={af.averageRating} size={12} />
+                <span style={{ color: C.dim, fontSize: 9, marginLeft: 4 }}>{af.ratingsCount} ratings</span>
+              </div>
+              {/* Histogram bars */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: 36, gap: 2, marginBottom: 2 }}>
+                {starValues.map((v, i) => {
+                  const c = afCounts[i];
+                  const hp = afMax > 0 ? c / afMax : 0;
+                  const isTop = afMax > 0 && c === afMax && c > 0;
+                  return (
+                    <div key={v} title={`★${v}: ${c}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      <div style={{
+                        width: '100%',
+                        height: Math.max(2, hp * 32),
+                        backgroundColor: isTop ? C.green : (c > 0 ? '#2a2a2a' : '#181818'),
+                        borderRadius: '2px 2px 0 0',
+                        transition: 'height 0.4s ease',
+                      }} />
                     </div>
-                  ))}
-                  {af.allRatings.length === 0 && (
-                    <div style={{ color: C.dim, fontSize: 9 }}>No ratings yet</div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-              {/* Watched by */}
-              {af.watchedBy.length > 0 && (
-                <div className="mb-3">
-                  <div
-                    style={{
-                      color: C.dim,
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 4 }}>
+                <span style={{ color: C.dim, fontSize: 7 }}>½★</span>
+                <span style={{ color: C.dim, fontSize: 7 }}>5★</span>
+              </div>
+              {/* Individual ratings list */}
+              <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                borderTop: `1px solid ${C.border}`,
+                paddingTop: 6,
+              }} className="space-y-1 pr-1">
+                {af.allRatings.length === 0 ? (
+                  <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', paddingTop: 8 }}>No ratings yet</div>
+                ) : af.allRatings.map((r, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      backgroundColor: avatarBg(r.name),
+                      color: C.blue,
                       fontSize: 8,
-                      textTransform: 'uppercase',
-                      marginBottom: 3,
-                    }}
-                  >
-                    WATCHED BY
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontWeight: 700,
+                    }}>
+                      {r.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="truncate" style={{ fontSize: 9, flex: 1, color: '#ccc' }}>{r.name}</div>
+                    <div style={{ color: C.green, fontSize: 9, fontWeight: 700 }}>★{r.rating}</div>
                   </div>
-                  <div className="flex flex-wrap" style={{ gap: 3 }}>
-                    {af.watchedBy.map((w, idx) => (
-                      <div
-                        key={idx}
-                        title={w.name}
-                        style={{
-                          width: 16,
-                          height: 16,
-                          borderRadius: '50%',
-                          backgroundColor: C.border,
-                          color: 'white',
-                          fontSize: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
+                ))}
+              </div>
+              <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', paddingTop: 4, letterSpacing: '0.08em' }}>CLICK FOR VIEWERS →</div>
+            </div>
+
+            {/* ── Panel 3: Watched by ── */}
+            <div
+              style={{
+                width: `${100 / PANELS}%`,
+                flexShrink: 0,
+                padding: '14px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                height: '100%',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Step indicator */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+                {[0,1,2,3].map(i => (
+                  <div key={i} style={{
+                    width: i === step - 1 ? 14 : 4,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: i === step - 1 ? C.blue : C.border,
+                    transition: 'all 0.3s',
+                  }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: C.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Watched by</span>
+                <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>{af.watchedCount}</span>
+              </div>
+              {af.watchedBy.length === 0 ? (
+                <div style={{ color: C.dim, fontSize: 10, textAlign: 'center', paddingTop: 16 }}>No viewers yet</div>
+              ) : (
+                <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-2 pr-1">
+                  {af.watchedBy.map((w, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        backgroundColor: avatarBg(w.name),
+                        color: 'white',
+                        fontSize: 9,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        fontWeight: 700,
+                        border: `1px solid ${C.border}`,
+                      }}>
                         {w.name.charAt(0).toUpperCase()}
                       </div>
-                    ))}
-                  </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: 'white', fontSize: 10, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {w.name}
+                        </div>
+                        <div style={{ color: C.dim, fontSize: 8 }}>
+                          {new Date(w.watchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      </div>
+                      <Eye size={10} color={C.dim} />
+                    </div>
+                  ))}
                 </div>
               )}
-              <div style={{ marginTop: 'auto', paddingTop: 6 }}>
-                <div style={{ color: C.dim, fontSize: 9 }}>
-                  Added{' '}
-                  {new Date(af.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </div>
+              <div style={{ marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
+                <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', letterSpacing: '0.08em' }}>CLICK TO RESTART →</div>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Film title below card */}
+        <div className="mt-2">
+          <h3 className="m-0 text-white truncate" style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}>
+            {af.title}
+          </h3>
+          {step === 0 && af.chosenBy && (
+            <div style={{ color: C.blue, fontSize: 10, marginTop: 2 }}>chosen by {af.chosenBy}</div>
+          )}
         </div>
       </div>
     );

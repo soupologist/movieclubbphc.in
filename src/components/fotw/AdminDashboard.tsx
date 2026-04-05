@@ -29,6 +29,7 @@ export default function AdminDashboard() {
     posterUrl: '',
     driveLink: '',
     chosenBy: '',
+    tmdbUrl: '',
   });
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [autoFilled, setAutoFilled] = useState(false);
@@ -40,6 +41,9 @@ export default function AdminDashboard() {
   const [fetchedMovie, setFetchedMovie] = useState<{ title: string; posterUrl: string; year: number } | null>(null);
 
   // Edit Film State
+  const [editTab, setEditTab] = useState<'current' | 'previous'>('current');
+
+  // Edit Film State
   const [editLoading, setEditLoading] = useState(false);
   const [editData, setEditData] = useState({
     filmId: '',
@@ -48,6 +52,7 @@ export default function AdminDashboard() {
     driveLink: '',
     chosenBy: '',
     timerPaused: false,
+    tmdbUrl: '',
   });
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -89,6 +94,7 @@ export default function AdminDashboard() {
             driveLink: d.currentFilm.driveLink || '',
             chosenBy: d.currentFilm.chosenBy || '',
             timerPaused: d.currentFilm.timerPaused || false,
+            tmdbUrl: d.currentFilm.tmdbUrl || '',
           });
         }
       })
@@ -114,10 +120,18 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tmdbUrl: tmdbUrlInput })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch movie data');
-      setFormData(prev => ({ ...prev, title: data.title, posterUrl: data.posterUrl }));
-      setFetchedMovie({ title: data.title, posterUrl: data.posterUrl, year: data.year });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to fetch movie data');
+      if (d.success) {
+        setFetchedMovie({ title: d.title, posterUrl: d.posterUrl, year: d.year });
+        setFormData((prev) => ({
+          ...prev,
+          title: `${d.title} (${d.year})`,
+          posterUrl: d.posterUrl,
+          tmdbUrl: tmdbUrlInput,
+        }));
+        setFetchError(null);
+      }
     } catch (e: any) {
       setFetchError(e.message);
       setFetchedMovie(null);
@@ -138,7 +152,7 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         showAddMessage('success', 'Film added successfully! Redirecting...');
-        setFormData({ title: '', posterUrl: '', driveLink: '', chosenBy: '' });
+        setFormData({ title: '', posterUrl: '', driveLink: '', chosenBy: '', tmdbUrl: '' });
         setAutoFilled(false);
         setTimeout(() => {
           router.push('/club/filmoftheweek');
@@ -217,15 +231,19 @@ export default function AdminDashboard() {
     let elapsed = 0;
     if (timerRef.current) clearInterval(timerRef.current);
 
+    // Pick the actual winner from the eligible pool
+    const finalWinner = pool[Math.floor(Math.random() * pool.length)].name;
+
     timerRef.current = setInterval(() => {
-      const randomWinner = pool[Math.floor(Math.random() * pool.length)].name;
-      setWinner(randomWinner);
+      // Visually spin through ALL names for dramatic effect
+      const randomVisual = leaderboard[Math.floor(Math.random() * leaderboard.length)].name;
+      setWinner(randomVisual);
       elapsed += 100;
       if (elapsed >= 3000) {
         clearInterval(timerRef.current!);
         setIsSpinning(false);
-        setWinner(randomWinner);
-        setFormData((prev) => ({ ...prev, chosenBy: randomWinner }));
+        setWinner(finalWinner);
+        setFormData((prev) => ({ ...prev, chosenBy: finalWinner }));
         setAutoFilled(true);
       }
     }, 100);
@@ -283,9 +301,9 @@ export default function AdminDashboard() {
         </h1>
       </div>
 
-      {/* ── Add New Film ────────────────────────────────────── */}
+      {/* ── Add New Film ─────────────────────────────────────── */}
       <section 
-        className="mb-8"
+        className="mb-12"
         style={{ 
           backgroundColor: C.card, 
           border: `1px solid ${C.border}`, 
@@ -445,7 +463,7 @@ export default function AdminDashboard() {
       {/* ── Edit Film Details ────────────────────────────────── */}
       {(currentFilm || archiveFilms.length > 0) && (
         <section 
-          className="mb-8"
+          className="mb-12"
           style={{ 
             backgroundColor: C.card, 
             border: `1px solid ${C.border}`, 
@@ -453,11 +471,65 @@ export default function AdminDashboard() {
             padding: 24 
           }}
         >
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-4">
             <Edit2 size={16} style={{ color: C.dim }} />
             <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>
               Edit Film Details
             </h2>
+          </div>
+
+          <div className="flex gap-4 mb-6 border-b pb-3" style={{ borderColor: C.border }}>
+             <button 
+               onClick={() => {
+                 setEditTab('current');
+                 if (currentFilm) {
+                   setEditData({
+                     filmId: currentFilm._id,
+                     title: currentFilm.title || '',
+                     posterUrl: currentFilm.posterUrl || '',
+                     driveLink: currentFilm.driveLink || '',
+                     chosenBy: currentFilm.chosenBy || '',
+                     timerPaused: currentFilm.timerPaused || false,
+                     tmdbUrl: currentFilm.tmdbUrl || '',
+                   });
+                 }
+               }}
+               style={{ 
+                 color: editTab === 'current' ? C.green : C.dim, 
+                 fontWeight: 600, 
+                 fontSize: 14,
+                 borderBottom: editTab === 'current' ? `2px solid ${C.green}` : 'none',
+                 paddingBottom: 4
+               }}
+             >
+               Edit Current
+             </button>
+             <button 
+               onClick={() => {
+                 setEditTab('previous');
+                 if (archiveFilms.length > 0) {
+                   const f = archiveFilms[0];
+                   setEditData({
+                     filmId: f._id,
+                     title: f.title || '',
+                     posterUrl: f.posterUrl || '',
+                     driveLink: f.driveLink || '',
+                     chosenBy: f.chosenBy || '',
+                     timerPaused: false,
+                     tmdbUrl: f.tmdbUrl || '',
+                   });
+                 }
+               }}
+               style={{ 
+                 color: editTab === 'previous' ? C.green : C.dim, 
+                 fontWeight: 600, 
+                 fontSize: 14,
+                 borderBottom: editTab === 'previous' ? `2px solid ${C.green}` : 'none',
+                 paddingBottom: 4
+               }}
+             >
+               Edit Previous
+             </button>
           </div>
 
           {editMsg && (
@@ -474,66 +546,85 @@ export default function AdminDashboard() {
           )}
 
           <form onSubmit={handleEditSubmit} className="space-y-5">
+            {editTab === 'previous' && (
+              <div>
+                <label className={labelClass} style={labelStyle}>Select Film</label>
+                <select
+                  value={editData.filmId}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const f = archiveFilms.find(x => x && x._id === selectedId);
+                    if (f) {
+                      setEditData({
+                        filmId: f._id,
+                        title: f.title || '',
+                        posterUrl: f.posterUrl || '',
+                        driveLink: f.driveLink || '',
+                        chosenBy: f.chosenBy || '',
+                        timerPaused: false,
+                        tmdbUrl: f.tmdbUrl || '',
+                      });
+                    }
+                  }}
+                  className={inputClass}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  {archiveFilms.map(f => (
+                    <option key={f._id} value={f._id}>{f.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {editTab === 'current' && (
+              <>
+                <div>
+                  <label className={labelClass} style={labelStyle}>Movie Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={editData.title}
+                    onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                    className={inputClass}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} style={labelStyle}>Poster Image URL</label>
+                  <input
+                    type="url"
+                    required
+                    value={editData.posterUrl}
+                    onChange={(e) => setEditData({ ...editData, posterUrl: e.target.value })}
+                    className={inputClass}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} style={labelStyle}>Google Drive Link</label>
+                  <input
+                    type="url"
+                    required
+                    value={editData.driveLink}
+                    onChange={(e) => setEditData({ ...editData, driveLink: e.target.value })}
+                    className={inputClass}
+                    style={inputStyle}
+                  />
+                </div>
+              </>
+            )}
+
             <div>
-              <label className={labelClass} style={labelStyle}>Select Film</label>
-              <select
-                value={editData.filmId}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
-                  const f = [currentFilm, ...archiveFilms].find(x => x && x._id === selectedId);
-                  if (f) {
-                    setEditData({
-                      filmId: f._id,
-                      title: f.title || '',
-                      posterUrl: f.posterUrl || '',
-                      driveLink: f.driveLink || '',
-                      chosenBy: f.chosenBy || '',
-                      timerPaused: f.timerPaused || false,
-                    });
-                  }
-                }}
-                className={inputClass}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                {currentFilm && <option value={currentFilm._id}>{currentFilm.title} (Current)</option>}
-                {archiveFilms.map(f => (
-                  <option key={f._id} value={f._id}>{f.title} (Archived)</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass} style={labelStyle}>Movie Title</label>
-              <input
-                type="text"
-                required
-                value={editData.title}
-                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                className={inputClass}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label className={labelClass} style={labelStyle}>Poster Image URL</label>
+              <label className={labelClass} style={labelStyle}>TMDB URL</label>
               <input
                 type="url"
-                required
-                value={editData.posterUrl}
-                onChange={(e) => setEditData({ ...editData, posterUrl: e.target.value })}
+                value={editData.tmdbUrl}
+                onChange={(e) => setEditData({ ...editData, tmdbUrl: e.target.value })}
                 className={inputClass}
                 style={inputStyle}
               />
             </div>
-            <div>
-              <label className={labelClass} style={labelStyle}>Google Drive Link</label>
-              <input
-                type="url"
-                required
-                value={editData.driveLink}
-                onChange={(e) => setEditData({ ...editData, driveLink: e.target.value })}
-                className={inputClass}
-                style={inputStyle}
-              />
-            </div>
+
             <div>
               <label className={labelClass} style={labelStyle}>Chosen By</label>
               <input
@@ -544,7 +635,8 @@ export default function AdminDashboard() {
                 style={inputStyle}
               />
             </div>
-            {editData.filmId === currentFilm?._id && (
+            
+            {editTab === 'current' && (
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -580,6 +672,7 @@ export default function AdminDashboard() {
 
       {/* ── Tie Breaker ──────────────────────────────────────── */}
       <section 
+        className="mb-12"
         style={{ 
           backgroundColor: C.card, 
           border: `1px solid ${C.border}`, 
@@ -644,11 +737,11 @@ export default function AdminDashboard() {
       </section>
 
       {/* ── Import Leaderboard ───────────────────────────────── */}
-      <section
-        className="mt-8"
-        style={{
-          backgroundColor: C.card,
-          border: `1px solid ${C.border}`,
+      <section 
+        className="mb-12"
+        style={{ 
+          backgroundColor: C.card, 
+          border: `1px solid ${C.border}`, 
           borderRadius: 16,
           padding: 24,
         }}
@@ -724,7 +817,7 @@ export default function AdminDashboard() {
 
       {/* ── Danger Zone ──────────────────────────────────────── */}
       <section
-        className="mt-8"
+        className="mb-12"
         style={{
           backgroundColor: '#1a0a0a',
           border: '1px solid rgba(255,100,100,0.2)',
