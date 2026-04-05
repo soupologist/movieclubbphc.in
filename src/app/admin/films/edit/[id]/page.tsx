@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import FilmForm, { FilmFormData } from '@/components/admin/FilmForm';
 
 export default function EditFilmPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
   const router = useRouter();
   const [film, setFilm] = useState<FilmFormData | null>(null);
 

@@ -398,7 +398,7 @@ export default function AdminDashboard() {
                 cursor: fetchLoading || !tmdbUrlInput ? 'not-allowed' : 'pointer',
                 opacity: fetchLoading || !tmdbUrlInput ? 0.5 : 1,
               }}
-              className="hover:!text-white transition-colors"
+              className="hover:text-white! transition-colors"
             >
               {fetchLoading ? 'Fetching...' : 'Fetch Movie'}
             </button>

@@ -494,7 +494,7 @@ export default function FOTWLandingPage() {
               {act.ratings.map((r, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div
-                    className="relative flex-shrink-0"
+                    className="relative shrink-0"
                     style={{
                       width: 40,
                       height: 60,
@@ -546,7 +546,7 @@ export default function FOTWLandingPage() {
               {act.likes.map((l, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div
-                    className="relative flex-shrink-0"
+                    className="relative shrink-0"
                     style={{
                       width: 40,
                       height: 60,
@@ -1179,7 +1179,7 @@ export default function FOTWLandingPage() {
             <Link
               href="/club/filmoftheweek/admin"
               style={ghostBtnStyle}
-              className="hover:!text-white hover:!border-[#2e2e2e]"
+              className="hover:text-white! hover:border-[#2e2e2e]!"
             >
               Admin
             </Link>
@@ -1822,7 +1822,7 @@ export default function FOTWLandingPage() {
                   display: 'flex',
                   padding: 0,
                 }}
-                className="hover:!text-white"
+                className="hover:text-white!"
               >
                 <X size={20} />
               </button>
@@ -1920,7 +1920,7 @@ export default function FOTWLandingPage() {
                   display: 'flex',
                   padding: 0,
                 }}
-                className="hover:!text-white"
+                className="hover:text-white!"
               >
                 <X size={20} />
               </button>
@@ -2040,7 +2040,7 @@ export default function FOTWLandingPage() {
                   display: 'flex',
                   padding: 0,
                 }}
-                className="hover:!text-white"
+                className="hover:text-white!"
               >
                 <X size={20} />
               </button>

@@ -83,7 +83,7 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleAddTag}
-          className="bg-gray-800 outline-none text-sm placeholder-gray-500 flex-grow min-w-[120px]"
+          className="bg-gray-800 outline-none text-sm placeholder-gray-500 grow min-w-30"
         />
       </div>
     </div>
@@ -167,7 +167,7 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
             accept="image/*"
             onChange={(e) => handleFileUpload(e, 'poster')}
             disabled={uploading === 'poster'}
-            className="p-2 bg-gray-800 flex-grow"
+            className="p-2 bg-gray-800 grow"
           />
           {uploading === 'poster' && <span className="text-blue-400">Uploading...</span>}
         </div>
@@ -192,7 +192,7 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
             accept="image/*,video/*"
             onChange={(e) => handleFileUpload(e, 'background')}
             disabled={uploading === 'background'}
-            className="p-2 bg-gray-800 flex-grow"
+            className="p-2 bg-gray-800 grow"
           />
           {uploading === 'background' && <span className="text-blue-400">Uploading...</span>}
         </div>
@@ -214,7 +214,7 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
             accept="image/*"
             onChange={(e) => handleFileUpload(e, 'backgroundImage')}
             disabled={uploading === 'backgroundImage'}
-            className="p-2 bg-gray-800 flex-grow"
+            className="p-2 bg-gray-800 grow"
           />
           {uploading === 'backgroundImage' && <span className="text-blue-400">Uploading...</span>}
         </div>
@@ -312,7 +312,7 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
                   updated[cIndex].title = e.target.value;
                   setForm((prev) => ({ ...prev, credits: updated }));
                 }}
-                className="p-2 bg-gray-800 flex-grow"
+                className="p-2 bg-gray-800 grow"
               />
               <button
                 type="button"
@@ -339,7 +339,7 @@ export default function FilmForm({ film, onSubmit, isEditing }: FilmFormProps) {
                       updated[cIndex].names[nIndex] = e.target.value;
                       setForm((prev) => ({ ...prev, credits: updated }));
                     }}
-                    className="p-2 bg-gray-800 flex-grow"
+                    className="p-2 bg-gray-800 grow"
                   />
                   <button
                     type="button"
