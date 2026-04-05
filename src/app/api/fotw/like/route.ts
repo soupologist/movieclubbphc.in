@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import FOTWLike from '@/models/FOTWLike';
+import FOTWFilm from '@/models/FOTWFilm';
 import { authOptions } from '@/lib/auth';
 
 // POST: Like a film (idempotent)
@@ -17,6 +18,18 @@ export async function POST(req: Request) {
 
     if (!filmId) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
+    }
+
+    // Check lock status
+    const film = await FOTWFilm.findById(filmId).lean();
+    if (!film) {
+      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    }
+    if ((film as any).lockedAt !== null && (film as any).lockedAt !== undefined) {
+      return NextResponse.json(
+        { error: 'This film has been archived and can no longer be updated.' },
+        { status: 403 }
+      );
     }
 
     await FOTWLike.findOneAndUpdate(
@@ -45,6 +58,18 @@ export async function DELETE(req: Request) {
 
     if (!filmId) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
+    }
+
+    // Check lock status
+    const film = await FOTWFilm.findById(filmId).lean();
+    if (!film) {
+      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    }
+    if ((film as any).lockedAt !== null && (film as any).lockedAt !== undefined) {
+      return NextResponse.json(
+        { error: 'This film has been archived and can no longer be updated.' },
+        { status: 403 }
+      );
     }
 
     await FOTWLike.findOneAndDelete({

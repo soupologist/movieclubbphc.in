@@ -20,6 +20,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
     }
 
+    // Check lock status
+    const film = await FOTWFilm.findById(filmId);
+    if (!film) {
+      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    }
+    if (film.lockedAt !== null && film.lockedAt !== undefined) {
+      return NextResponse.json(
+        { error: 'This film has been archived and can no longer be updated.' },
+        { status: 403 }
+      );
+    }
+
     // $addToSet safely pushes uniquely, and automatically initiates array if it somehow was missing.
     const updatedFilm = await FOTWFilm.findByIdAndUpdate(
       filmId,

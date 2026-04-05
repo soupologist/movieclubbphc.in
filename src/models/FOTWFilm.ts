@@ -8,6 +8,7 @@ export interface IFOTWFilm extends Document {
   chosenBy: string; // name of the person who chose this film
   watchedBy: { userEmail: string; watchedAt: Date }[];
   createdAt: Date;
+  lockedAt: Date | null;
 }
 
 const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
@@ -26,6 +27,7 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
       ],
       default: [],
     },
+    lockedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

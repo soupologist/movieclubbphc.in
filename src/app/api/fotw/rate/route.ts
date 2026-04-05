@@ -25,6 +25,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
 
+    // Check lock status
+    if (film.lockedAt !== null && film.lockedAt !== undefined) {
+      return NextResponse.json(
+        { error: 'This film has been archived and can no longer be updated.' },
+        { status: 403 }
+      );
+    }
+
     // Gating: user must have marked film as watched before rating
     const hasWatched = Array.isArray(film.watchedBy) &&
       film.watchedBy.some((w: any) => w.userEmail === session.user.email);

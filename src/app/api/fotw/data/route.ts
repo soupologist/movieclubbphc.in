@@ -18,8 +18,17 @@ export async function GET(req: Request) {
 
     await dbConnect();
 
-    // 1. Get Current Film (Latest one)
-    const currentFilm = await FOTWFilm.findOne().sort({ createdAt: -1 }).lean();
+    // 1. Get Current Film (Latest unlocked one)
+    let currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
+
+    // Auto-lock if 7 days have passed
+    if (currentFilm) {
+      const deadline = new Date(currentFilm.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() > deadline) {
+        await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
+        currentFilm = null;
+      }
+    }
 
     // 2. Get Leaderboard (Top 50 users by watched count)
     const leaderboard = await FOTWUser.find()

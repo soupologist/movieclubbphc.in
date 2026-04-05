@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Sparkles, ArrowLeft, Edit2 } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Edit2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { instrumentSerif } from '@/app/fonts';
 
@@ -33,6 +33,12 @@ export default function AdminDashboard() {
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [autoFilled, setAutoFilled] = useState(false);
 
+  // TMDB Fetch State
+  const [tmdbUrlInput, setTmdbUrlInput] = useState('');
+  const [fetchLoading, setFetchLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [fetchedMovie, setFetchedMovie] = useState<{ title: string; posterUrl: string; year: number } | null>(null);
+
   // Edit Film State
   const [editLoading, setEditLoading] = useState(false);
   const [editData, setEditData] = useState({
@@ -50,6 +56,13 @@ export default function AdminDashboard() {
   const [winner, setWinner] = useState<string | null>(null);
   const [cycleReset, setCycleReset] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
+
+  // Import Leaderboard State
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -86,6 +99,27 @@ export default function AdminDashboard() {
   const showEditMessage = (type: 'success' | 'error', text: string) => {
     setEditMsg({ type, text });
     setTimeout(() => setEditMsg(null), 4000);
+  };
+
+  const handleFetchMovie = async () => {
+    setFetchLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch('/api/fotw/admin/resolve-tmdb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tmdbUrl: tmdbUrlInput })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch movie data');
+      setFormData(prev => ({ ...prev, title: data.title, posterUrl: data.posterUrl }));
+      setFetchedMovie({ title: data.title, posterUrl: data.posterUrl, year: data.year });
+    } catch (e: any) {
+      setFetchError(e.message);
+      setFetchedMovie(null);
+    } finally {
+      setFetchLoading(false);
+    }
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -178,6 +212,30 @@ export default function AdminDashboard() {
     }, 100);
   };
 
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImportLoading(true);
+    setImportResult(null);
+    setImportError(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', importFile);
+      const res = await fetch('/api/fotw/admin/import-leaderboard', {
+        method: 'POST',
+        body: fd,
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || 'Import failed');
+      setImportResult({ imported: d.imported, skipped: d.skipped });
+      setImportFile(null);
+      if (importInputRef.current) importInputRef.current.value = '';
+    } catch (err: any) {
+      setImportError(err.message || 'Import failed');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const labelClass = "block uppercase tracking-[0.08em] mb-2";
   const labelStyle = { color: C.muted, fontSize: 11 };
   
@@ -238,29 +296,77 @@ export default function AdminDashboard() {
 
         <form onSubmit={handleAddSubmit} className="space-y-5">
           <div>
-            <label className={labelClass} style={labelStyle}>Movie Title</label>
+            <label className={labelClass} style={labelStyle}>TMDB MOVIE URL</label>
             <input
               type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              value={tmdbUrlInput}
+              onChange={(e) => setTmdbUrlInput(e.target.value)}
               className={inputClass}
               style={inputStyle}
-              placeholder="e.g. Mulholland Drive"
+              placeholder="https://www.themoviedb.org/movie/597-titanic"
             />
+            <p style={{ color: '#4a5568', fontSize: 11, marginTop: 6, marginBottom: 8 }}>
+              Paste the TMDB page URL for the movie
+            </p>
+            <button
+              type="button"
+              onClick={handleFetchMovie}
+              disabled={fetchLoading || !tmdbUrlInput}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${C.border}`,
+                color: C.muted,
+                borderRadius: 8,
+                padding: '6px 14px',
+                fontSize: 13,
+                cursor: fetchLoading || !tmdbUrlInput ? 'not-allowed' : 'pointer',
+                opacity: fetchLoading || !tmdbUrlInput ? 0.5 : 1,
+              }}
+              className="hover:!text-white transition-colors"
+            >
+              {fetchLoading ? 'Fetching...' : 'Fetch Movie'}
+            </button>
+            {fetchError && (
+              <p style={{ color: '#ff6464', fontSize: 12, marginTop: 8 }}>
+                {fetchError}
+              </p>
+            )}
           </div>
-          <div>
-            <label className={labelClass} style={labelStyle}>Poster Image URL</label>
-            <input
-              type="url"
-              required
-              value={formData.posterUrl}
-              onChange={(e) => setFormData({ ...formData, posterUrl: e.target.value })}
-              className={inputClass}
-              style={inputStyle}
-              placeholder="https://example.com/poster.jpg"
-            />
-          </div>
+
+          {fetchedMovie && (
+            <div className="flex items-center gap-4 p-3 mb-4" style={{ background: '#141414', border: `1px solid ${C.border}`, borderRadius: 8 }}>
+              <div style={{ width: 56, aspectRatio: '2/3', borderRadius: 6, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={fetchedMovie.posterUrl} alt={fetchedMovie.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span style={{ color: 'white', fontSize: 14, fontWeight: 500 }}>{fetchedMovie.title}</span>
+                <span style={{ color: C.muted, fontSize: 13 }}>{fetchedMovie.year}</span>
+                <span style={{
+                  background: '#0a1a0a', border: '1px solid #00e054', color: '#00e054',
+                  borderRadius: 999, fontSize: 10, padding: '2px 8px', width: 'fit-content', marginTop: 2
+                }}>
+                  ✓ Found
+                </span>
+              </div>
+            </div>
+          )}
+
+          {fetchedMovie && (
+            <div>
+              <label className={labelClass} style={labelStyle}>Movie Title</label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className={inputClass}
+                style={inputStyle}
+                placeholder="e.g. Mulholland Drive"
+              />
+            </div>
+          )}
+
           <div>
             <label className={labelClass} style={labelStyle}>Google Drive Link</label>
             <input
@@ -292,22 +398,28 @@ export default function AdminDashboard() {
               </p>
             )}
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ 
-              backgroundColor: C.green, 
-              color: '#000', 
-              borderRadius: 8, 
-              fontWeight: 600, 
-              padding: '10px 24px',
-              fontSize: 14
-            }}
-          >
-            {loading && <Loader2 className="animate-spin" size={16} />}
-            {loading ? 'Adding...' : 'Add Film'}
-          </button>
+          <div>
+            <button
+              type="submit"
+              disabled={loading || !formData.posterUrl}
+              className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ 
+                backgroundColor: C.green, 
+                color: '#000', 
+                borderRadius: 8, 
+                fontWeight: 600, 
+                padding: '10px 24px',
+                fontSize: 14,
+                width: 'fit-content'
+              }}
+            >
+              {loading && <Loader2 className="animate-spin" size={16} />}
+              {loading ? 'Adding...' : 'Add Film'}
+            </button>
+            {!formData.posterUrl && (
+              <p style={{ color: C.dim, fontSize: 12, marginTop: 10 }}>Fetch a movie first</p>
+            )}
+          </div>
         </form>
       </section>
 
@@ -469,6 +581,85 @@ export default function AdminDashboard() {
             </p>
           )}
         </div>
+      </section>
+
+      {/* ── Import Leaderboard ───────────────────────────────── */}
+      <section
+        className="mt-8"
+        style={{
+          backgroundColor: C.card,
+          border: `1px solid ${C.border}`,
+          borderRadius: 16,
+          padding: 24,
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <Upload size={16} style={{ color: C.dim }} />
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white', margin: 0 }}>Import Leaderboard from CSV</h2>
+        </div>
+        <p style={{ color: C.dim, fontSize: 12, marginBottom: 20 }}>
+          CSV must have columns: name, email, watchedCount
+        </p>
+
+        {/* Drag-drop zone */}
+        <div
+          onClick={() => importInputRef.current?.click()}
+          style={{
+            border: `1px dashed ${importFile ? C.blue : '#2e2e2e'}`,
+            borderRadius: 12,
+            padding: 32,
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s',
+            marginBottom: 16,
+          }}
+        >
+          <Upload size={20} style={{ color: C.dim, margin: '0 auto 8px' }} />
+          <p style={{ color: importFile ? 'white' : C.dim, fontSize: 13, margin: 0 }}>
+            {importFile ? importFile.name : 'Drop CSV here or click to upload'}
+          </p>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              setImportFile(e.target.files?.[0] ?? null);
+              setImportResult(null);
+              setImportError(null);
+            }}
+          />
+        </div>
+
+        <button
+          onClick={handleImport}
+          disabled={!importFile || importLoading}
+          className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{
+            backgroundColor: C.green,
+            color: '#000',
+            borderRadius: 8,
+            fontWeight: 600,
+            padding: '10px 24px',
+            fontSize: 14,
+            border: 'none',
+            cursor: !importFile || importLoading ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {importLoading && <Loader2 className="animate-spin" size={16} />}
+          {importLoading ? 'Importing...' : 'Import'}
+        </button>
+
+        {importResult && (
+          <p style={{ color: C.green, fontSize: 13, marginTop: 12 }}>
+            ✓ {importResult.imported} records imported, {importResult.skipped} skipped
+          </p>
+        )}
+        {importError && (
+          <p style={{ color: '#ff6464', fontSize: 13, marginTop: 12 }}>
+            {importError}
+          </p>
+        )}
       </section>
     </div>
   );

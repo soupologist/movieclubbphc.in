@@ -51,6 +51,7 @@ const FOTWFilmSchema = new Schema(
       type: [{ userEmail: String, watchedAt: { type: Date, default: Date.now } }],
       default: [],
     },
+    lockedAt: { type: Date, default: null },
     _seeded: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -93,33 +94,32 @@ const FOTWLike   = models.FOTWLike   || model('FOTWLike',   FOTWLikeSchema);
 
 // ── Seed data ─────────────────────────────────────────────────────────
 
-const FILMS = [
-  // (title, TMDB poster path — these are public CDN URLs)
-  ['Mulholland Drive',        'https://image.tmdb.org/t/p/w500/nUW6oBmV5BE1fXRpPJFxGDLODGr.jpg'],
-  ['2001: A Space Odyssey',   'https://image.tmdb.org/t/p/w500/ve72VxNqjGM69Uky4WTo2bK6rfq.jpg'],
-  ['Parasite',                'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg'],
-  ['Spirited Away',           'https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg'],
-  ['The Godfather',           'https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsLeleqKeiVng.jpg'],
-  ['Stalker',                 'https://image.tmdb.org/t/p/w500/gwl4R6QNb6GbHpOEKaHj9TlX9kC.jpg'],
-  ['In the Mood for Love',    'https://image.tmdb.org/t/p/w500/bmPbmwsKbdj6vGFXbMzXBTkSnlm.jpg'],
-  ['Blade Runner 2049',       'https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg'],
-  ['Yi Yi',                   'https://image.tmdb.org/t/p/w500/fkHBfivnMSHLx9WMBXQ3yXnz31B.jpg'],
-  ['Jeanne Dielman',          'https://image.tmdb.org/t/p/w500/2KKjmGxfPqJuFWdT7tJSAEFChB5.jpg'],
-  ['Synecdoche, New York',    'https://image.tmdb.org/t/p/w500/2aMGiZlbf2lCY4Dg9ojxWkGGLtD.jpg'],
-  ['The Tree of Life',        'https://image.tmdb.org/t/p/w500/bHEMHlGNnHa6uBPq3Xeh2UThzw9.jpg'],
-  ['Certified Copy',          'https://image.tmdb.org/t/p/w500/fmfkqhAvNXbcnFqyToXMDYoFrGH.jpg'],
-  ['Her',                     'https://image.tmdb.org/t/p/w500/lEIaL12hSkqqe83zVvF98FcXTSg.jpg'],
-  ['Moonlight',               'https://image.tmdb.org/t/p/w500/4911T5FbJ9eAlnFMqWAhihuEFdG.jpg'],
-  ['The Master',              'https://image.tmdb.org/t/p/w500/anmol4UnLpKgTiSe8V9J5F0TZpM.jpg'],
-  ['Memoria',                 'https://image.tmdb.org/t/p/w500/r4J4oeyQRNqFRa0qLW4qx4hfXCA.jpg'],
-  ['Burning',                 'https://image.tmdb.org/t/p/w500/l72qAhWCwJXa8U7V0IKVKM3OwS.jpg'],
-  ['Portrait of a Lady on Fire','https://image.tmdb.org/t/p/w500/3xFBLHfhJQEFP8VEJCr5GwOLR6a.jpg'],
-  ['Aftersun',                'https://image.tmdb.org/t/p/w500/2Za1WqTB5DpELzqpEqaXaAZEcyD.jpg'],
-  ['Tár',                     'https://image.tmdb.org/t/p/w500/oO7nUuEKmz4dMKnuT7mxPdAUqWC.jpg'],
-  ['Drive My Car',            'https://image.tmdb.org/t/p/w500/5gPBd9FKQO6HwTpaMgRv5kANbv0.jpg'],
-  ['The Souvenir',            'https://image.tmdb.org/t/p/w500/9oI7nFdE4pCfCYYa8gLHdAJMl2T.jpg'],
-  ['Annihilation',            'https://image.tmdb.org/t/p/w500/like9yfcBmX0yqFMXMBpUHrWOOR.jpg'],
-  ['Hereditary',              'https://image.tmdb.org/t/p/w500/p9gKEPmLi21hPEuACmXU4HsVUKm.jpg'],
+const FILM_TITLES = [
+  'Mulholland Drive',
+  '2001: A Space Odyssey',
+  'Parasite',
+  'Spirited Away',
+  'The Godfather',
+  'Stalker',
+  'In the Mood for Love',
+  'Blade Runner 2049',
+  'Yi Yi',
+  'Jeanne Dielman, 23, quai du Commerce, 1080 Bruxelles',
+  'Synecdoche, New York',
+  'The Tree of Life',
+  'Certified Copy',
+  'Her',
+  'Moonlight',
+  'The Master',
+  'Memoria',
+  'Burning',
+  'Portrait of a Lady on Fire',
+  'Aftersun',
+  'Tár',
+  'Drive My Car',
+  'The Souvenir',
+  'Annihilation',
+  'Hereditary',
 ];
 
 const MEMBERS = [
@@ -232,17 +232,46 @@ async function seed() {
   const ADMIN_EMAIL = 'admin@bits-hyd.ac.in';
 
   const filmDates = [];
+  // All archive films spaced 1 week apart starting Aug 2024,
+  // but the LAST film (current week) is set 2 days ago so the timer is still running.
+  const now = new Date();
+  const currentFilmDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+
   let cur = new Date('2024-08-05');
-  for (let i = 0; i < FILMS.length; i++) {
+  for (let i = 0; i < FILM_TITLES.length - 1; i++) {
     filmDates.push(new Date(cur));
     cur = new Date(cur.getTime() + 7 * 24 * 60 * 60 * 1000); // +1 week
   }
+  // Last film = current week (2 days ago, ~5 days remaining)
+  filmDates.push(currentFilmDate);
 
-  console.log(`🎬 Inserting ${FILMS.length} films...`);
+  console.log(`🎬 Fetching and Inserting ${FILM_TITLES.length} films from TMDB...`);
   const filmDocs = [];
-  for (let i = 0; i < FILMS.length; i++) {
-    const [title, posterUrl] = FILMS[i];
+  for (let i = 0; i < FILM_TITLES.length; i++) {
+    const queryTitle = FILM_TITLES[i];
     const chosenBy = MEMBERS[i % MEMBERS.length][0]; // cycle through members
+
+    // ── Fetch from TMDB API with Retries ──
+    let tmdbData = null;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const tmdbRes = await fetch(`https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(queryTitle)}&api_key=${envVars['NEXT_PUBLIC_TMDB_API_KEY']}`, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!tmdbRes.ok) throw new Error(`Status ${tmdbRes.status}`);
+        tmdbData = await tmdbRes.json();
+        break;
+      } catch (err) {
+        retries--;
+        if (retries === 0) throw new Error(`TMDB fetch failed for ${queryTitle}: ${err.message}`);
+        await new Promise((r) => setTimeout(r, 1000)); // wait 1s before retry
+      }
+    }
+    const movie = tmdbData.results[0];
+    
+    const title = movie ? movie.title : queryTitle;
+    const posterUrl = movie && movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster';
 
     // Pick random watchers: 60-100% of club attended
     const watcherCount = Math.floor(MEMBERS.length * (0.6 + Math.random() * 0.4));
@@ -257,6 +286,7 @@ async function seed() {
     if (existing) {
       filmDoc = existing;
     } else {
+      const isCurrentFilm = i === FILM_TITLES.length - 1;
       filmDoc = await FOTWFilm.create({
         title,
         posterUrl,
@@ -264,13 +294,14 @@ async function seed() {
         addedBy: ADMIN_EMAIL,
         chosenBy,
         watchedBy,
+        lockedAt: null, // never locked
         _seeded: true,
         createdAt: filmDates[i],
         updatedAt: filmDates[i],
       });
     }
     filmDocs.push({ doc: filmDoc, watchers });
-    process.stdout.write(`   [${String(i + 1).padStart(2)}/${FILMS.length}] ${title}\n`);
+    process.stdout.write(`   [${String(i + 1).padStart(2)}/${FILM_TITLES.length}] ${title}\n`);
   }
   console.log('   ✓ Films done\n');
 
