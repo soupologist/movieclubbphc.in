@@ -600,19 +600,20 @@ export default function AdminDashboard() {
                     style={inputStyle}
                   />
                 </div>
-                <div>
-                  <label className={labelClass} style={labelStyle}>Google Drive Link</label>
-                  <input
-                    type="url"
-                    required
-                    value={editData.driveLink}
-                    onChange={(e) => setEditData({ ...editData, driveLink: e.target.value })}
-                    className={inputClass}
-                    style={inputStyle}
-                  />
-                </div>
               </>
             )}
+
+            <div>
+              <label className={labelClass} style={labelStyle}>Google Drive Link</label>
+              <input
+                type="url"
+                required={editTab === 'current'}
+                value={editData.driveLink}
+                onChange={(e) => setEditData({ ...editData, driveLink: e.target.value })}
+                className={inputClass}
+                style={inputStyle}
+              />
+            </div>
 
             <div>
               <label className={labelClass} style={labelStyle}>TMDB URL</label>
