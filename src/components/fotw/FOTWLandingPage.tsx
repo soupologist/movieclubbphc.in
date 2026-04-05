@@ -75,7 +75,7 @@ function MiniStars({ value, size = 14 }: { value: number; size?: number }) {
 }
 
 /* ── Countdown hook ──────────────────────────────────────── */
-function useCountdown(createdAt: string | undefined, durationDays: number = 7) {
+function useCountdown(createdAt: string | undefined, timerDuration: number = 604800000) {
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(
     null
   );
@@ -83,7 +83,7 @@ function useCountdown(createdAt: string | undefined, durationDays: number = 7) {
 
   useEffect(() => {
     if (!createdAt) return;
-    const deadline = new Date(createdAt).getTime() + durationDays * 24 * 60 * 60 * 1000;
+    const deadline = new Date(createdAt).getTime() + timerDuration;
 
     const tick = () => {
       const diff = deadline - Date.now();
@@ -103,7 +103,7 @@ function useCountdown(createdAt: string | undefined, durationDays: number = 7) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [createdAt, durationDays]);
+  }, [createdAt, timerDuration]);
 
   return { timeLeft, expired };
 }
@@ -113,14 +113,14 @@ function CountdownDisplay({
   createdAt,
   onExpire,
   timerPaused,
-  durationDays,
+  timerDuration,
 }: {
   createdAt: string | undefined;
   onExpire: () => void;
   timerPaused?: boolean;
-  durationDays?: number;
+  timerDuration?: number;
 }) {
-  const { timeLeft, expired } = useCountdown(createdAt, durationDays);
+  const { timeLeft, expired } = useCountdown(createdAt, timerDuration);
   const calledExpire = useRef(false);
 
   useEffect(() => {
@@ -213,7 +213,7 @@ interface FOTWData {
     createdAt?: string;
     timerPaused?: boolean;
     tmdbUrl?: string;
-    timerDurationDays?: number;
+    timerDuration?: number;
   } | null;
   leaderboard: LeaderboardUser[];
   userRating: number | null;
@@ -1358,7 +1358,7 @@ export default function FOTWLandingPage() {
                 <CountdownDisplay
                   createdAt={film.createdAt}
                   timerPaused={film.timerPaused}
-                  durationDays={film.timerDurationDays}
+                  timerDuration={film.timerDuration}
                   onExpire={() => setTimeout(fetchData, 500)}
                 />
               </div>

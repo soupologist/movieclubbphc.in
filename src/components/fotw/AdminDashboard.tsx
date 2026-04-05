@@ -23,6 +23,17 @@ const C = {
 export default function AdminDashboard() {
   const router = useRouter();
 
+  const parseDuration = (ms?: number) => {
+    const val = ms ?? 604800000;
+    const totalS = Math.floor(val / 1000);
+    return {
+      timerD: Math.floor(totalS / 86400),
+      timerH: Math.floor((totalS % 86400) / 3600),
+      timerM: Math.floor((totalS % 3600) / 60),
+      timerS: totalS % 60,
+    };
+  };
+
   // Add Film State
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -31,7 +42,10 @@ export default function AdminDashboard() {
     chosenBy: '',
     chosenByEmail: '',
     tmdbUrl: '',
-    timerDurationDays: 7,
+    timerD: 7,
+    timerH: 0,
+    timerM: 0,
+    timerS: 0,
   });
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [autoFilled, setAutoFilled] = useState(false);
@@ -59,7 +73,10 @@ export default function AdminDashboard() {
     chosenByEmail: '',
     timerPaused: false,
     tmdbUrl: '',
-    timerDurationDays: 7,
+    timerD: 7,
+    timerH: 0,
+    timerM: 0,
+    timerS: 0,
   });
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -116,7 +133,7 @@ export default function AdminDashboard() {
             chosenByEmail: d.currentFilm.chosenByEmail || '',
             timerPaused: d.currentFilm.timerPaused || false,
             tmdbUrl: d.currentFilm.tmdbUrl || '',
-            timerDurationDays: d.currentFilm.timerDurationDays ?? 7,
+            ...parseDuration(d.currentFilm.timerDuration),
           });
         }
       })
@@ -211,14 +228,34 @@ export default function AdminDashboard() {
     setLoading(true);
     setAddMsg(null);
     try {
+      const payload = {
+        ...formData,
+        timerDuration:
+          (formData.timerD * 86400 +
+            formData.timerH * 3600 +
+            formData.timerM * 60 +
+            formData.timerS) *
+          1000,
+      };
+      
       const res = await fetch('/api/fotw/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         showAddMessage('success', 'Film added successfully! Redirecting...');
-        setFormData({ title: '', posterUrl: '', chosenBy: '', chosenByEmail: '', tmdbUrl: '', timerDurationDays: 7 });
+        setFormData({
+          title: '',
+          posterUrl: '',
+          chosenBy: '',
+          chosenByEmail: '',
+          tmdbUrl: '',
+          timerD: 7,
+          timerH: 0,
+          timerM: 0,
+          timerS: 0,
+        });
         setAutoFilled(false);
         setTimeout(() => {
           router.push('/club/filmoftheweek');
@@ -240,10 +277,20 @@ export default function AdminDashboard() {
     setEditLoading(true);
     setEditMsg(null);
     try {
+      const payload = {
+        ...editData,
+        timerDuration:
+          (editData.timerD * 86400 +
+            editData.timerH * 3600 +
+            editData.timerM * 60 +
+            editData.timerS) *
+          1000,
+      };
+
       const res = await fetch('/api/fotw/data', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editData),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         showEditMessage('success', 'Film updated successfully!');
@@ -619,19 +666,62 @@ export default function AdminDashboard() {
               </p>
             )}
           </div>
-          <div>
-            <label className={labelClass} style={labelStyle}>
-              Timer Duration (Days)
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={formData.timerDurationDays}
-              onChange={(e) => setFormData({ ...formData, timerDurationDays: Number(e.target.value) })}
-              className={inputClass}
-              style={inputStyle}
-              placeholder="7"
-            />
+          <div className="grid grid-cols-4 gap-2">
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                Timer (Days)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.timerD}
+                onChange={(e) => setFormData({ ...formData, timerD: Number(e.target.value) })}
+                className={inputClass}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                (Hours)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="23"
+                value={formData.timerH}
+                onChange={(e) => setFormData({ ...formData, timerH: Number(e.target.value) })}
+                className={inputClass}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                (Minutes)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={formData.timerM}
+                onChange={(e) => setFormData({ ...formData, timerM: Number(e.target.value) })}
+                className={inputClass}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                (Seconds)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={formData.timerS}
+                onChange={(e) => setFormData({ ...formData, timerS: Number(e.target.value) })}
+                className={inputClass}
+                style={inputStyle}
+              />
+            </div>
           </div>
           <div>
             <button
@@ -687,7 +777,7 @@ export default function AdminDashboard() {
                     chosenByEmail: currentFilm.chosenByEmail || '',
                     timerPaused: currentFilm.timerPaused || false,
                     tmdbUrl: currentFilm.tmdbUrl || '',
-                    timerDurationDays: currentFilm.timerDurationDays ?? 7,
+                    ...parseDuration(currentFilm.timerDuration),
                   });
                 }
               }}
@@ -714,7 +804,7 @@ export default function AdminDashboard() {
                     chosenByEmail: f.chosenByEmail || '',
                     timerPaused: false,
                     tmdbUrl: f.tmdbUrl || '',
-                    timerDurationDays: f.timerDurationDays ?? 7,
+                    ...parseDuration(f.timerDuration),
                   });
                 }
               }}
@@ -764,7 +854,7 @@ export default function AdminDashboard() {
                         chosenByEmail: f.chosenByEmail || '',
                         timerPaused: false,
                         tmdbUrl: f.tmdbUrl || '',
-                        timerDurationDays: f.timerDurationDays ?? 7,
+                        ...parseDuration(f.timerDuration),
                       });
                     }
                   }}
@@ -837,18 +927,62 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div>
-              <label className={labelClass} style={labelStyle}>
-                Timer Duration (Days)
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={editData.timerDurationDays}
-                onChange={(e) => setEditData({ ...editData, timerDurationDays: Number(e.target.value) })}
-                className={inputClass}
-                style={inputStyle}
-              />
+            <div className="grid grid-cols-4 gap-2">
+              <div>
+                <label className={labelClass} style={labelStyle}>
+                  Timer (Days)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editData.timerD}
+                  onChange={(e) => setEditData({ ...editData, timerD: Number(e.target.value) })}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>
+                  (Hours)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={editData.timerH}
+                  onChange={(e) => setEditData({ ...editData, timerH: Number(e.target.value) })}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>
+                  (Minutes)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={editData.timerM}
+                  onChange={(e) => setEditData({ ...editData, timerM: Number(e.target.value) })}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>
+                  (Seconds)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={editData.timerS}
+                  onChange={(e) => setEditData({ ...editData, timerS: Number(e.target.value) })}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
             </div>
 
             {editTab === 'current' && (

@@ -23,8 +23,10 @@ export async function GET(req: Request) {
 
     // Auto-lock if the timer duration has passed and timer is not paused
     if (currentFilm && !currentFilm.timerPaused) {
-      const durationDays = currentFilm.timerDurationDays ?? 7;
-      const deadline = new Date(currentFilm.createdAt).getTime() + durationDays * 24 * 60 * 60 * 1000;
+      // Fallback: if timerDuration is not set, calculate from timerDurationDays or default 7 days.
+      const fallbackMs = currentFilm.timerDurationDays ? currentFilm.timerDurationDays * 86400000 : 7 * 86400000;
+      const duration = currentFilm.timerDuration ?? fallbackMs;
+      const deadline = new Date(currentFilm.createdAt).getTime() + duration;
       if (Date.now() > deadline) {
         await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
         currentFilm = null;
@@ -139,7 +141,8 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerDurationDays } = await req.json();
+    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerDuration } =
+      await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
@@ -148,7 +151,7 @@ export async function POST(req: Request) {
       chosenBy: chosenBy || '',
       chosenByEmail: chosenByEmail || '',
       addedBy: session.user.email,
-      timerDurationDays: timerDurationDays ?? 7,
+      timerDuration: timerDuration ?? 604800000,
     });
 
     return NextResponse.json({ success: true, film: newFilm });
@@ -172,7 +175,16 @@ export async function PATCH(req: Request) {
 
     await dbConnect();
     const body = await req.json();
-    const { filmId, title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerPaused, timerDurationDays } = body;
+    const {
+      filmId,
+      title,
+      posterUrl,
+      tmdbUrl,
+      chosenBy,
+      chosenByEmail,
+      timerPaused,
+      timerDuration,
+    } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
@@ -185,7 +197,7 @@ export async function PATCH(req: Request) {
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
     if (chosenByEmail !== undefined) updates.chosenByEmail = chosenByEmail;
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
-    if (timerDurationDays !== undefined) updates.timerDurationDays = timerDurationDays;
+    if (timerDuration !== undefined) updates.timerDuration = timerDuration;
 
     const updatedFilm = await FOTWFilm.findByIdAndUpdate(filmId, { $set: updates }, { new: true });
 
