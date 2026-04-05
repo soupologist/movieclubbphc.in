@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Sparkles, Edit2, Upload } from 'lucide-react';
 import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import { instrumentSerif } from '@/app/fonts';
 
 const C = {
@@ -385,9 +385,9 @@ export default function AdminDashboard() {
     });
   }, [rulesUpdatedAt]);
 
-  const markdownComponents = useMemo(
+  const markdownComponents = useMemo<Components>(
     () => ({
-      h1: ({ children }: { children: React.ReactNode }) => (
+      h1: ({ children }) => (
         <h1
           className={instrumentSerif.className}
           style={{ color: 'white', marginTop: 24, fontSize: '1.6rem' }}
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
           {children}
         </h1>
       ),
-      h2: ({ children }: { children: React.ReactNode }) => (
+      h2: ({ children }) => (
         <h2
           className={instrumentSerif.className}
           style={{ color: 'white', marginTop: 24, fontSize: '1.4rem' }}
@@ -403,7 +403,7 @@ export default function AdminDashboard() {
           {children}
         </h2>
       ),
-      h3: ({ children }: { children: React.ReactNode }) => (
+      h3: ({ children }) => (
         <h3
           className={instrumentSerif.className}
           style={{ color: 'white', marginTop: 24, fontSize: '1.2rem' }}
@@ -411,23 +411,19 @@ export default function AdminDashboard() {
           {children}
         </h3>
       ),
-      p: ({ children }: { children: React.ReactNode }) => (
+      p: ({ children }) => (
         <p style={{ color: '#8a9bb0', lineHeight: 1.8, fontSize: 15 }}>{children}</p>
       ),
-      ul: ({ children }: { children: React.ReactNode }) => (
+      ul: ({ children }) => (
         <ul style={{ color: '#8a9bb0', paddingLeft: 20, lineHeight: 2 }}>{children}</ul>
       ),
-      ol: ({ children }: { children: React.ReactNode }) => (
+      ol: ({ children }) => (
         <ol style={{ color: '#8a9bb0', paddingLeft: 20, lineHeight: 2 }}>{children}</ol>
       ),
-      li: ({ children }: { children: React.ReactNode }) => (
-        <li style={{ marginBottom: 4 }}>{children}</li>
-      ),
-      strong: ({ children }: { children: React.ReactNode }) => (
-        <strong style={{ color: 'white' }}>{children}</strong>
-      ),
+      li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+      strong: ({ children }) => <strong style={{ color: 'white' }}>{children}</strong>,
       hr: () => <hr style={{ borderColor: '#1e1e1e', margin: '24px 0' }} />,
-      code: ({ children }: { children: React.ReactNode }) => (
+      code: ({ children }) => (
         <code
           style={{
             background: '#141414',
