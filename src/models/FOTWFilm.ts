@@ -11,6 +11,7 @@ export interface IFOTWFilm extends Document {
   createdAt: Date;
   lockedAt: Date | null;
   timerPaused: boolean;
+  timerDurationDays: number;
 }
 
 const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
@@ -32,6 +33,7 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
     },
     lockedAt: { type: Date, default: null },
     timerPaused: { type: Boolean, default: false },
+    timerDurationDays: { type: Number, default: 7 },
   },
   { timestamps: true }
 );

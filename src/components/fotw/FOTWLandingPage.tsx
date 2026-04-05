@@ -75,7 +75,7 @@ function MiniStars({ value, size = 14 }: { value: number; size?: number }) {
 }
 
 /* ── Countdown hook ──────────────────────────────────────── */
-function useCountdown(createdAt: string | undefined) {
+function useCountdown(createdAt: string | undefined, durationDays: number = 7) {
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(
     null
   );
@@ -83,7 +83,7 @@ function useCountdown(createdAt: string | undefined) {
 
   useEffect(() => {
     if (!createdAt) return;
-    const deadline = new Date(createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+    const deadline = new Date(createdAt).getTime() + durationDays * 24 * 60 * 60 * 1000;
 
     const tick = () => {
       const diff = deadline - Date.now();
@@ -103,7 +103,7 @@ function useCountdown(createdAt: string | undefined) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [createdAt]);
+  }, [createdAt, durationDays]);
 
   return { timeLeft, expired };
 }
@@ -113,12 +113,14 @@ function CountdownDisplay({
   createdAt,
   onExpire,
   timerPaused,
+  durationDays,
 }: {
   createdAt: string | undefined;
   onExpire: () => void;
   timerPaused?: boolean;
+  durationDays?: number;
 }) {
-  const { timeLeft, expired } = useCountdown(createdAt);
+  const { timeLeft, expired } = useCountdown(createdAt, durationDays);
   const calledExpire = useRef(false);
 
   useEffect(() => {
@@ -211,6 +213,7 @@ interface FOTWData {
     createdAt?: string;
     timerPaused?: boolean;
     tmdbUrl?: string;
+    timerDurationDays?: number;
   } | null;
   leaderboard: LeaderboardUser[];
   userRating: number | null;
@@ -1355,6 +1358,7 @@ export default function FOTWLandingPage() {
                 <CountdownDisplay
                   createdAt={film.createdAt}
                   timerPaused={film.timerPaused}
+                  durationDays={film.timerDurationDays}
                   onExpire={() => setTimeout(fetchData, 500)}
                 />
               </div>

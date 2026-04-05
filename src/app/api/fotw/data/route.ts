@@ -21,9 +21,10 @@ export async function GET(req: Request) {
     // 1. Get Current Film (Latest unlocked one)
     let currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
 
-    // Auto-lock if 7 days have passed and timer is not paused
+    // Auto-lock if the timer duration has passed and timer is not paused
     if (currentFilm && !currentFilm.timerPaused) {
-      const deadline = new Date(currentFilm.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+      const durationDays = currentFilm.timerDurationDays ?? 7;
+      const deadline = new Date(currentFilm.createdAt).getTime() + durationDays * 24 * 60 * 60 * 1000;
       if (Date.now() > deadline) {
         await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
         currentFilm = null;
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail } = await req.json();
+    const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerDurationDays } = await req.json();
 
     const newFilm = await FOTWFilm.create({
       title,
@@ -147,6 +148,7 @@ export async function POST(req: Request) {
       chosenBy: chosenBy || '',
       chosenByEmail: chosenByEmail || '',
       addedBy: session.user.email,
+      timerDurationDays: timerDurationDays ?? 7,
     });
 
     return NextResponse.json({ success: true, film: newFilm });
@@ -170,7 +172,7 @@ export async function PATCH(req: Request) {
 
     await dbConnect();
     const body = await req.json();
-    const { filmId, title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerPaused } = body;
+    const { filmId, title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerPaused, timerDurationDays } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
@@ -183,6 +185,7 @@ export async function PATCH(req: Request) {
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
     if (chosenByEmail !== undefined) updates.chosenByEmail = chosenByEmail;
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
+    if (timerDurationDays !== undefined) updates.timerDurationDays = timerDurationDays;
 
     const updatedFilm = await FOTWFilm.findByIdAndUpdate(filmId, { $set: updates }, { new: true });
 

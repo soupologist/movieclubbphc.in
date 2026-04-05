@@ -31,6 +31,7 @@ export default function AdminDashboard() {
     chosenBy: '',
     chosenByEmail: '',
     tmdbUrl: '',
+    timerDurationDays: 7,
   });
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [autoFilled, setAutoFilled] = useState(false);
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
     chosenByEmail: '',
     timerPaused: false,
     tmdbUrl: '',
+    timerDurationDays: 7,
   });
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -114,6 +116,7 @@ export default function AdminDashboard() {
             chosenByEmail: d.currentFilm.chosenByEmail || '',
             timerPaused: d.currentFilm.timerPaused || false,
             tmdbUrl: d.currentFilm.tmdbUrl || '',
+            timerDurationDays: d.currentFilm.timerDurationDays ?? 7,
           });
         }
       })
@@ -215,7 +218,7 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         showAddMessage('success', 'Film added successfully! Redirecting...');
-        setFormData({ title: '', posterUrl: '', chosenBy: '', chosenByEmail: '', tmdbUrl: '' });
+        setFormData({ title: '', posterUrl: '', chosenBy: '', chosenByEmail: '', tmdbUrl: '', timerDurationDays: 7 });
         setAutoFilled(false);
         setTimeout(() => {
           router.push('/club/filmoftheweek');
@@ -617,6 +620,20 @@ export default function AdminDashboard() {
             )}
           </div>
           <div>
+            <label className={labelClass} style={labelStyle}>
+              Timer Duration (Days)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.timerDurationDays}
+              onChange={(e) => setFormData({ ...formData, timerDurationDays: Number(e.target.value) })}
+              className={inputClass}
+              style={inputStyle}
+              placeholder="7"
+            />
+          </div>
+          <div>
             <button
               type="submit"
               disabled={loading || !formData.posterUrl}
@@ -670,6 +687,7 @@ export default function AdminDashboard() {
                     chosenByEmail: currentFilm.chosenByEmail || '',
                     timerPaused: currentFilm.timerPaused || false,
                     tmdbUrl: currentFilm.tmdbUrl || '',
+                    timerDurationDays: currentFilm.timerDurationDays ?? 7,
                   });
                 }
               }}
@@ -696,6 +714,7 @@ export default function AdminDashboard() {
                     chosenByEmail: f.chosenByEmail || '',
                     timerPaused: false,
                     tmdbUrl: f.tmdbUrl || '',
+                    timerDurationDays: f.timerDurationDays ?? 7,
                   });
                 }
               }}
@@ -745,6 +764,7 @@ export default function AdminDashboard() {
                         chosenByEmail: f.chosenByEmail || '',
                         timerPaused: false,
                         tmdbUrl: f.tmdbUrl || '',
+                        timerDurationDays: f.timerDurationDays ?? 7,
                       });
                     }
                   }}
@@ -812,6 +832,20 @@ export default function AdminDashboard() {
                 type="text"
                 value={editData.chosenBy}
                 onChange={(e) => setEditData({ ...editData, chosenBy: e.target.value })}
+                className={inputClass}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                Timer Duration (Days)
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={editData.timerDurationDays}
+                onChange={(e) => setEditData({ ...editData, timerDurationDays: Number(e.target.value) })}
                 className={inputClass}
                 style={inputStyle}
               />
