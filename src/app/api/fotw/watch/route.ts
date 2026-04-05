@@ -64,3 +64,58 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) {
+      console.error('Watch API DELETE failed: Unauthorized');
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    await dbConnect();
+    const { filmId } = await req.json();
+
+    if (!filmId) {
+      return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
+    }
+
+    const result = await FOTWFilm.findOneAndUpdate(
+      {
+        _id: filmId,
+        lockedAt: null,
+        'watchedBy.userEmail': session.user.email,
+      },
+      {
+        $pull: { watchedBy: { userEmail: session.user.email } },
+      },
+      { new: true }
+    );
+
+    if (!result) {
+      const film = await FOTWFilm.findById(filmId).select('lockedAt watchedBy').lean();
+      if (!film) return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+      if (film.lockedAt !== null && film.lockedAt !== undefined) {
+        return NextResponse.json(
+          { error: 'This film has been archived and can no longer be updated.' },
+          { status: 403 }
+        );
+      }
+      return NextResponse.json({ success: true, notWatched: true });
+    }
+
+    await FOTWUser.findOneAndUpdate(
+      { email: session.user.email },
+      {
+        $set: { name: session.user.name, image: session.user.image },
+        $inc: { watchedCount: -1 },
+      },
+      { new: true }
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error removing watched film:', error);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}

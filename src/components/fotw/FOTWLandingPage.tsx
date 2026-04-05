@@ -382,16 +382,35 @@ export default function FOTWLandingPage() {
 
   /* ── Watch handler ───────────────────────────────────────── */
   const handleWatch = async () => {
-    if (!data?.currentFilm || hasWatchedLocal || watchLoading) return;
+    if (!data?.currentFilm || watchLoading) return;
     setWatchLoading(true);
+
+    const currentlyWatched = hasWatchedLocal;
+    const method = currentlyWatched ? 'DELETE' : 'POST';
+
     try {
       const res = await fetch('/api/fotw/watch', {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filmId: data.currentFilm._id }),
       });
-      if (!res.ok) throw new Error('Failed to log watch');
-      setHasWatchedLocal(true);
+      if (!res.ok) throw new Error('Failed to update watch status');
+
+      const newWatchedState = !currentlyWatched;
+      setHasWatchedLocal(newWatchedState);
+
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              hasWatched: newWatchedState,
+              watchedCount: newWatchedState
+                ? prev.watchedCount + 1
+                : Math.max(0, prev.watchedCount - 1),
+            }
+          : prev
+      );
+
       fetchData();
     } catch (e) {
       console.error('Watch failed', e);
@@ -1336,13 +1355,13 @@ export default function FOTWLandingPage() {
                 <button
                   id="btn-watched"
                   onClick={handleWatch}
-                  disabled={hasWatched || watchLoading}
+                  disabled={watchLoading}
                   style={{
                     ...pillBtnBase,
                     background: hasWatched ? '#0a1a0a' : '#141414',
                     borderColor: hasWatched ? C.green : C.border,
                     color: hasWatched ? C.green : C.muted,
-                    cursor: hasWatched ? 'default' : watchLoading ? 'wait' : 'pointer',
+                    cursor: watchLoading ? 'wait' : 'pointer',
                     opacity: watchLoading ? 0.7 : 1,
                   }}
                 >
@@ -1365,7 +1384,7 @@ export default function FOTWLandingPage() {
                       fill={hasWatched ? C.green : 'none'}
                     />
                   )}
-                  {hasWatched ? 'Watched' : 'Watched'}
+                  {hasWatched ? 'Watched' : 'Watch'}
                 </button>
 
                 <button
