@@ -47,12 +47,14 @@ export default function AdminDashboard() {
     posterUrl: '',
     driveLink: '',
     chosenBy: '',
+    timerPaused: false,
   });
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // General State
+  const [currentFilm, setCurrentFilm] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<{ name: string; watchedCount: number }[]>([]);
-  const [archiveFilms, setArchiveFilms] = useState<{ chosenBy?: string }[]>([]);
+  const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
   const [winner, setWinner] = useState<string | null>(null);
   const [cycleReset, setCycleReset] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -79,12 +81,14 @@ export default function AdminDashboard() {
         setLeaderboard(d.leaderboard || []);
         setArchiveFilms(Array.isArray(archive) ? archive : []);
         if (d.currentFilm) {
+          setCurrentFilm(d.currentFilm);
           setEditData({
             filmId: d.currentFilm._id,
             title: d.currentFilm.title || '',
             posterUrl: d.currentFilm.posterUrl || '',
             driveLink: d.currentFilm.driveLink || '',
             chosenBy: d.currentFilm.chosenBy || '',
+            timerPaused: d.currentFilm.timerPaused || false,
           });
         }
       })
@@ -171,6 +175,21 @@ export default function AdminDashboard() {
       showEditMessage('error', 'Error updating film');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleResetLeaderboard = async () => {
+    if (!window.confirm("Are you sure you want to reset all user scores to 0? This cannot be undone.")) return;
+    try {
+      const res = await fetch('/api/fotw/admin/reset-leaderboard', { method: 'POST' });
+      if (res.ok) {
+        setLeaderboard([]);
+        alert("Leaderboard reset successfully.");
+      } else {
+        alert("Failed to reset leaderboard.");
+      }
+    } catch (err) {
+      alert("Error resetting leaderboard.");
     }
   };
 
@@ -423,8 +442,8 @@ export default function AdminDashboard() {
         </form>
       </section>
 
-      {/* ── Edit Current Film ────────────────────────────────── */}
-      {editData.filmId && (
+      {/* ── Edit Film Details ────────────────────────────────── */}
+      {(currentFilm || archiveFilms.length > 0) && (
         <section 
           className="mb-8"
           style={{ 
@@ -437,7 +456,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2 mb-6">
             <Edit2 size={16} style={{ color: C.dim }} />
             <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>
-              Edit Current Film
+              Edit Film Details
             </h2>
           </div>
 
@@ -455,6 +474,33 @@ export default function AdminDashboard() {
           )}
 
           <form onSubmit={handleEditSubmit} className="space-y-5">
+            <div>
+              <label className={labelClass} style={labelStyle}>Select Film</label>
+              <select
+                value={editData.filmId}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const f = [currentFilm, ...archiveFilms].find(x => x && x._id === selectedId);
+                  if (f) {
+                    setEditData({
+                      filmId: f._id,
+                      title: f.title || '',
+                      posterUrl: f.posterUrl || '',
+                      driveLink: f.driveLink || '',
+                      chosenBy: f.chosenBy || '',
+                      timerPaused: f.timerPaused || false,
+                    });
+                  }
+                }}
+                className={inputClass}
+                style={{ ...inputStyle, cursor: 'pointer' }}
+              >
+                {currentFilm && <option value={currentFilm._id}>{currentFilm.title} (Current)</option>}
+                {archiveFilms.map(f => (
+                  <option key={f._id} value={f._id}>{f.title} (Archived)</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className={labelClass} style={labelStyle}>Movie Title</label>
               <input
@@ -498,6 +544,20 @@ export default function AdminDashboard() {
                 style={inputStyle}
               />
             </div>
+            {editData.filmId === currentFilm?._id && (
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="timerPaused"
+                  checked={editData.timerPaused}
+                  onChange={(e) => setEditData({ ...editData, timerPaused: e.target.checked })}
+                  style={{ accentColor: C.green, width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <label htmlFor="timerPaused" style={{ color: 'white', fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+                  Pause countdown timer (prevent auto-archiving)
+                </label>
+              </div>
+            )}
             <button
               type="submit"
               disabled={editLoading}
@@ -660,6 +720,43 @@ export default function AdminDashboard() {
             {importError}
           </p>
         )}
+      </section>
+
+      {/* ── Danger Zone ──────────────────────────────────────── */}
+      <section
+        className="mt-8"
+        style={{
+          backgroundColor: '#1a0a0a',
+          border: '1px solid rgba(255,100,100,0.2)',
+          borderRadius: 16,
+          padding: 24,
+        }}
+      >
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: '#ff6464', margin: '0 0 4px 0' }}>Reset Leaderboard</h2>
+            <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
+              Sets all user watched counts back to 0. This cannot be undone.
+            </p>
+          </div>
+          <button
+            onClick={handleResetLeaderboard}
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid #ff6464',
+              color: '#ff6464',
+              borderRadius: 8,
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+            className="hover:bg-red-500/10 transition-colors"
+          >
+            Reset Leaderboard
+          </button>
+        </div>
       </section>
     </div>
   );

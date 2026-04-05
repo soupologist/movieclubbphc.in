@@ -21,8 +21,8 @@ export async function GET(req: Request) {
     // 1. Get Current Film (Latest unlocked one)
     let currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
 
-    // Auto-lock if 7 days have passed
-    if (currentFilm) {
+    // Auto-lock if 7 days have passed and timer is not paused
+    if (currentFilm && !currentFilm.timerPaused) {
       const deadline = new Date(currentFilm.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
       if (Date.now() > deadline) {
         await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
@@ -159,7 +159,8 @@ export async function PATCH(req: Request) {
     }
 
     await dbConnect();
-    const { filmId, title, posterUrl, driveLink, chosenBy } = await req.json();
+    const body = await req.json();
+    const { filmId, title, posterUrl, driveLink, chosenBy, timerPaused } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
@@ -170,6 +171,7 @@ export async function PATCH(req: Request) {
     if (posterUrl !== undefined) updates.posterUrl = posterUrl;
     if (driveLink !== undefined) updates.driveLink = driveLink;
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
+    if (timerPaused !== undefined) updates.timerPaused = timerPaused;
 
     const updatedFilm = await FOTWFilm.findByIdAndUpdate(
       filmId,

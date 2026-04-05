@@ -9,6 +9,7 @@ export interface IFOTWFilm extends Document {
   watchedBy: { userEmail: string; watchedAt: Date }[];
   createdAt: Date;
   lockedAt: Date | null;
+  timerPaused: boolean;
 }
 
 const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
@@ -28,6 +29,7 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
       default: [],
     },
     lockedAt: { type: Date, default: null },
+    timerPaused: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

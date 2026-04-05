@@ -141,9 +141,11 @@ function useCountdown(createdAt: string | undefined) {
 function CountdownDisplay({
   createdAt,
   onExpire,
+  timerPaused,
 }: {
   createdAt: string | undefined;
   onExpire: () => void;
+  timerPaused?: boolean;
 }) {
   const { timeLeft, expired } = useCountdown(createdAt);
   const calledExpire = useRef(false);
@@ -155,6 +157,9 @@ function CountdownDisplay({
     }
   }, [expired, onExpire]);
 
+  if (timerPaused) {
+    return <span style={{ color: C.orange, fontSize: 12 }}>Timer Paused</span>;
+  }
   if (expired) {
     return <span style={{ color: C.dim, fontSize: 12 }}>Week ended</span>;
   }
@@ -1024,6 +1029,7 @@ export default function FOTWLandingPage() {
               {/* Countdown */}
               <CountdownDisplay
                 createdAt={film.createdAt}
+                timerPaused={film.timerPaused}
                 onExpire={() => setTimeout(fetchData, 500)}
               />
 
@@ -1335,7 +1341,7 @@ export default function FOTWLandingPage() {
           <>
             <div
               className="flex items-center justify-between"
-              style={{ borderTop: `1px solid ${C.border}`, paddingTop: 32, marginTop: 48 }}
+              style={{ marginTop: 48 }}
             >
               <span
                 style={{
@@ -1378,7 +1384,7 @@ export default function FOTWLandingPage() {
       <>
         <div
           className="flex items-center justify-between"
-          style={{ borderTop: `1px solid ${C.border}`, paddingTop: 32, marginTop: 48 }}
+          style={{ marginTop: 48 }}
         >
           <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
           {previousFilms.length > 0 && (
