@@ -5,6 +5,7 @@ export interface IFOTWUser extends Document {
   name: string;
   image?: string;
   watchedCount: number;
+  timesSuggested: number;
 }
 
 const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
@@ -13,6 +14,7 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
     name: { type: String },
     image: { type: String },
     watchedCount: { type: Number, default: 0 },
+    timesSuggested: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Sparkles, Edit2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown, { type Components } from 'react-markdown';
+import Papa from 'papaparse';
 import { instrumentSerif } from '@/app/fonts';
 
 const C = {
@@ -83,21 +84,23 @@ export default function AdminDashboard() {
   // General State
   const [currentFilm, setCurrentFilm] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<
-    { name: string; watchedCount: number; email: string }[]
+    { name: string; watchedCount: number; email: string; timesSuggested?: number }[]
   >([]);
   const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
   const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
   const [cycleReset, setCycleReset] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
 
-  // Import Leaderboard State
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(
+  // Single Bulk CSV Import State
+  const [historyFile, setHistoryFile] = useState<File | null>(null);
+  const [historyStep, setHistoryStep] = useState<1 | 2>(1); // 1 = Upload, 2 = Review & Submit
+  const [preparedUsers, setPreparedUsers] = useState<any[]>([]);
+  const [preparedHistoryFilms, setPreparedHistoryFilms] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyMsg, setHistoryMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
-  const [importError, setImportError] = useState<string | null>(null);
-  const importInputRef = useRef<HTMLInputElement>(null);
+  const historyInputRef = useRef<HTMLInputElement>(null);
 
   // Rules Editor State
   const [rulesContent, setRulesContent] = useState('');
@@ -237,7 +240,7 @@ export default function AdminDashboard() {
             formData.timerS) *
           1000,
       };
-      
+
       const res = await fetch('/api/fotw/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -346,11 +349,13 @@ export default function AdminDashboard() {
     // Fallback to all if none watched
     let candidates = topTied.length > 0 ? topTied : leaderboard;
 
-    // Filter out candidates with no name
-    candidates = candidates.filter((u) => u.name && u.name.trim() !== '');
+    // Filter out candidates with no name and users who already suggested before.
+    candidates = candidates.filter(
+      (u) => u.name && u.name.trim() !== '' && (u.timesSuggested ?? 0) === 0
+    );
     if (candidates.length === 0) {
       alert(
-        'Some top members have no display name — ask them to update their Google account name.'
+        'No eligible users found. Either names are missing or everyone already suggested a film.'
       );
       setIsSpinning(false);
       return;
@@ -390,27 +395,184 @@ export default function AdminDashboard() {
     }, 100);
   };
 
-  const handleImport = async () => {
-    if (!importFile) return;
-    setImportLoading(true);
-    setImportResult(null);
-    setImportError(null);
+  const handleHistoryFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setHistoryFile(file);
+    setHistoryMsg(null);
+
+    const normalizeHeader = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    Papa.parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rawData = results.data as string[][];
+
+        if (rawData.length < 2 || (rawData[0] || []).length < 6) {
+          setHistoryMsg({
+            type: 'error',
+            text: 'CSV must include at least 6 columns: name, email, watch count, times suggested, film suggested, and films.',
+          });
+          return;
+        }
+
+        const topRow = rawData[0];
+
+        const required = ['name', 'email', 'watchcount', 'timessuggested', 'filmsuggested'];
+        const normalizedFirstFive = topRow.slice(0, 5).map((h) => normalizeHeader((h || '').trim()));
+        const headersMatch = required.every((field, idx) => normalizedFirstFive[idx] === field);
+
+        if (!headersMatch) {
+          setHistoryMsg({
+            type: 'error',
+            text: 'CSV headers must be ordered as: name, email, watch count, times suggested, film suggested, then movie columns.',
+          });
+          return;
+        }
+
+        const filmsFound: any[] = topRow.slice(5).map((filmTitleRaw) => ({
+          title: (filmTitleRaw || '').trim(),
+          originalTitle: (filmTitleRaw || '').trim(),
+          chosenBy: '',
+          chosenByEmail: '',
+          tmdbUrl: '',
+          posterUrl: '',
+          watches: [],
+          fetchLoading: false,
+          fetchError: null,
+        }));
+
+        const usersFound: any[] = [];
+
+        for (let r = 1; r < rawData.length; r++) {
+          const row = rawData[r] || [];
+          const name = (row[0] || '').trim();
+          const email = (row[1] || '').trim();
+          if (!email) continue;
+
+          const watchCount = Number.parseInt((row[2] || '0').trim(), 10);
+          const timesSuggested = Number.parseInt((row[3] || '0').trim(), 10);
+          const filmSuggested = (row[4] || '').trim();
+
+          usersFound.push({
+            name: name || email.split('@')[0],
+            email,
+            watchedCount: Number.isNaN(watchCount) ? 0 : watchCount,
+            timesSuggested: Number.isNaN(timesSuggested) ? 0 : timesSuggested,
+            filmSuggested,
+          });
+
+          for (let col = 5; col < topRow.length; col++) {
+            const cellVal = (row[col] || '').trim();
+            if (!cellVal) continue;
+
+            const film = filmsFound[col - 5];
+            if (!film?.title) continue;
+
+            let rating: number | null = null;
+            if (cellVal !== '0') {
+              const parsed = Number(cellVal);
+              if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+                rating = parsed;
+              }
+            }
+
+            film.watches.push({
+              name: name || email.split('@')[0],
+              email,
+              rating,
+            });
+          }
+        }
+
+        const filmsWithTitles = filmsFound.filter((f) => f.title);
+        usersFound.forEach((u) => {
+          if (!u.filmSuggested || u.timesSuggested <= 0) return;
+          const matchedFilm = filmsWithTitles.find(
+            (f) => f.title.toLowerCase() === u.filmSuggested.toLowerCase()
+          );
+          if (matchedFilm && !matchedFilm.chosenByEmail) {
+            matchedFilm.chosenBy = u.name;
+            matchedFilm.chosenByEmail = u.email;
+          }
+        });
+
+        setPreparedUsers(usersFound);
+        setPreparedHistoryFilms(filmsWithTitles);
+        setHistoryStep(2);
+      },
+      error: (error) => {
+        setHistoryMsg({ type: 'error', text: 'Failed to parse CSV: ' + error.message });
+      },
+    });
+  };
+
+  const fetchTmdbForHistory = async (index: number, tmdbUrl: string) => {
+    const films = [...preparedHistoryFilms];
+    films[index].fetchLoading = true;
+    films[index].fetchError = null;
+    setPreparedHistoryFilms(films);
+
     try {
-      const fd = new FormData();
-      fd.append('file', importFile);
-      const res = await fetch('/api/fotw/admin/import-leaderboard', {
+      const res = await fetch('/api/fotw/admin/resolve-tmdb', {
         method: 'POST',
-        body: fd,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tmdbUrl }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to fetch movie data');
+      films[index].title = `${d.title} (${d.year})`;
+      films[index].posterUrl = d.posterUrl;
+      films[index].tmdbUrl = tmdbUrl;
+      films[index].fetchError = null;
+    } catch (e: any) {
+      films[index].fetchError = e.message;
+    } finally {
+      films[index].fetchLoading = false;
+      setPreparedHistoryFilms([...films]);
+    }
+  };
+
+  const handleHistorySubmit = async () => {
+    const validFilms = preparedHistoryFilms.filter((f) => f.posterUrl && f.title);
+    if (validFilms.length < preparedHistoryFilms.length) {
+      if (
+        !window.confirm(
+          "Some films don't have a poster (TMDB fetch needed). They will be skipped. Continue?"
+        )
+      )
+        return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryMsg(null);
+    try {
+      const payload = { users: preparedUsers, films: validFilms };
+      const res = await fetch('/api/fotw/admin/import-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.message || 'Import failed');
-      setImportResult({ imported: d.imported, skipped: d.skipped });
-      setImportFile(null);
-      if (importInputRef.current) importInputRef.current.value = '';
+
+      setHistoryMsg({ type: 'success', text: d.message });
+      setHistoryStep(1);
+      setHistoryFile(null);
+      setPreparedUsers([]);
+      setPreparedHistoryFilms([]);
+
+      const [adminRes, archiveRes] = await Promise.all([
+        fetch('/api/fotw/admin/leaderboard').then((r) => r.json()),
+        fetch('/api/fotw/archive').then((r) => r.json()),
+      ]);
+      setLeaderboard(adminRes.leaderboard || []);
+      setArchiveFilms(Array.isArray(archiveRes) ? archiveRes : []);
     } catch (err: any) {
-      setImportError(err.message || 'Import failed');
+      setHistoryMsg({ type: 'error', text: err.message || 'Error importing history' });
     } finally {
-      setImportLoading(false);
+      setHistoryLoading(false);
     }
   };
 
@@ -1094,7 +1256,7 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {/* ── Import Leaderboard ───────────────────────────────── */}
+      {/* ── Bulk CSV Import ──────────────────────────────────────── */}
       <section
         className="mb-12"
         style={{
@@ -1104,72 +1266,205 @@ export default function AdminDashboard() {
           padding: 24,
         }}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <Upload size={16} style={{ color: C.dim }} />
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white', margin: 0 }}>
-            Import Leaderboard from CSV
+        <div className="flex items-center gap-2 mb-6">
+          <Upload size={18} style={{ color: C.dim }} />
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>
+            Bulk CSV Upload (Users + Archive)
           </h2>
         </div>
-        <p style={{ color: C.dim, fontSize: 12, marginBottom: 20 }}>
-          CSV must have columns: name, email, watchedCount
+        <p style={{ color: C.dim, fontSize: 12, marginBottom: 16 }}>
+          Column order must be: name, email, watch count, times suggested, film suggested, then one
+          column per film. Blank means not watched, 0 means watched without rating, 1-5 is rating.
         </p>
 
-        {/* Drag-drop zone */}
-        <div
-          onClick={() => importInputRef.current?.click()}
-          style={{
-            border: `1px dashed ${importFile ? C.blue : '#2e2e2e'}`,
-            borderRadius: 12,
-            padding: 32,
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'border-color 0.2s',
-            marginBottom: 16,
-          }}
-        >
-          <Upload size={20} style={{ color: C.dim, margin: '0 auto 8px' }} />
-          <p style={{ color: importFile ? 'white' : C.dim, fontSize: 13, margin: 0 }}>
-            {importFile ? importFile.name : 'Drop CSV here or click to upload'}
-          </p>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              setImportFile(e.target.files?.[0] ?? null);
-              setImportResult(null);
-              setImportError(null);
+        {historyMsg && (
+          <div
+            className="mb-6 p-3 rounded-lg text-sm"
+            style={{
+              backgroundColor:
+                historyMsg.type === 'success' ? 'rgba(0,224,84,0.1)' : 'rgba(255,100,100,0.1)',
+              color: historyMsg.type === 'success' ? C.green : '#ff6464',
+              border: `1px solid ${historyMsg.type === 'success' ? 'rgba(0,224,84,0.2)' : 'rgba(255,100,100,0.2)'}`,
             }}
-          />
-        </div>
-
-        <button
-          onClick={handleImport}
-          disabled={!importFile || importLoading}
-          className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{
-            backgroundColor: C.green,
-            color: '#000',
-            borderRadius: 8,
-            fontWeight: 600,
-            padding: '10px 24px',
-            fontSize: 14,
-            border: 'none',
-            cursor: !importFile || importLoading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {importLoading && <Loader2 className="animate-spin" size={16} />}
-          {importLoading ? 'Importing...' : 'Import'}
-        </button>
-
-        {importResult && (
-          <p style={{ color: C.green, fontSize: 13, marginTop: 12 }}>
-            ✓ {importResult.imported} records imported, {importResult.skipped} skipped
-          </p>
+          >
+            {historyMsg.text}
+          </div>
         )}
-        {importError && (
-          <p style={{ color: '#ff6464', fontSize: 13, marginTop: 12 }}>{importError}</p>
+
+        {historyStep === 1 && (
+          <div
+            onClick={() => historyInputRef.current?.click()}
+            style={{
+              border: `1px dashed ${historyFile ? C.blue : '#2e2e2e'}`,
+              borderRadius: 12,
+              padding: 32,
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'border-color 0.2s',
+              marginBottom: 16,
+            }}
+          >
+            <Upload size={20} style={{ color: C.dim, margin: '0 auto 8px' }} />
+            <p style={{ color: historyFile ? 'white' : C.dim, fontSize: 13, margin: 0 }}>
+              {historyFile ? historyFile.name : 'Drop Bulk CSV here or click to upload'}
+            </p>
+            <input
+              ref={historyInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              style={{ display: 'none' }}
+              onChange={handleHistoryFileUpload}
+            />
+          </div>
+        )}
+
+        {historyStep === 2 && (
+          <div className="space-y-6">
+            <div
+              style={{
+                border: `1px solid ${C.border}`,
+                borderRadius: 8,
+                padding: 12,
+                background: '#141414',
+              }}
+            >
+              <p style={{ color: 'white', fontSize: 13, margin: 0 }}>
+                Parsed {preparedUsers.length} users and {preparedHistoryFilms.length} films. Review
+                before saving.
+              </p>
+            </div>
+
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 12 }}>
+              <h3 style={{ color: 'white', fontSize: 13, margin: '0 0 8px 0' }}>Users Preview</h3>
+              <div className="overflow-x-auto">
+                <table style={{ width: '100%', fontSize: 12, color: C.muted }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', paddingBottom: 8 }}>Name</th>
+                      <th style={{ textAlign: 'left', paddingBottom: 8 }}>Email</th>
+                      <th style={{ textAlign: 'left', paddingBottom: 8 }}>Watch Count</th>
+                      <th style={{ textAlign: 'left', paddingBottom: 8 }}>Times Suggested</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preparedUsers.slice(0, 12).map((u, i) => (
+                      <tr key={`${u.email}-${i}`}>
+                        <td style={{ padding: '4px 0' }}>{u.name}</td>
+                        <td style={{ padding: '4px 0' }}>{u.email}</td>
+                        <td style={{ padding: '4px 0' }}>{u.watchedCount}</td>
+                        <td style={{ padding: '4px 0' }}>{u.timesSuggested}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {preparedUsers.length > 12 && (
+                <p style={{ color: C.dim, fontSize: 11, margin: '8px 0 0 0' }}>
+                  Showing first 12 users.
+                </p>
+              )}
+            </div>
+
+            {preparedHistoryFilms.map((film, i) => (
+              <div
+                key={i}
+                style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}
+              >
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {film.posterUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={film.posterUrl}
+                      alt="Poster"
+                      style={{ width: 64, height: 96, objectFit: 'cover', borderRadius: 4 }}
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h3 style={{ color: 'white', fontWeight: 600, margin: '0 0 4px 0' }}>
+                      {film.title}{' '}
+                      <span style={{ color: C.dim, fontSize: 12, fontWeight: 400 }}>
+                        ({film.originalTitle})
+                      </span>
+                    </h3>
+                    <p style={{ color: C.dim, fontSize: 12, margin: '0 0 8px 0' }}>
+                      Chosen by: {film.chosenBy || 'Unknown'} • Watches: {film.watches.length} •
+                      Ratings: {film.watches.filter((w: any) => Number(w.rating) > 0).length}
+                    </p>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="url"
+                        placeholder="TMDB URL"
+                        value={film.tmdbUrl}
+                        readOnly={!!film.posterUrl}
+                        onChange={(e) => {
+                          const f = [...preparedHistoryFilms];
+                          f[i].tmdbUrl = e.target.value;
+                          setPreparedHistoryFilms(f);
+                        }}
+                        className={inputClass}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      {!film.posterUrl && (
+                        <button
+                          onClick={() => fetchTmdbForHistory(i, film.tmdbUrl)}
+                          disabled={film.fetchLoading || !film.tmdbUrl}
+                          style={{
+                            background: '#2e2e2e',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '10px 16px',
+                            cursor: film.fetchLoading || !film.tmdbUrl ? 'not-allowed' : 'pointer',
+                            fontSize: 13,
+                          }}
+                        >
+                          {film.fetchLoading ? 'Fetching...' : 'Fetch'}
+                        </button>
+                      )}
+                    </div>
+                    {film.fetchError && (
+                      <p style={{ color: '#ff6464', fontSize: 12, margin: '8px 0 0 0' }}>
+                        {film.fetchError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => setHistoryStep(1)}
+                style={{
+                  ...inputStyle,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: '#2e2e2e',
+                  color: 'white',
+                  fontWeight: 600,
+                  padding: '10px 24px',
+                }}
+              >
+                Back
+              </button>
+              <button
+                onClick={handleHistorySubmit}
+                disabled={historyLoading}
+                style={{
+                  ...inputStyle,
+                  border: 'none',
+                  cursor: historyLoading ? 'not-allowed' : 'pointer',
+                  background: C.green,
+                  color: 'black',
+                  fontWeight: 600,
+                  padding: '10px 24px',
+                  opacity: historyLoading ? 0.7 : 1,
+                }}
+              >
+                {historyLoading ? 'Saving...' : 'Save to Database'}
+              </button>
+            </div>
+          </div>
         )}
       </section>
 

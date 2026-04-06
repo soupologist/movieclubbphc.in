@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     // Includes email field, accessible only to admins
     const leaderboard = await FOTWUser.find({ watchedCount: { $gt: 0 } })
       .sort({ watchedCount: -1, createdAt: 1 })
-      .select('name image watchedCount email')
+      .select('name image watchedCount email timesSuggested')
       .lean();
 
     return NextResponse.json({ leaderboard });

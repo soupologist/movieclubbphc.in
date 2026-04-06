@@ -158,6 +158,17 @@ export async function POST(req: Request) {
       timerDuration: timerDuration ?? 604800000,
     });
 
+    if (chosenByEmail) {
+      await FOTWUser.findOneAndUpdate(
+        { email: chosenByEmail },
+        {
+          $setOnInsert: { name: chosenBy || chosenByEmail.split('@')[0] },
+          $inc: { timesSuggested: 1 },
+        },
+        { upsert: true }
+      );
+    }
+
     return NextResponse.json({ success: true, film: newFilm });
   } catch (error) {
     console.error('Error creating film:', error);
