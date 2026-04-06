@@ -115,6 +115,7 @@ export default function Home() {
             playsInline
             preload="auto"
             poster="/images/video-poster.jpg"
+            suppressHydrationWarning
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <p

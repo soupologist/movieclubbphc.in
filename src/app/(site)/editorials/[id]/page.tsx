@@ -54,7 +54,7 @@ It has taken me 11 years and 3 watches to finally fall in love with INTERSTELLAR
 
 export default function EditorialPage() {
   const params = useParams();
-  const { id } = params;
+  const id = params?.id;
   const [editorial, setEditorial] = useState<null | (typeof MOCK_EDITORIALS)[0]>(null);
   const [dominantColor, setDominantColor] = useState<string>('#5a5aff'); // fallback
   const imgRef = useRef<HTMLImageElement>(null);

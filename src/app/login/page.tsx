@@ -20,7 +20,7 @@ export default function LoginPage() {
     <div className="flex flex-col min-h-screen bg-black text-white">
       <Navbar />
 
-      <main className="flex-grow flex flex-col items-center justify-center px-4 text-center">
+      <main className="grow flex flex-col items-center justify-center px-4 text-center">
         <h1 className="text-3xl font-bold mb-6">Login to Movie Club BPHC</h1>
 
         <button

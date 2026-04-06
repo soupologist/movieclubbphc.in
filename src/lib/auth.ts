@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import type { Session } from 'next-auth';
+import type { Session, NextAuthOptions } from 'next-auth';
 
 // TODO: fix naming
 
@@ -11,7 +11,8 @@ const ADMIN_EMAILS = [
 ];
 const CLUB_EMAILS = ['f20230177@hyderabad.bits-pilani.ac.in'];
 
-const authOptions = {
+export const authOptions: NextAuthOptions = {
+  debug: true,
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
@@ -36,6 +37,3 @@ const authOptions = {
     },
   },
 };
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
