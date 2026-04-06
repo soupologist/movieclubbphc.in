@@ -236,7 +236,7 @@ export default async function FOTWAdminStatsPage({
         </p>
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <section className="grid grid-cols-1 gap-4">
         <div
           style={{
             backgroundColor: C.card,
@@ -245,7 +245,7 @@ export default async function FOTWAdminStatsPage({
             padding: 16,
           }}
         >
-          <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 15 }}>Most Watched Films</h2>
+          <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 15 }}>Films</h2>
           <div className="flex flex-wrap gap-2 mb-3">
             <Link
               href={`/club/filmoftheweek/admin/stats?sort=watches&order=${sortOrder}`}
@@ -284,7 +284,10 @@ export default async function FOTWAdminStatsPage({
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table style={{ width: '100%', color: C.muted, fontSize: 13 }}>
+            <table
+              className="most-watched-table"
+              style={{ width: '100%', color: C.muted, fontSize: 13 }}
+            >
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Film</th>
@@ -297,7 +300,9 @@ export default async function FOTWAdminStatsPage({
               <tbody>
                 {filmsWithStats.map((f) => (
                   <tr key={f.id}>
-                    <td style={{ padding: '6px 0' }}>{f.title}</td>
+                    <td className="most-watched-film-title" style={{ padding: '6px 0' }}>
+                      {f.title}
+                    </td>
                     <td style={{ padding: '6px 0' }}>{f.chosenBy || 'Unknown'}</td>
                     <td style={{ padding: '6px 0' }}>{formatDateDDMMYYYY(f.dateSuggested)}</td>
                     <td style={{ padding: '6px 0' }}>{f.watchCount}</td>
@@ -340,6 +345,34 @@ export default async function FOTWAdminStatsPage({
           </div>
         </div>
       </section>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .most-watched-table {
+            font-size: 10px !important;
+          }
+
+          .most-watched-table th {
+            padding-bottom: 6px !important;
+            font-size: 9px !important;
+            line-height: 1.2;
+          }
+
+          .most-watched-table td {
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+            line-height: 1.25;
+            vertical-align: top;
+          }
+
+          .most-watched-film-title {
+            font-size: 9px !important;
+            line-height: 1.25;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+          }
+        }
+      `}</style>
     </div>
   );
 }
