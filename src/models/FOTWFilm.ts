@@ -7,6 +7,7 @@ export interface IFOTWFilm extends Document {
   addedBy: string; // email of admin who added it
   chosenBy: string; // name of the person who chose this film
   chosenByEmail: string; // email of the person who chose this film
+  dateSuggested: Date | null;
   watchedBy: { userEmail: string; watchedAt: Date }[];
   createdAt: Date;
   lockedAt: Date | null;
@@ -22,6 +23,7 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
     addedBy: { type: String, required: true },
     chosenBy: { type: String, default: '' }, // Name of member who chose this week's film
     chosenByEmail: { type: String, default: '' }, // Email of member who chose this week's film
+    dateSuggested: { type: Date, default: null },
     watchedBy: {
       type: [
         {

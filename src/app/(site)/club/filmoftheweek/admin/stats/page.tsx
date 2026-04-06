@@ -20,14 +20,27 @@ const C = {
   green: '#00e054',
 };
 
-export default async function FOTWAdminStatsPage() {
+type SortKey = 'watches' | 'avg' | 'date';
+type SortOrder = 'asc' | 'desc';
+
+export default async function FOTWAdminStatsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ sort?: string; order?: string }>;
+}) {
   await dbConnect();
   await syncTimesSuggestedFromFilms();
+
+  const params = (await searchParams) || {};
+  const sortKey: SortKey = ['watches', 'avg', 'date'].includes(params.sort || '')
+    ? (params.sort as SortKey)
+    : 'watches';
+  const sortOrder: SortOrder = params.order === 'asc' ? 'asc' : 'desc';
 
   const [users, archivedFilms, ratings, currentFilm] = await Promise.all([
     FOTWUser.find({}).select('name email watchedCount timesSuggested').lean(),
     FOTWFilm.find({ lockedAt: { $ne: null } })
-      .select('title watchedBy chosenBy chosenByEmail createdAt')
+      .select('title watchedBy chosenBy chosenByEmail createdAt dateSuggested')
       .sort({ createdAt: -1 })
       .lean(),
     FOTWRating.find({}).select('filmId rating').lean(),
@@ -77,13 +90,30 @@ export default async function FOTWAdminStatsPage() {
         id: String(film._id),
         title: film.title || 'Untitled',
         chosenBy: film.chosenBy || 'Unknown',
+        dateSuggested: film.dateSuggested || film.createdAt || null,
         watchCount: Array.isArray(film.watchedBy) ? film.watchedBy.length : 0,
         ratingsCount: filmRatings.length,
         avgRating,
       };
     })
-    .sort((a, b) => b.watchCount - a.watchCount)
-    .slice(0, 15);
+    .sort((a, b) => {
+      const dir = sortOrder === 'asc' ? 1 : -1;
+      if (sortKey === 'watches') return dir * (a.watchCount - b.watchCount);
+      if (sortKey === 'avg') return dir * ((a.avgRating ?? -1) - (b.avgRating ?? -1));
+
+      const aDate = a.dateSuggested ? new Date(a.dateSuggested).getTime() : 0;
+      const bDate = b.dateSuggested ? new Date(b.dateSuggested).getTime() : 0;
+      return dir * (aDate - bDate);
+    });
+
+  const sortLinkStyle = (active: boolean) => ({
+    color: active ? 'white' : C.muted,
+    fontSize: 12,
+    textDecoration: 'none',
+    border: `1px solid ${active ? C.green : C.border}`,
+    borderRadius: 999,
+    padding: '6px 10px',
+  });
 
   const statCardStyle = {
     backgroundColor: C.card,
@@ -210,11 +240,45 @@ export default async function FOTWAdminStatsPage() {
           }}
         >
           <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 15 }}>Most Watched Films</h2>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Link
+              href={`/club/filmoftheweek/admin/stats?sort=watches&order=${sortOrder}`}
+              style={sortLinkStyle(sortKey === 'watches')}
+            >
+              Sort: Most Watched
+            </Link>
+            <Link
+              href={`/club/filmoftheweek/admin/stats?sort=avg&order=${sortOrder}`}
+              style={sortLinkStyle(sortKey === 'avg')}
+            >
+              Sort: Highest Avg
+            </Link>
+            <Link
+              href={`/club/filmoftheweek/admin/stats?sort=date&order=${sortOrder}`}
+              style={sortLinkStyle(sortKey === 'date')}
+            >
+              Sort: Date
+            </Link>
+            <Link
+              href={`/club/filmoftheweek/admin/stats?sort=${sortKey}&order=asc`}
+              style={sortLinkStyle(sortOrder === 'asc')}
+            >
+              Asc
+            </Link>
+            <Link
+              href={`/club/filmoftheweek/admin/stats?sort=${sortKey}&order=desc`}
+              style={sortLinkStyle(sortOrder === 'desc')}
+            >
+              Desc
+            </Link>
+          </div>
           <div className="overflow-x-auto">
             <table style={{ width: '100%', color: C.muted, fontSize: 13 }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Film</th>
+                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Suggested By</th>
+                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Date</th>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Watches</th>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Avg Rating</th>
                 </tr>
@@ -223,6 +287,10 @@ export default async function FOTWAdminStatsPage() {
                 {filmsWithStats.map((f) => (
                   <tr key={f.id}>
                     <td style={{ padding: '6px 0' }}>{f.title}</td>
+                    <td style={{ padding: '6px 0' }}>{f.chosenBy || 'Unknown'}</td>
+                    <td style={{ padding: '6px 0' }}>
+                      {f.dateSuggested ? new Date(f.dateSuggested).toLocaleDateString() : '-'}
+                    </td>
                     <td style={{ padding: '6px 0' }}>{f.watchCount}</td>
                     <td style={{ padding: '6px 0' }}>{f.avgRating ?? '-'}</td>
                   </tr>

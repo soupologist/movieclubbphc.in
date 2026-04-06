@@ -409,10 +409,10 @@ export default function AdminDashboard() {
       complete: (results) => {
         const rawData = results.data as string[][];
 
-        if (rawData.length < 2 || (rawData[0] || []).length < 6) {
+        if (rawData.length < 2 || (rawData[0] || []).length < 7) {
           setHistoryMsg({
             type: 'error',
-            text: 'CSV must include at least 6 columns: name, email, watch count, times suggested, film suggested, and films.',
+            text: 'CSV must include at least 7 columns: name, email, watch count, times suggested, film suggested, when suggested, and films.',
           });
           return;
         }
@@ -424,20 +424,25 @@ export default function AdminDashboard() {
           .slice(0, 5)
           .map((h) => normalizeHeader((h || '').trim()));
         const headersMatch = required.every((field, idx) => normalizedFirstFive[idx] === field);
+        const whenSuggestedHeader = normalizeHeader((topRow[5] || '').trim());
+        const whenSuggestedHeaderValid = ['whensuggested', 'date', 'suggesteddate'].includes(
+          whenSuggestedHeader
+        );
 
-        if (!headersMatch) {
+        if (!headersMatch || !whenSuggestedHeaderValid) {
           setHistoryMsg({
             type: 'error',
-            text: 'CSV headers must be ordered as: name, email, watch count, times suggested, film suggested, then movie columns.',
+            text: 'CSV headers must be ordered as: name, email, watch count, times suggested, film suggested, when suggested, then movie columns.',
           });
           return;
         }
 
-        const filmsFound: any[] = topRow.slice(5).map((filmTitleRaw) => ({
+        const filmsFound: any[] = topRow.slice(6).map((filmTitleRaw) => ({
           title: (filmTitleRaw || '').trim(),
           originalTitle: (filmTitleRaw || '').trim(),
           chosenBy: '',
           chosenByEmail: '',
+          dateSuggested: '',
           tmdbUrl: '',
           posterUrl: '',
           watches: [],
@@ -455,16 +460,17 @@ export default function AdminDashboard() {
 
           const timesSuggested = Number.parseInt((row[3] || '0').trim(), 10);
           const filmSuggested = (row[4] || '').trim();
+          const whenSuggested = (row[5] || '').trim();
           let computedWatchCount = 0;
 
-          for (let col = 5; col < topRow.length; col++) {
+          for (let col = 6; col < topRow.length; col++) {
             const cellVal = (row[col] || '').trim();
             if (!cellVal) continue;
 
             // Any non-blank cell means user watched this film.
             computedWatchCount += 1;
 
-            const film = filmsFound[col - 5];
+            const film = filmsFound[col - 6];
             if (!film?.title) continue;
 
             let rating: number | null = null;
@@ -488,6 +494,7 @@ export default function AdminDashboard() {
             watchedCount: computedWatchCount,
             timesSuggested: Number.isNaN(timesSuggested) ? 0 : timesSuggested,
             filmSuggested,
+            whenSuggested,
           });
         }
 
@@ -500,6 +507,7 @@ export default function AdminDashboard() {
           if (matchedFilm && !matchedFilm.chosenByEmail) {
             matchedFilm.chosenBy = u.name;
             matchedFilm.chosenByEmail = u.email;
+            matchedFilm.dateSuggested = u.whenSuggested || '';
           }
         });
 
@@ -1278,9 +1286,9 @@ export default function AdminDashboard() {
           </h2>
         </div>
         <p style={{ color: C.dim, fontSize: 12, marginBottom: 16 }}>
-          Column order must be: name, email, watch count, times suggested, film suggested, then one
-          column per film. Watch count column is ignored and recomputed from movie cells. Blank
-          means not watched, 0 means watched without rating, 1-5 is rating.
+          Column order must be: name, email, watch count, times suggested, film suggested, when
+          suggested, then one column per film. Watch count column is ignored and recomputed from
+          movie cells. Blank means not watched, 0 means watched without rating, 1-5 is rating.
         </p>
 
         {historyMsg && (

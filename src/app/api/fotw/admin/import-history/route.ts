@@ -10,6 +10,25 @@ import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const parseCsvDate = (value: unknown): Date | null => {
+  const raw = (value ?? '').toString().trim();
+  if (!raw) return null;
+
+  const iso = new Date(raw);
+  if (!Number.isNaN(iso.getTime())) return iso;
+
+  const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]);
+    const year = Number(dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]);
+    const candidate = new Date(Date.UTC(year, month - 1, day));
+    if (!Number.isNaN(candidate.getTime())) return candidate;
+  }
+
+  return null;
+};
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -43,6 +62,7 @@ export async function POST(req: Request) {
             watchedCount: u.watchedCount || 0,
             timesSuggested: u.timesSuggested || 0,
             filmSuggested: u.filmSuggested || '',
+            whenSuggested: parseCsvDate(u.whenSuggested),
           },
         },
         { upsert: true, new: true }
@@ -79,6 +99,7 @@ export async function POST(req: Request) {
       if (existingFilm) {
         // Preserve canonical poster and chooser once a film already exists.
         existingFilm.tmdbUrl = filmData.tmdbUrl || '';
+        existingFilm.dateSuggested = parseCsvDate(filmData.dateSuggested);
         existingFilm.watchedBy = watchedBy;
         if (!existingFilm.lockedAt) existingFilm.lockedAt = new Date();
         await existingFilm.save();
@@ -91,6 +112,7 @@ export async function POST(req: Request) {
           addedBy: session.user.email,
           chosenBy: filmData.chosenBy || '',
           chosenByEmail: filmData.chosenByEmail || '',
+          dateSuggested: parseCsvDate(filmData.dateSuggested),
           watchedBy,
           lockedAt: new Date(),
           timerDuration: 0,
