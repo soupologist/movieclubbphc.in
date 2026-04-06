@@ -208,65 +208,39 @@ export default async function FOTWAdminStatsPage({
             padding: 16,
           }}
         >
-          <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 15 }}>All Users</h2>
-          <div className="overflow-x-auto">
-            <table style={{ width: '100%', color: C.muted, fontSize: 13 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Name</th>
-                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Watches</th>
-                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Times Suggested</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allUsers.map((u: any, i) => (
-                  <tr key={`${u.email}-${i}`}>
-                    <td style={{ padding: '6px 0' }}>{u.name || u.email}</td>
-                    <td style={{ padding: '6px 0' }}>{u.watchedCount || 0}</td>
-                    <td style={{ padding: '6px 0' }}>{u.timesSuggested || 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: C.card,
-            border: `1px solid ${C.border}`,
-            borderRadius: 12,
-            padding: 16,
-          }}
-        >
           <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 15 }}>Most Watched Films</h2>
           <div className="flex flex-wrap gap-2 mb-3">
             <Link
               href={`/club/filmoftheweek/admin/stats?sort=watches&order=${sortOrder}`}
+              scroll={false}
               style={sortLinkStyle(sortKey === 'watches')}
             >
               Sort: Most Watched
             </Link>
             <Link
               href={`/club/filmoftheweek/admin/stats?sort=avg&order=${sortOrder}`}
+              scroll={false}
               style={sortLinkStyle(sortKey === 'avg')}
             >
               Sort: Highest Avg
             </Link>
             <Link
               href={`/club/filmoftheweek/admin/stats?sort=date&order=${sortOrder}`}
+              scroll={false}
               style={sortLinkStyle(sortKey === 'date')}
             >
               Sort: Date
             </Link>
             <Link
               href={`/club/filmoftheweek/admin/stats?sort=${sortKey}&order=asc`}
+              scroll={false}
               style={sortLinkStyle(sortOrder === 'asc')}
             >
               Asc
             </Link>
             <Link
               href={`/club/filmoftheweek/admin/stats?sort=${sortKey}&order=desc`}
+              scroll={false}
               style={sortLinkStyle(sortOrder === 'desc')}
             >
               Desc
@@ -293,6 +267,37 @@ export default async function FOTWAdminStatsPage({
                     </td>
                     <td style={{ padding: '6px 0' }}>{f.watchCount}</td>
                     <td style={{ padding: '6px 0' }}>{f.avgRating ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: C.card,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12,
+            padding: 16,
+          }}
+        >
+          <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 15 }}>All Users</h2>
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', color: C.muted, fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Name</th>
+                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Watches</th>
+                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Times Suggested</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allUsers.map((u: any, i) => (
+                  <tr key={`${u.email}-${i}`}>
+                    <td style={{ padding: '6px 0' }}>{u.name || u.email}</td>
+                    <td style={{ padding: '6px 0' }}>{u.watchedCount || 0}</td>
+                    <td style={{ padding: '6px 0' }}>{u.timesSuggested || 0}</td>
                   </tr>
                 ))}
               </tbody>
