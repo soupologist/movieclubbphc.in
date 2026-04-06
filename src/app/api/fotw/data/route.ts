@@ -7,6 +7,7 @@ import FOTWUser from '@/models/FOTWUser';
 import FOTWLike from '@/models/FOTWLike';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
+import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 
 // GET: Fetch current film, leaderboard, and user's rating status
 export async function GET(req: Request) {
@@ -158,16 +159,7 @@ export async function POST(req: Request) {
       timerDuration: timerDuration ?? 604800000,
     });
 
-    if (chosenByEmail) {
-      await FOTWUser.findOneAndUpdate(
-        { email: chosenByEmail },
-        {
-          $setOnInsert: { name: chosenBy || chosenByEmail.split('@')[0] },
-          $inc: { timesSuggested: 1 },
-        },
-        { upsert: true }
-      );
-    }
+    await syncTimesSuggestedFromFilms();
 
     return NextResponse.json({ success: true, film: newFilm });
   } catch (error) {
@@ -219,6 +211,8 @@ export async function PATCH(req: Request) {
     if (!updatedFilm) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
+
+    await syncTimesSuggestedFromFilms();
 
     return NextResponse.json({ success: true, film: updatedFilm });
   } catch (error) {

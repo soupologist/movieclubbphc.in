@@ -420,7 +420,9 @@ export default function AdminDashboard() {
         const topRow = rawData[0];
 
         const required = ['name', 'email', 'watchcount', 'timessuggested', 'filmsuggested'];
-        const normalizedFirstFive = topRow.slice(0, 5).map((h) => normalizeHeader((h || '').trim()));
+        const normalizedFirstFive = topRow
+          .slice(0, 5)
+          .map((h) => normalizeHeader((h || '').trim()));
         const headersMatch = required.every((field, idx) => normalizedFirstFive[idx] === field);
 
         if (!headersMatch) {
@@ -451,21 +453,16 @@ export default function AdminDashboard() {
           const email = (row[1] || '').trim();
           if (!email) continue;
 
-          const watchCount = Number.parseInt((row[2] || '0').trim(), 10);
           const timesSuggested = Number.parseInt((row[3] || '0').trim(), 10);
           const filmSuggested = (row[4] || '').trim();
-
-          usersFound.push({
-            name: name || email.split('@')[0],
-            email,
-            watchedCount: Number.isNaN(watchCount) ? 0 : watchCount,
-            timesSuggested: Number.isNaN(timesSuggested) ? 0 : timesSuggested,
-            filmSuggested,
-          });
+          let computedWatchCount = 0;
 
           for (let col = 5; col < topRow.length; col++) {
             const cellVal = (row[col] || '').trim();
             if (!cellVal) continue;
+
+            // Any non-blank cell means user watched this film.
+            computedWatchCount += 1;
 
             const film = filmsFound[col - 5];
             if (!film?.title) continue;
@@ -484,6 +481,14 @@ export default function AdminDashboard() {
               rating,
             });
           }
+
+          usersFound.push({
+            name: name || email.split('@')[0],
+            email,
+            watchedCount: computedWatchCount,
+            timesSuggested: Number.isNaN(timesSuggested) ? 0 : timesSuggested,
+            filmSuggested,
+          });
         }
 
         const filmsWithTitles = filmsFound.filter((f) => f.title);
@@ -1274,7 +1279,8 @@ export default function AdminDashboard() {
         </div>
         <p style={{ color: C.dim, fontSize: 12, marginBottom: 16 }}>
           Column order must be: name, email, watch count, times suggested, film suggested, then one
-          column per film. Blank means not watched, 0 means watched without rating, 1-5 is rating.
+          column per film. Watch count column is ignored and recomputed from movie cells. Blank
+          means not watched, 0 means watched without rating, 1-5 is rating.
         </p>
 
         {historyMsg && (
@@ -1331,6 +1337,10 @@ export default function AdminDashboard() {
               <p style={{ color: 'white', fontSize: 13, margin: 0 }}>
                 Parsed {preparedUsers.length} users and {preparedHistoryFilms.length} films. Review
                 before saving.
+              </p>
+              <p style={{ color: C.muted, fontSize: 12, margin: '10px 0 0 0' }}>
+                Re-upload behavior: for existing films, poster and chosen-by are preserved; watch
+                data, ratings, and TMDB URL are refreshed from this CSV.
               </p>
             </div>
 

@@ -6,6 +6,9 @@ import FOTWUser from '@/models/FOTWUser';
 import FOTWRating from '@/models/FOTWRating';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
+import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export async function POST(req: Request) {
   try {
@@ -25,8 +28,10 @@ export async function POST(req: Request) {
     let watchesImported = 0;
     let ratingsImported = 0;
     let usersImported = 0;
+    let duplicatesSkipped = 0;
 
     // 1) Sync leaderboard users from CSV (create missing users, update existing).
+    // This always runs, even when film columns are duplicates.
     for (const u of data.users) {
       if (!u.email) continue;
 
@@ -37,6 +42,7 @@ export async function POST(req: Request) {
             name: u.name || u.email.split('@')[0],
             watchedCount: u.watchedCount || 0,
             timesSuggested: u.timesSuggested || 0,
+            filmSuggested: u.filmSuggested || '',
           },
         },
         { upsert: true, new: true }
@@ -45,8 +51,17 @@ export async function POST(req: Request) {
     }
 
     // 2) Import/Update archive films and attach watched/rating relations.
+    const seenInPayload = new Set<string>();
     for (const filmData of data.films) {
       if (!filmData.title || !filmData.posterUrl) continue;
+
+      const normalizedTitle = filmData.title.toString().trim().toLowerCase();
+      if (!normalizedTitle) continue;
+      if (seenInPayload.has(normalizedTitle)) {
+        duplicatesSkipped++;
+        continue;
+      }
+      seenInPayload.add(normalizedTitle);
 
       // Extract watches and ratings
       const watches = filmData.watches || [];
@@ -56,16 +71,14 @@ export async function POST(req: Request) {
       }));
 
       const existingFilm = await FOTWFilm.findOne({
-        title: filmData.title,
+        title: { $regex: `^${escapeRegex(filmData.title.toString().trim())}$`, $options: 'i' },
         lockedAt: { $ne: null },
       });
 
       let importedFilmId;
       if (existingFilm) {
-        existingFilm.posterUrl = filmData.posterUrl;
+        // Preserve canonical poster and chooser once a film already exists.
         existingFilm.tmdbUrl = filmData.tmdbUrl || '';
-        existingFilm.chosenBy = filmData.chosenBy || '';
-        existingFilm.chosenByEmail = filmData.chosenByEmail || '';
         existingFilm.watchedBy = watchedBy;
         if (!existingFilm.lockedAt) existingFilm.lockedAt = new Date();
         await existingFilm.save();
@@ -110,9 +123,11 @@ export async function POST(req: Request) {
       }
     }
 
+    await syncTimesSuggestedFromFilms();
+
     return NextResponse.json({
       success: true,
-      message: `Bulk sync complete! Updated ${usersImported} users. Imported ${filmsImported} films, ${watchesImported} watch records, and ${ratingsImported} ratings.`,
+      message: `Bulk sync complete! Updated ${usersImported} users. Imported ${filmsImported} film columns, ${watchesImported} watch records, ${ratingsImported} ratings, skipped ${duplicatesSkipped} duplicate movie columns inside this CSV.`,
     });
   } catch (error) {
     console.error('Bulk Import error:', error);

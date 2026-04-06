@@ -1209,21 +1209,36 @@ export default function FOTWLandingPage() {
         </div>
       </div>
 
-      <Link
-        href="/club/filmoftheweek/rules"
-        style={{
-          color: '#4a5568',
-          fontSize: '13px',
-          textDecoration: 'none',
-          display: 'inline-block',
-          marginBottom: '24px',
-          letterSpacing: '0.02em',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
-        onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
-      >
-        Rules →
-      </Link>
+      <div className="flex items-center gap-4" style={{ marginBottom: '24px' }}>
+        <Link
+          href="/club/filmoftheweek/rules"
+          style={{
+            color: '#4a5568',
+            fontSize: '13px',
+            textDecoration: 'none',
+            display: 'inline-block',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Rules →
+        </Link>
+        <Link
+          href="/club/filmoftheweek/admin/stats"
+          style={{
+            color: '#4a5568',
+            fontSize: '13px',
+            textDecoration: 'none',
+            display: 'inline-block',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Stats →
+        </Link>
+      </div>
 
       {/* ══════════════════════════════════════════════════════
           SECTION 1: CURRENT FILM HERO

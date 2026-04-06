@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import FOTWUser from '@/models/FOTWUser';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
+import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 
 export async function GET(req: Request) {
   try {
@@ -13,6 +14,7 @@ export async function GET(req: Request) {
     }
 
     await dbConnect();
+    await syncTimesSuggestedFromFilms();
 
     // Includes email field, accessible only to admins
     const leaderboard = await FOTWUser.find({ watchedCount: { $gt: 0 } })
