@@ -250,3 +250,68 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+// DELETE: Admin deletes a film and rolls back watch counts for users who watched it
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!FOTW_ADMINS.includes(session.user.email)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+    }
+
+    await dbConnect();
+    const { filmId } = await req.json();
+
+    if (!filmId) {
+      return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
+    }
+
+    const film = await FOTWFilm.findById(filmId).select('watchedBy').lean();
+    if (!film) {
+      return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    }
+
+    const watchedBy = Array.isArray((film as any).watchedBy) ? (film as any).watchedBy : [];
+    const watchCountByEmail = watchedBy.reduce(
+      (acc: Record<string, number>, entry: { userEmail?: string }) => {
+        const email = (entry?.userEmail || '').trim().toLowerCase();
+        if (!email) return acc;
+        acc[email] = (acc[email] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
+
+    for (const [email, decrementBy] of Object.entries(watchCountByEmail)) {
+      await FOTWUser.updateOne({ email }, [
+        {
+          $set: {
+            watchedCount: {
+              $max: [0, { $subtract: [{ $ifNull: ['$watchedCount', 0] }, decrementBy] }],
+            },
+          },
+        },
+      ]);
+    }
+
+    await Promise.all([
+      FOTWFilm.deleteOne({ _id: filmId }),
+      FOTWRating.deleteMany({ filmId }),
+      FOTWLike.deleteMany({ filmId }),
+    ]);
+
+    await syncTimesSuggestedFromFilms();
+
+    return NextResponse.json({
+      success: true,
+      decrementedUsers: Object.keys(watchCountByEmail).length,
+    });
+  } catch (error) {
+    console.error('Error deleting film:', error);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}

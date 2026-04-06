@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Sparkles, Edit2, Upload } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Edit2, Upload, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import Papa from 'papaparse';
@@ -73,6 +73,7 @@ export default function AdminDashboard() {
 
   // Edit Film State
   const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [editData, setEditData] = useState({
     filmId: '',
     title: '',
@@ -125,31 +126,67 @@ export default function AdminDashboard() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    Promise.all([
+  const loadDashboardData = async (preferredTab?: 'current' | 'previous') => {
+    const [adminData, d, archive] = await Promise.all([
       fetch('/api/fotw/admin/leaderboard').then((r) => r.json()),
       fetch('/api/fotw/data').then((r) => r.json()),
       fetch('/api/fotw/archive').then((r) => r.json()),
-    ])
-      .then(([adminData, d, archive]) => {
-        setLeaderboard(adminData.leaderboard || []);
-        setArchiveFilms(Array.isArray(archive) ? archive : []);
-        if (d.currentFilm) {
-          setCurrentFilm(d.currentFilm);
-          setEditData({
-            filmId: d.currentFilm._id,
-            title: d.currentFilm.title || '',
-            posterUrl: d.currentFilm.posterUrl || '',
-            chosenBy: d.currentFilm.chosenBy || '',
-            chosenByEmail: d.currentFilm.chosenByEmail || '',
-            dateSuggested: toDateInputValue(d.currentFilm.dateSuggested),
-            timerPaused: d.currentFilm.timerPaused || false,
-            tmdbUrl: d.currentFilm.tmdbUrl || '',
-            ...parseDuration(d.currentFilm.timerDuration),
-          });
-        }
-      })
-      .catch((err) => console.error(err));
+    ]);
+
+    const archiveList = Array.isArray(archive) ? archive : [];
+    const nextCurrentFilm = d.currentFilm || null;
+    setLeaderboard(adminData.leaderboard || []);
+    setArchiveFilms(archiveList);
+    setCurrentFilm(nextCurrentFilm);
+
+    let nextTab = preferredTab ?? editTab;
+    if (nextTab === 'current' && !nextCurrentFilm && archiveList.length > 0) {
+      nextTab = 'previous';
+    }
+    if (nextTab === 'previous' && archiveList.length === 0 && nextCurrentFilm) {
+      nextTab = 'current';
+    }
+    setEditTab(nextTab);
+
+    if (nextTab === 'current' && nextCurrentFilm) {
+      setEditData({
+        filmId: nextCurrentFilm._id,
+        title: nextCurrentFilm.title || '',
+        posterUrl: nextCurrentFilm.posterUrl || '',
+        chosenBy: nextCurrentFilm.chosenBy || '',
+        chosenByEmail: nextCurrentFilm.chosenByEmail || '',
+        dateSuggested: toDateInputValue(nextCurrentFilm.dateSuggested),
+        timerPaused: nextCurrentFilm.timerPaused || false,
+        tmdbUrl: nextCurrentFilm.tmdbUrl || '',
+        ...parseDuration(nextCurrentFilm.timerDuration),
+      });
+      return;
+    }
+
+    if (nextTab === 'previous' && archiveList.length > 0) {
+      const previousFilm = archiveList[0];
+      setEditData({
+        filmId: previousFilm._id,
+        title: previousFilm.title || '',
+        posterUrl: previousFilm.posterUrl || '',
+        chosenBy: previousFilm.chosenBy || '',
+        chosenByEmail: previousFilm.chosenByEmail || '',
+        dateSuggested: toDateInputValue(previousFilm.dateSuggested),
+        timerPaused: false,
+        tmdbUrl: previousFilm.tmdbUrl || '',
+        ...parseDuration(previousFilm.timerDuration),
+      });
+      return;
+    }
+
+    setEditData((prev) => ({
+      ...prev,
+      filmId: '',
+    }));
+  };
+
+  useEffect(() => {
+    loadDashboardData('current').catch((err) => console.error(err));
 
     loadRules();
   }, []);
@@ -314,6 +351,45 @@ export default function AdminDashboard() {
       showEditMessage('error', 'Error updating film');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleDeleteFilm = async () => {
+    const targetFilm =
+      editTab === 'current'
+        ? currentFilm
+        : archiveFilms.find((film) => film && film._id === editData.filmId);
+
+    if (!targetFilm?._id) {
+      showEditMessage('error', 'No film selected to delete.');
+      return;
+    }
+
+    const targetLabel = editTab === 'current' ? 'current film' : 'selected previous film';
+    const confirmDelete = window.confirm(
+      `Delete ${targetLabel} "${targetFilm.title}"? This will remove its watch history and reduce associated user watch counts.`
+    );
+    if (!confirmDelete) return;
+
+    setDeleteLoading(true);
+    setEditMsg(null);
+    try {
+      const res = await fetch('/api/fotw/data', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filmId: targetFilm._id }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        throw new Error(d?.message || 'Failed to delete film');
+      }
+
+      await loadDashboardData(editTab);
+      showEditMessage('success', 'Film deleted and watch history adjusted successfully.');
+    } catch (error: any) {
+      showEditMessage('error', error?.message || 'Failed to delete film');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -1211,22 +1287,50 @@ export default function AdminDashboard() {
                 </label>
               </div>
             )}
-            <button
-              type="submit"
-              disabled={editLoading}
-              className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{
-                backgroundColor: C.green,
-                color: '#000',
-                borderRadius: 8,
-                fontWeight: 600,
-                padding: '10px 24px',
-                fontSize: 14,
-              }}
-            >
-              {editLoading && <Loader2 className="animate-spin" size={16} />}
-              {editLoading ? 'Saving...' : 'Save Changes'}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={editLoading || deleteLoading}
+                className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{
+                  backgroundColor: C.green,
+                  color: '#000',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  padding: '10px 24px',
+                  fontSize: 14,
+                }}
+              >
+                {editLoading && <Loader2 className="animate-spin" size={16} />}
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteFilm}
+                disabled={deleteLoading || editLoading || !editData.filmId}
+                className="flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'transparent',
+                  border: '1px solid #ff6464',
+                  color: '#ff6464',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  padding: '10px 16px',
+                  fontSize: 14,
+                }}
+              >
+                {deleteLoading ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                {deleteLoading
+                  ? 'Deleting...'
+                  : editTab === 'current'
+                    ? 'Delete Current Film'
+                    : 'Delete Selected Film'}
+              </button>
+            </div>
           </form>
         </section>
       )}

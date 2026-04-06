@@ -9,5 +9,8 @@ export const FOTW_ADMINS = [
   'f20230591@hyderabad.bits-pilani.ac.in', //shreyas
   'f20230640@hyderabad.bits-pilani.ac.in', //aswanth
   'f20230410@hyderabad.bits-pilani.ac.in', //tarun
+  'f20231171@hyderabad.bits-pilani.ac.in', //shreya
+  'f20230247@hyderabad.bits-pilani.ac.in', //tejasvi
+
   'movieclub@hyderabad.bits-pilani.ac.in', //
 ];
