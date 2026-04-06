@@ -24,6 +24,13 @@ const C = {
 export default function AdminDashboard() {
   const router = useRouter();
 
+  const toDateInputValue = (value?: string | Date | null) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  };
+
   const parseDuration = (ms?: number) => {
     const val = ms ?? 604800000;
     const totalS = Math.floor(val / 1000);
@@ -72,6 +79,7 @@ export default function AdminDashboard() {
     posterUrl: '',
     chosenBy: '',
     chosenByEmail: '',
+    dateSuggested: '',
     timerPaused: false,
     tmdbUrl: '',
     timerD: 7,
@@ -134,6 +142,7 @@ export default function AdminDashboard() {
             posterUrl: d.currentFilm.posterUrl || '',
             chosenBy: d.currentFilm.chosenBy || '',
             chosenByEmail: d.currentFilm.chosenByEmail || '',
+            dateSuggested: toDateInputValue(d.currentFilm.dateSuggested),
             timerPaused: d.currentFilm.timerPaused || false,
             tmdbUrl: d.currentFilm.tmdbUrl || '',
             ...parseDuration(d.currentFilm.timerDuration),
@@ -402,6 +411,13 @@ export default function AdminDashboard() {
     setHistoryMsg(null);
 
     const normalizeHeader = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalizeFilmTitle = (value: string) =>
+      value
+        .trim()
+        .toLowerCase()
+        .replace(/\(\d{4}\)/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
 
     Papa.parse(file, {
       header: false,
@@ -500,9 +516,9 @@ export default function AdminDashboard() {
 
         const filmsWithTitles = filmsFound.filter((f) => f.title);
         usersFound.forEach((u) => {
-          if (!u.filmSuggested || u.timesSuggested <= 0) return;
+          if (!u.filmSuggested) return;
           const matchedFilm = filmsWithTitles.find(
-            (f) => f.title.toLowerCase() === u.filmSuggested.toLowerCase()
+            (f) => normalizeFilmTitle(f.title) === normalizeFilmTitle(u.filmSuggested)
           );
           if (matchedFilm && !matchedFilm.chosenByEmail) {
             matchedFilm.chosenBy = u.name;
@@ -950,6 +966,7 @@ export default function AdminDashboard() {
                     posterUrl: currentFilm.posterUrl || '',
                     chosenBy: currentFilm.chosenBy || '',
                     chosenByEmail: currentFilm.chosenByEmail || '',
+                    dateSuggested: toDateInputValue(currentFilm.dateSuggested),
                     timerPaused: currentFilm.timerPaused || false,
                     tmdbUrl: currentFilm.tmdbUrl || '',
                     ...parseDuration(currentFilm.timerDuration),
@@ -977,6 +994,7 @@ export default function AdminDashboard() {
                     posterUrl: f.posterUrl || '',
                     chosenBy: f.chosenBy || '',
                     chosenByEmail: f.chosenByEmail || '',
+                    dateSuggested: toDateInputValue(f.dateSuggested),
                     timerPaused: false,
                     tmdbUrl: f.tmdbUrl || '',
                     ...parseDuration(f.timerDuration),
@@ -1027,6 +1045,7 @@ export default function AdminDashboard() {
                         posterUrl: f.posterUrl || '',
                         chosenBy: f.chosenBy || '',
                         chosenByEmail: f.chosenByEmail || '',
+                        dateSuggested: toDateInputValue(f.dateSuggested),
                         timerPaused: false,
                         tmdbUrl: f.tmdbUrl || '',
                         ...parseDuration(f.timerDuration),
@@ -1101,6 +1120,21 @@ export default function AdminDashboard() {
                 style={inputStyle}
               />
             </div>
+
+            {editTab === 'previous' && (
+              <div>
+                <label className={labelClass} style={labelStyle}>
+                  Date Suggested
+                </label>
+                <input
+                  type="date"
+                  value={editData.dateSuggested}
+                  onChange={(e) => setEditData({ ...editData, dateSuggested: e.target.value })}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-4 gap-2">
               <div>

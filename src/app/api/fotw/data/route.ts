@@ -9,6 +9,33 @@ import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 
+const parseAdminDate = (value: unknown): Date | null => {
+  const raw = (value ?? '').toString().trim();
+  if (!raw) return null;
+
+  const ymd = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymd) {
+    const year = Number(ymd[1]);
+    const month = Number(ymd[2]);
+    const day = Number(ymd[3]);
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      const candidate = new Date(Date.UTC(year, month - 1, day));
+      if (
+        !Number.isNaN(candidate.getTime()) &&
+        candidate.getUTCDate() === day &&
+        candidate.getUTCMonth() === month - 1 &&
+        candidate.getUTCFullYear() === year
+      ) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 // GET: Fetch current film, leaderboard, and user's rating status
 export async function GET(req: Request) {
   try {
@@ -155,6 +182,7 @@ export async function POST(req: Request) {
       tmdbUrl: tmdbUrl || '',
       chosenBy: chosenBy || '',
       chosenByEmail: chosenByEmail || '',
+      dateSuggested: new Date(),
       addedBy: session.user.email,
       timerDuration: timerDuration ?? 604800000,
     });
@@ -189,6 +217,7 @@ export async function PATCH(req: Request) {
       tmdbUrl,
       chosenBy,
       chosenByEmail,
+      dateSuggested,
       timerPaused,
       timerDuration,
     } = body;
@@ -203,6 +232,7 @@ export async function PATCH(req: Request) {
     if (tmdbUrl !== undefined) updates.tmdbUrl = tmdbUrl;
     if (chosenBy !== undefined) updates.chosenBy = chosenBy;
     if (chosenByEmail !== undefined) updates.chosenByEmail = chosenByEmail;
+    if (dateSuggested !== undefined) updates.dateSuggested = parseAdminDate(dateSuggested);
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
     if (timerDuration !== undefined) updates.timerDuration = timerDuration;
 

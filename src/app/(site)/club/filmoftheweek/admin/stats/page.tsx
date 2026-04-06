@@ -23,6 +23,26 @@ const C = {
 type SortKey = 'watches' | 'avg' | 'date';
 type SortOrder = 'asc' | 'desc';
 
+const normalizeTitle = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/\(\d{4}\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const formatDateDDMMYYYY = (value: unknown) => {
+  if (!value) return '-';
+  const date = new Date(value as string | number | Date);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+};
+
 export default async function FOTWAdminStatsPage({
   searchParams,
 }: {
@@ -38,7 +58,9 @@ export default async function FOTWAdminStatsPage({
   const sortOrder: SortOrder = params.order === 'asc' ? 'asc' : 'desc';
 
   const [users, archivedFilms, ratings, currentFilm] = await Promise.all([
-    FOTWUser.find({}).select('name email watchedCount timesSuggested').lean(),
+    FOTWUser.find({})
+      .select('name email watchedCount timesSuggested filmSuggested whenSuggested')
+      .lean(),
     FOTWFilm.find({ lockedAt: { $ne: null } })
       .select('title watchedBy chosenBy chosenByEmail createdAt dateSuggested')
       .sort({ createdAt: -1 })
@@ -79,6 +101,18 @@ export default async function FOTWAdminStatsPage({
     return (a.name || '').localeCompare(b.name || '');
   });
 
+  const userSuggestedDateByFilm = new Map<string, Date>();
+  for (const u of users as any[]) {
+    const title = (u.filmSuggested || '').toString().trim();
+    const when = u.whenSuggested ? new Date(u.whenSuggested) : null;
+    if (!title || !when || Number.isNaN(when.getTime())) continue;
+    const key = normalizeTitle(title);
+    const existing = userSuggestedDateByFilm.get(key);
+    if (!existing || when.getTime() > existing.getTime()) {
+      userSuggestedDateByFilm.set(key, when);
+    }
+  }
+
   const filmsWithStats = (archivedFilms as any[])
     .map((film) => {
       const filmRatings = ratingsByFilm.get(String(film._id)) || [];
@@ -90,7 +124,10 @@ export default async function FOTWAdminStatsPage({
         id: String(film._id),
         title: film.title || 'Untitled',
         chosenBy: film.chosenBy || 'Unknown',
-        dateSuggested: film.dateSuggested || film.createdAt || null,
+        dateSuggested:
+          film.dateSuggested ||
+          userSuggestedDateByFilm.get(normalizeTitle(film.title || '')) ||
+          null,
         watchCount: Array.isArray(film.watchedBy) ? film.watchedBy.length : 0,
         ratingsCount: filmRatings.length,
         avgRating,
@@ -262,9 +299,7 @@ export default async function FOTWAdminStatsPage({
                   <tr key={f.id}>
                     <td style={{ padding: '6px 0' }}>{f.title}</td>
                     <td style={{ padding: '6px 0' }}>{f.chosenBy || 'Unknown'}</td>
-                    <td style={{ padding: '6px 0' }}>
-                      {f.dateSuggested ? new Date(f.dateSuggested).toLocaleDateString() : '-'}
-                    </td>
+                    <td style={{ padding: '6px 0' }}>{formatDateDDMMYYYY(f.dateSuggested)}</td>
                     <td style={{ padding: '6px 0' }}>{f.watchCount}</td>
                     <td style={{ padding: '6px 0' }}>{f.avgRating ?? '-'}</td>
                   </tr>

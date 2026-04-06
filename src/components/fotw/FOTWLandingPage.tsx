@@ -230,6 +230,7 @@ interface ArchiveFilm {
   _id: string;
   title: string;
   posterUrl: string;
+  dateSuggested?: string | null;
   createdAt: string;
   ratingsCount: number;
   watchedCount: number;
@@ -756,11 +757,13 @@ export default function FOTWLandingPage() {
                 </div>
               )}
               <div style={{ color: C.dim, fontSize: 10 }}>
-                {new Date(af.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {new Date(af.dateSuggested || '').toString() !== 'Invalid Date'
+                  ? new Date(af.dateSuggested as string).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })
+                  : '-'}
               </div>
               {/* Key stats */}
               <div
