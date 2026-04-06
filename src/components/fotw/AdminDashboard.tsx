@@ -23,6 +23,17 @@ const C = {
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const defaultAddForm = {
+    title: '',
+    posterUrl: '',
+    chosenBy: '',
+    chosenByEmail: '',
+    tmdbUrl: '',
+    timerD: 7,
+    timerH: 0,
+    timerM: 0,
+    timerS: 0,
+  };
 
   const toDateInputValue = (value?: string | Date | null) => {
     if (!value) return '';
@@ -44,17 +55,7 @@ export default function AdminDashboard() {
 
   // Add Film State
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    posterUrl: '',
-    chosenBy: '',
-    chosenByEmail: '',
-    tmdbUrl: '',
-    timerD: 7,
-    timerH: 0,
-    timerM: 0,
-    timerS: 0,
-  });
+  const [formData, setFormData] = useState(defaultAddForm);
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [autoFilled, setAutoFilled] = useState(false);
 
@@ -125,6 +126,15 @@ export default function AdminDashboard() {
   const [rulesPreview, setRulesPreview] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const addBaselineRef = useRef(JSON.stringify(defaultAddForm));
+  const editBaselineRef = useRef('');
+  const rulesBaselineRef = useRef('');
+  const hasUnsavedChangesRef = useRef(false);
+
+  const setEditDataAndBaseline = (nextEditData: typeof editData) => {
+    setEditData(nextEditData);
+    editBaselineRef.current = JSON.stringify(nextEditData);
+  };
 
   const loadDashboardData = async (preferredTab?: 'current' | 'previous') => {
     const [adminData, d, archive] = await Promise.all([
@@ -149,7 +159,7 @@ export default function AdminDashboard() {
     setEditTab(nextTab);
 
     if (nextTab === 'current' && nextCurrentFilm) {
-      setEditData({
+      const nextEditData = {
         filmId: nextCurrentFilm._id,
         title: nextCurrentFilm.title || '',
         posterUrl: nextCurrentFilm.posterUrl || '',
@@ -159,13 +169,14 @@ export default function AdminDashboard() {
         timerPaused: nextCurrentFilm.timerPaused || false,
         tmdbUrl: nextCurrentFilm.tmdbUrl || '',
         ...parseDuration(nextCurrentFilm.timerDuration),
-      });
+      };
+      setEditDataAndBaseline(nextEditData);
       return;
     }
 
     if (nextTab === 'previous' && archiveList.length > 0) {
       const previousFilm = archiveList[0];
-      setEditData({
+      const nextEditData = {
         filmId: previousFilm._id,
         title: previousFilm.title || '',
         posterUrl: previousFilm.posterUrl || '',
@@ -175,14 +186,16 @@ export default function AdminDashboard() {
         timerPaused: false,
         tmdbUrl: previousFilm.tmdbUrl || '',
         ...parseDuration(previousFilm.timerDuration),
-      });
+      };
+      setEditDataAndBaseline(nextEditData);
       return;
     }
 
-    setEditData((prev) => ({
-      ...prev,
+    const clearedEditData = {
+      ...editData,
       filmId: '',
-    }));
+    };
+    setEditDataAndBaseline(clearedEditData);
   };
 
   useEffect(() => {
@@ -209,6 +222,7 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || 'Failed to load rules');
       setRulesContent(data.content || '');
+      rulesBaselineRef.current = data.content || '';
       setRulesUpdatedAt(data.updatedAt || null);
       setRulesUpdatedBy(data.updatedBy || null);
     } catch (error: any) {
@@ -219,6 +233,8 @@ export default function AdminDashboard() {
   };
 
   const handleSaveRules = async () => {
+    if (!window.confirm('Save rules changes?')) return;
+
     setRulesSaving(true);
     setRulesMessage(null);
     try {
@@ -229,6 +245,7 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || 'Failed to save rules');
+      rulesBaselineRef.current = rulesContent;
       setRulesUpdatedAt(data.updatedAt || null);
       setRulesUpdatedBy(data.updatedBy || null);
       setRulesMessage({ type: 'success', text: 'Rules saved successfully' });
@@ -274,6 +291,8 @@ export default function AdminDashboard() {
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!window.confirm('Add this film of the week?')) return;
+
     setLoading(true);
     setAddMsg(null);
     try {
@@ -294,18 +313,11 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         showAddMessage('success', 'Film added successfully! Redirecting...');
-        setFormData({
-          title: '',
-          posterUrl: '',
-          chosenBy: '',
-          chosenByEmail: '',
-          tmdbUrl: '',
-          timerD: 7,
-          timerH: 0,
-          timerM: 0,
-          timerS: 0,
-        });
+        setFormData(defaultAddForm);
         setAutoFilled(false);
+        setTmdbUrlInput('');
+        setFetchedMovie(null);
+        addBaselineRef.current = JSON.stringify(defaultAddForm);
         setTimeout(() => {
           router.push('/club/filmoftheweek');
         }, 1500);
@@ -323,6 +335,8 @@ export default function AdminDashboard() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editData.filmId) return;
+    if (!window.confirm('Save these film edits?')) return;
+
     setEditLoading(true);
     setEditMsg(null);
     try {
@@ -342,6 +356,7 @@ export default function AdminDashboard() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        await loadDashboardData(editTab);
         showEditMessage('success', 'Film updated successfully!');
       } else {
         const d = await res.json();
@@ -414,6 +429,70 @@ export default function AdminDashboard() {
       alert('Error resetting leaderboard.');
     }
   };
+
+  const addFormDirty =
+    JSON.stringify(formData) !== addBaselineRef.current ||
+    tmdbUrlInput.trim() !== '' ||
+    !!fetchedMovie ||
+    autoFilled;
+  const editFormDirty = JSON.stringify(editData) !== editBaselineRef.current;
+  const rulesDirty = rulesContent !== rulesBaselineRef.current;
+  const historyDirty =
+    historyFile !== null ||
+    historyStep !== 1 ||
+    preparedUsers.length > 0 ||
+    preparedHistoryFilms.length > 0;
+  const hasUnsavedChanges = addFormDirty || editFormDirty || rulesDirty || historyDirty;
+
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const beforeUnloadHandler = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChangesRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    const clickHandler = (event: MouseEvent) => {
+      if (!hasUnsavedChangesRef.current) return;
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const rawHref = anchor.getAttribute('href');
+      if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return;
+
+      const destination = new URL(anchor.href, window.location.href);
+      const current = new URL(window.location.href);
+      const isSamePage =
+        destination.pathname === current.pathname &&
+        destination.search === current.search &&
+        destination.hash === current.hash;
+
+      if (destination.origin !== current.origin || isSamePage) return;
+
+      const allowLeave = window.confirm(
+        'You have unsaved changes. Do you want to leave this page?'
+      );
+      if (!allowLeave) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+    document.addEventListener('click', clickHandler, true);
+
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
+      document.removeEventListener('click', clickHandler, true);
+    };
+  }, []);
 
   const handleSpin = () => {
     if (leaderboard.length === 0) return;
@@ -640,6 +719,8 @@ export default function AdminDashboard() {
   };
 
   const handleHistorySubmit = async () => {
+    if (!window.confirm('Import this CSV data into the database?')) return;
+
     const validFilms = preparedHistoryFilms.filter((f) => f.posterUrl && f.title);
     if (validFilms.length < preparedHistoryFilms.length) {
       if (
@@ -1036,7 +1117,7 @@ export default function AdminDashboard() {
               onClick={() => {
                 setEditTab('current');
                 if (currentFilm) {
-                  setEditData({
+                  const nextEditData = {
                     filmId: currentFilm._id,
                     title: currentFilm.title || '',
                     posterUrl: currentFilm.posterUrl || '',
@@ -1046,7 +1127,8 @@ export default function AdminDashboard() {
                     timerPaused: currentFilm.timerPaused || false,
                     tmdbUrl: currentFilm.tmdbUrl || '',
                     ...parseDuration(currentFilm.timerDuration),
-                  });
+                  };
+                  setEditDataAndBaseline(nextEditData);
                 }
               }}
               style={{
@@ -1064,7 +1146,7 @@ export default function AdminDashboard() {
                 setEditTab('previous');
                 if (archiveFilms.length > 0) {
                   const f = archiveFilms[0];
-                  setEditData({
+                  const nextEditData = {
                     filmId: f._id,
                     title: f.title || '',
                     posterUrl: f.posterUrl || '',
@@ -1074,7 +1156,8 @@ export default function AdminDashboard() {
                     timerPaused: false,
                     tmdbUrl: f.tmdbUrl || '',
                     ...parseDuration(f.timerDuration),
-                  });
+                  };
+                  setEditDataAndBaseline(nextEditData);
                 }
               }}
               style={{
@@ -1115,7 +1198,7 @@ export default function AdminDashboard() {
                     const selectedId = e.target.value;
                     const f = archiveFilms.find((x) => x && x._id === selectedId);
                     if (f) {
-                      setEditData({
+                      const nextEditData = {
                         filmId: f._id,
                         title: f.title || '',
                         posterUrl: f.posterUrl || '',
@@ -1125,7 +1208,8 @@ export default function AdminDashboard() {
                         timerPaused: false,
                         tmdbUrl: f.tmdbUrl || '',
                         ...parseDuration(f.timerDuration),
-                      });
+                      };
+                      setEditDataAndBaseline(nextEditData);
                     }
                   }}
                   className={inputClass}
