@@ -119,10 +119,10 @@ export async function DELETE(req: Request) {
     const ratingResult = await FOTWRating.deleteOne({ userEmail: session.user.email, filmId });
     const likeResult = await FOTWLike.deleteOne({ userEmail: session.user.email, filmId });
 
-    return NextResponse.json({ 
-      success: true, 
-      ratingRemoved: ratingResult.deletedCount > 0, 
-      likeRemoved: likeResult.deletedCount > 0 
+    return NextResponse.json({
+      success: true,
+      ratingRemoved: ratingResult.deletedCount > 0,
+      likeRemoved: likeResult.deletedCount > 0,
     });
   } catch (error) {
     console.error('Error removing watched film:', error);
