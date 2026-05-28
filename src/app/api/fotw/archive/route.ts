@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWRating from '@/models/FOTWRating';
-import FOTWUser from '@/models/FOTWUser';
-import FOTWLike from '@/models/FOTWLike';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWRating } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWLike } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 
 // GET: Fetch all previous (locked) FOTWs with their stats.
@@ -59,7 +59,9 @@ export async function GET() {
         ...film,
         timerDuration:
           film.timerDuration ??
-          (film.timerDurationDays ? film.timerDurationDays * 86400000 : 7 * 86400000),
+          ((film as any).timerDurationDays
+            ? (film as any).timerDurationDays * 86400000
+            : 7 * 86400000),
         averageRating: avg,
         ratingsCount: filmRatings.length,
         watchedCount: watchedBy.length,

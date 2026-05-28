@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWUser from '@/models/FOTWUser';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
 
 export async function syncTimesSuggestedFromFilms() {
   await dbConnect();

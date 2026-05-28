@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { LETTERBOXD_LIST_URL } from '@/lib/fotwConfig';
 import StarRating from './StarRating';
 import { Trophy, Eye, Star, Film, Heart, X, ExternalLink } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -131,10 +132,10 @@ function CountdownDisplay({
   }, [expired, onExpire]);
 
   if (timerPaused) {
-    return <span style={{ color: C.orange, fontSize: 12 }}>Timer Paused</span>;
+    return <span style={{ color: C.orange, fontSize: 14 }}>Timer Paused</span>;
   }
   if (expired) {
-    return <span style={{ color: C.dim, fontSize: 12 }}>Week ended</span>;
+    return <span style={{ color: C.dim, fontSize: 14 }}>Week ended</span>;
   }
   if (!timeLeft) return null;
 
@@ -163,7 +164,7 @@ function CountdownDisplay({
         >
           <span
             style={{
-              fontSize: 13,
+              fontSize: 14,
               color: 'white',
               fontVariantNumeric: 'tabular-nums',
               fontWeight: 600,
@@ -173,7 +174,7 @@ function CountdownDisplay({
           </span>
           <span
             style={{
-              fontSize: 9,
+              fontSize: 14,
               color: C.dim,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -246,6 +247,8 @@ interface UserActivityData {
   name: string;
   image: string | null;
   watchedCount: number;
+  currentStreak?: number;
+  longestStreak?: number;
   ratings: {
     filmId: string;
     filmTitle: string;
@@ -305,10 +308,10 @@ export default function FOTWLandingPage() {
   // Archive multi-flip state — 0: poster, 1: info, 2: histogram, 3: watched-by
   const [flipStates, setFlipStates] = useState<Record<string, number>>({});
 
-  const advanceFlip = (id: string) => {
+  const advanceFlip = (id: string, panels: number = 4) => {
     setFlipStates((prev) => {
       const current = prev[id] ?? 0;
-      const next = (current + 1) % 4;
+      const next = (current + 1) % panels;
       return { ...prev, [id]: next };
     });
   };
@@ -400,20 +403,45 @@ export default function FOTWLandingPage() {
       });
       if (!res.ok) throw new Error('Failed to update watch status');
 
+      const responseData = await res.json();
+
       const newWatchedState = !currentlyWatched;
       setHasWatchedLocal(newWatchedState);
 
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              hasWatched: newWatchedState,
-              watchedCount: newWatchedState
-                ? prev.watchedCount + 1
-                : Math.max(0, prev.watchedCount - 1),
-            }
-          : prev
-      );
+      if (!newWatchedState) {
+        setPendingRating(0);
+        if (liked) {
+          setLiked(false);
+          setLikesCount((prev) => Math.max(0, prev - 1));
+        }
+      }
+
+      setData((prev) => {
+        if (!prev) return prev;
+
+        let newUserRating = prev.userRating;
+        let newUserLiked = prev.userLiked;
+        let newLikesCount = prev.likesCount;
+
+        if (!newWatchedState) {
+          newUserRating = null;
+          if (newUserLiked) {
+            newUserLiked = false;
+            newLikesCount = Math.max(0, newLikesCount - 1);
+          }
+        }
+
+        return {
+          ...prev,
+          hasWatched: newWatchedState,
+          watchedCount: newWatchedState
+            ? prev.watchedCount + 1
+            : Math.max(0, prev.watchedCount - 1),
+          userRating: newUserRating,
+          userLiked: newUserLiked,
+          likesCount: newLikesCount,
+        };
+      });
 
       fetchData();
     } catch (e) {
@@ -480,7 +508,7 @@ export default function FOTWLandingPage() {
     color: C.muted,
     borderRadius: 8,
     padding: '6px 14px',
-    fontSize: 13,
+    fontSize: 14,
     transition: 'all 0.2s',
   };
 
@@ -490,7 +518,7 @@ export default function FOTWLandingPage() {
     borderRadius: 999,
     height: 38,
     padding: '0 18px',
-    fontSize: 13,
+    fontSize: 14,
     color: C.muted,
     display: 'flex',
     alignItems: 'center',
@@ -509,7 +537,7 @@ export default function FOTWLandingPage() {
         {act.ratings.length > 0 && (
           <div className="mb-6">
             <h3
-              style={{ fontSize: 11, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
+              style={{ fontSize: 14, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
             >
               Ratings
             </h3>
@@ -538,14 +566,14 @@ export default function FOTWLandingPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p
-                      style={{ color: 'white', fontSize: 13, fontWeight: 500, margin: '0 0 4px 0' }}
+                      style={{ color: 'white', fontSize: 14, fontWeight: 500, margin: '0 0 4px 0' }}
                       className="truncate"
                     >
                       {r.filmTitle}
                     </p>
                     <div className="flex items-center gap-2">
                       <MiniStars value={r.rating} size={12} />
-                      <span style={{ color: C.dim, fontSize: 11 }}>
+                      <span style={{ color: C.dim, fontSize: 14 }}>
                         {new Date(r.createdAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -561,7 +589,7 @@ export default function FOTWLandingPage() {
         {act.likes.length > 0 && (
           <div className="mb-4">
             <h3
-              style={{ fontSize: 11, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
+              style={{ fontSize: 14, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
             >
               Likes
             </h3>
@@ -590,14 +618,14 @@ export default function FOTWLandingPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p
-                      style={{ color: 'white', fontSize: 13, fontWeight: 500, margin: '0 0 4px 0' }}
+                      style={{ color: 'white', fontSize: 14, fontWeight: 500, margin: '0 0 4px 0' }}
                       className="truncate"
                     >
                       {l.filmTitle}
                     </p>
                     <div className="flex items-center gap-2">
                       <Heart size={12} color={C.orange} fill={C.orange} />
-                      <span style={{ color: C.dim, fontSize: 11 }}>
+                      <span style={{ color: C.dim, fontSize: 14 }}>
                         {new Date(l.createdAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -626,7 +654,8 @@ export default function FOTWLandingPage() {
     const afCounts = starValues.map((v) => af.allRatings.filter((r) => r.rating === v).length);
     const afMax = Math.max(...afCounts, 0);
 
-    const PANELS = 4;
+    const hasRatings = af.allRatings && af.allRatings.length > 0;
+    const PANELS = hasRatings ? 3 : 2;
 
     return (
       <div key={af._id} style={{ width: '100%', minWidth: 150 }}>
@@ -643,7 +672,7 @@ export default function FOTWLandingPage() {
             border: `1px solid ${step === 0 ? 'transparent' : C.border}`,
             transition: 'border-color 0.3s',
           }}
-          onClick={() => advanceFlip(af._id)}
+          onClick={() => advanceFlip(af._id, PANELS)}
         >
           {/* Sliding strip: 4 panels side-by-side */}
           <div
@@ -681,19 +710,19 @@ export default function FOTWLandingPage() {
                   style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
                 >
                   <span style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1 }}>
-                    {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
+                    {af.ratingsCount > 4 ? af.averageRating.toFixed(1) : '—'}
                   </span>
                   <div className="flex items-center justify-center gap-1 mt-1 mb-3">
-                    <MiniStars value={af.averageRating} size={14} />
+                    {af.ratingsCount > 4 && <MiniStars value={af.averageRating} size={14} />}
                   </div>
                   <div className="flex items-center gap-2" style={{ color: C.muted }}>
                     <Eye size={13} />
-                    <span style={{ fontSize: 12, fontWeight: 500 }}>{af.watchedCount}</span>
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>{af.watchedCount}</span>
                   </div>
                   <div
                     style={{
                       color: C.dim,
-                      fontSize: 9,
+                      fontSize: 14,
                       marginTop: 10,
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
@@ -711,7 +740,7 @@ export default function FOTWLandingPage() {
                 width: `${100 / PANELS}%`,
                 flexShrink: 0,
                 padding: isMobile ? '10px' : '14px 12px',
-                fontSize: isMobile ? '11px' : 'inherit',
+                fontSize: isMobile ? '13px' : 'inherit',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
@@ -723,7 +752,7 @@ export default function FOTWLandingPage() {
             >
               {/* Step indicator */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
-                {[0, 1, 2, 3].map((i) => (
+                {Array.from({ length: PANELS }, (_, idx) => idx).map((i) => (
                   <div
                     key={i}
                     style={{
@@ -743,20 +772,24 @@ export default function FOTWLandingPage() {
                   fontWeight: 700,
                   margin: 0,
                   lineHeight: 1.3,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
                 }}
               >
-                {af.title}
+                {af.title.replace(/\s*\(\d{4}\)$/, '')}
               </h3>
               {af.chosenBy && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Film size={10} color={C.dim} />
-                  <span style={{ color: C.dim, fontSize: 9 }}>chosen by</span>
-                  <span style={{ color: C.blue, fontSize: 10, fontWeight: 600 }}>
+                  <span style={{ color: C.dim, fontSize: 11 }}>picked by</span>
+                  <span style={{ color: C.blue, fontSize: 12, fontWeight: 600 }}>
                     {af.chosenBy}
                   </span>
                 </div>
               )}
-              <div style={{ color: C.dim, fontSize: 10 }}>
+              <div style={{ color: C.dim, fontSize: 12 }}>
                 {new Date(af.dateSuggested || '').toString() !== 'Invalid Date'
                   ? new Date(af.dateSuggested as string).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -789,7 +822,7 @@ export default function FOTWLandingPage() {
                   <span
                     style={{
                       color: C.dim,
-                      fontSize: 8,
+                      fontSize: 14,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                     }}
@@ -812,7 +845,7 @@ export default function FOTWLandingPage() {
                   <span
                     style={{
                       color: C.dim,
-                      fontSize: 8,
+                      fontSize: 14,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                     }}
@@ -830,12 +863,12 @@ export default function FOTWLandingPage() {
                   }}
                 >
                   <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
-                    {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
+                    {af.ratingsCount > 4 ? af.averageRating.toFixed(1) : '—'}
                   </span>
                   <span
                     style={{
                       color: C.dim,
-                      fontSize: 8,
+                      fontSize: 14,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                     }}
@@ -860,7 +893,7 @@ export default function FOTWLandingPage() {
                     borderRadius: 8,
                     padding: '7px 10px',
                     color: C.blue,
-                    fontSize: 11,
+                    fontSize: 14,
                     fontWeight: 600,
                     textDecoration: 'none',
                   }}
@@ -872,7 +905,7 @@ export default function FOTWLandingPage() {
               <div
                 style={{
                   color: C.dim,
-                  fontSize: 9,
+                  fontSize: 14,
                   textAlign: 'center',
                   marginTop: 4,
                   letterSpacing: '0.08em',
@@ -882,168 +915,182 @@ export default function FOTWLandingPage() {
               </div>
             </div>
 
-            {/* ── Panel 2: Histogram + ratings list ── */}
-            <div
-              style={{
-                width: `${100 / PANELS}%`,
-                flexShrink: 0,
-                padding: isMobile ? '10px' : '14px 12px',
-                fontSize: isMobile ? '11px' : 'inherit',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-                height: '100%',
-                maxHeight: '100%',
-                overflowY: 'auto',
-                boxSizing: 'border-box',
-              }}
-            >
-              {/* Step indicator */}
-              <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: i === step - 1 ? 14 : 4,
-                      height: 3,
-                      borderRadius: 2,
-                      backgroundColor: i === step - 1 ? C.orange : C.border,
-                      transition: 'all 0.3s',
-                    }}
-                  />
-                ))}
-              </div>
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              >
-                <span
+            {hasRatings && (
+              <>
+                {/* ── Panel 2: Histogram + ratings list ── */}
+                <div
                   style={{
-                    color: C.muted,
-                    fontSize: 9,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
+                    width: `${100 / PANELS}%`,
+                    flexShrink: 0,
+                    padding: isMobile ? '10px' : '14px 12px',
+                    fontSize: isMobile ? '13px' : 'inherit',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                    height: '100%',
+                    maxHeight: '100%',
+                    overflowY: 'auto',
+                    boxSizing: 'border-box',
                   }}
                 >
-                  Ratings
-                </span>
-                <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
-                  {af.averageRating > 0 ? af.averageRating.toFixed(1) : '—'}
-                </span>
-              </div>
-              {/* MiniStars for avg */}
-              <div>
-                <MiniStars value={af.averageRating} size={12} />
-                <span style={{ color: C.dim, fontSize: 9, marginLeft: 4 }}>
-                  {af.ratingsCount} ratings
-                </span>
-              </div>
-              {/* Histogram bars */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  height: 36,
-                  gap: 2,
-                  marginBottom: 2,
-                }}
-              >
-                {starValues.map((v, i) => {
-                  const c = afCounts[i];
-                  const hp = afMax > 0 ? c / afMax : 0;
-                  const isTop = afMax > 0 && c === afMax && c > 0;
-                  return (
-                    <div
-                      key={v}
-                      title={`★${v}: ${c}`}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}
-                    >
+                  {/* Step indicator */}
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+                    {Array.from({ length: PANELS }, (_, idx) => idx).map((i) => (
                       <div
+                        key={i}
                         style={{
-                          width: '100%',
-                          height: Math.max(2, hp * 32),
-                          backgroundColor: isTop ? C.green : c > 0 ? '#2a2a2a' : '#181818',
-                          borderRadius: '2px 2px 0 0',
-                          transition: 'height 0.4s ease',
+                          width: i === step - 1 ? 14 : 4,
+                          height: 3,
+                          borderRadius: 2,
+                          backgroundColor: i === step - 1 ? C.orange : C.border,
+                          transition: 'all 0.3s',
                         }}
                       />
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 4 }}>
-                <span style={{ color: C.dim, fontSize: 7 }}>½★</span>
-                <span style={{ color: C.dim, fontSize: 7 }}>5★</span>
-              </div>
-              {/* Individual ratings list */}
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  borderTop: `1px solid ${C.border}`,
-                  paddingTop: 6,
-                }}
-                className="space-y-1 pr-1"
-              >
-                {af.allRatings.length === 0 ? (
-                  <div style={{ color: C.dim, fontSize: 9, textAlign: 'center', paddingTop: 8 }}>
-                    No ratings yet
+                    ))}
                   </div>
-                ) : (
-                  af.allRatings.map((r, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: C.muted,
+                        fontSize: 14,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      Ratings
+                    </span>
+                    <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
+                      {af.ratingsCount > 4 ? af.averageRating.toFixed(1) : '—'}
+                    </span>
+                  </div>
+                  {/* MiniStars for avg */}
+                  <div>
+                    {af.ratingsCount > 4 && <MiniStars value={af.averageRating} size={12} />}
+                    <span style={{ color: C.dim, fontSize: 14, marginLeft: 4 }}>
+                      {af.ratingsCount} ratings
+                    </span>
+                  </div>
+                  {/* Histogram bars */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      height: 36,
+                      gap: 2,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {starValues.map((v, i) => {
+                      const c = afCounts[i];
+                      const hp = afMax > 0 ? c / afMax : 0;
+                      const isTop = afMax > 0 && c === afMax && c > 0;
+                      return (
+                        <div
+                          key={v}
+                          title={`★${v}: ${c}`}
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 1,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '100%',
+                              height: Math.max(2, hp * 32),
+                              backgroundColor: isTop ? '#5f5f5f' : c > 0 ? '#2a2a2a' : '#181818',
+                              borderRadius: '2px 2px 0 0',
+                              transition: 'height 0.4s ease',
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 4 }}
+                  >
+                    <span style={{ color: C.dim, fontSize: 14 }}>½★</span>
+                    <span style={{ color: C.dim, fontSize: 14 }}>5★</span>
+                  </div>
+                  {/* Individual ratings list */}
+                  <div
+                    style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      borderTop: `1px solid ${C.border}`,
+                      paddingTop: 6,
+                    }}
+                    className="space-y-1 pr-1"
+                  >
+                    {af.allRatings.length === 0 ? (
                       <div
-                        style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          backgroundColor: avatarBg(r.name),
-                          color: C.blue,
-                          fontSize: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          fontWeight: 700,
-                        }}
+                        style={{ color: C.dim, fontSize: 14, textAlign: 'center', paddingTop: 8 }}
                       >
-                        {r.name.charAt(0).toUpperCase()}
+                        No ratings yet
                       </div>
-                      <div className="truncate" style={{ fontSize: 9, flex: 1, color: '#ccc' }}>
-                        {r.name}
-                      </div>
-                      <div style={{ color: C.green, fontSize: 9, fontWeight: 700 }}>
-                        ★{r.rating}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div
-                style={{
-                  color: C.dim,
-                  fontSize: 9,
-                  textAlign: 'center',
-                  paddingTop: 4,
-                  letterSpacing: '0.08em',
-                }}
-              >
-                CLICK FOR VIEWERS →
-              </div>
-            </div>
-
+                    ) : (
+                      af.allRatings.map((r, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <div
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: '50%',
+                              backgroundColor: avatarBg(r.name),
+                              color: C.blue,
+                              fontSize: 14,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {r.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div
+                            className="truncate"
+                            style={{ fontSize: 14, flex: 1, color: '#ccc' }}
+                          >
+                            {r.name}
+                          </div>
+                          <div style={{ color: C.green, fontSize: 14, fontWeight: 700 }}>
+                            ★{r.rating}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      color: C.dim,
+                      fontSize: 14,
+                      textAlign: 'center',
+                      paddingTop: 4,
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    CLICK FOR VIEWERS →
+                  </div>
+                </div>
+              </>
+            )}
             {/* ── Panel 3: Watched by ── */}
             <div
               style={{
                 width: `${100 / PANELS}%`,
                 flexShrink: 0,
                 padding: isMobile ? '10px' : '14px 12px',
-                fontSize: isMobile ? '11px' : 'inherit',
+                fontSize: isMobile ? '13px' : 'inherit',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
@@ -1055,7 +1102,7 @@ export default function FOTWLandingPage() {
             >
               {/* Step indicator */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
-                {[0, 1, 2, 3].map((i) => (
+                {Array.from({ length: PANELS }, (_, idx) => idx).map((i) => (
                   <div
                     key={i}
                     style={{
@@ -1074,19 +1121,19 @@ export default function FOTWLandingPage() {
                 <span
                   style={{
                     color: C.muted,
-                    fontSize: 9,
+                    fontSize: 14,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                   }}
                 >
                   Watched by
                 </span>
-                <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ color: C.blue, fontSize: 14, fontWeight: 700 }}>
                   {af.watchedCount}
                 </span>
               </div>
               {af.watchedBy.length === 0 ? (
-                <div style={{ color: C.dim, fontSize: 10, textAlign: 'center', paddingTop: 16 }}>
+                <div style={{ color: C.dim, fontSize: 14, textAlign: 'center', paddingTop: 16 }}>
                   No viewers yet
                 </div>
               ) : (
@@ -1100,7 +1147,7 @@ export default function FOTWLandingPage() {
                           borderRadius: '50%',
                           backgroundColor: avatarBg(w.name),
                           color: 'white',
-                          fontSize: 9,
+                          fontSize: 14,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1115,7 +1162,7 @@ export default function FOTWLandingPage() {
                         <div
                           style={{
                             color: 'white',
-                            fontSize: 10,
+                            fontSize: 14,
                             fontWeight: 500,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -1124,7 +1171,7 @@ export default function FOTWLandingPage() {
                         >
                           {w.name}
                         </div>
-                        <div style={{ color: C.dim, fontSize: 8 }}>
+                        <div style={{ color: C.dim, fontSize: 14 }}>
                           {new Date(w.watchedAt).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -1140,7 +1187,7 @@ export default function FOTWLandingPage() {
                 <div
                   style={{
                     color: C.dim,
-                    fontSize: 9,
+                    fontSize: 14,
                     textAlign: 'center',
                     letterSpacing: '0.08em',
                   }}
@@ -1155,13 +1202,21 @@ export default function FOTWLandingPage() {
         {/* Film title below card */}
         <div className="mt-2">
           <h3
-            className="m-0 text-white truncate"
-            style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}
+            className="m-0 text-white"
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              lineHeight: 1.3,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
           >
-            {af.title}
+            {af.title.replace(/\s*\(\d{4}\)$/, '')}
           </h3>
           {step === 0 && af.chosenBy && (
-            <div style={{ color: C.blue, fontSize: 10, marginTop: 2 }}>chosen by {af.chosenBy}</div>
+            <div style={{ color: C.blue, fontSize: 11, marginTop: 2 }}>picked by {af.chosenBy}</div>
           )}
         </div>
       </div>
@@ -1217,7 +1272,7 @@ export default function FOTWLandingPage() {
           href="/club/filmoftheweek/rules"
           style={{
             color: '#4a5568',
-            fontSize: '13px',
+            fontSize: '14px',
             textDecoration: 'none',
             display: 'inline-block',
             letterSpacing: '0.02em',
@@ -1225,13 +1280,13 @@ export default function FOTWLandingPage() {
           onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
           onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
         >
-          Rules →
+          About →
         </Link>
         <Link
           href="/club/filmoftheweek/admin/stats"
           style={{
             color: '#4a5568',
-            fontSize: '13px',
+            fontSize: '14px',
             textDecoration: 'none',
             display: 'inline-block',
             letterSpacing: '0.02em',
@@ -1241,6 +1296,46 @@ export default function FOTWLandingPage() {
         >
           Stats →
         </Link>
+        <button
+          onClick={openMyActivity}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            color: '#4a5568',
+            fontSize: '14px',
+            textDecoration: 'none',
+            display: 'inline-block',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Activity →
+        </button>
+        <a
+          href={LETTERBOXD_LIST_URL}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            background: 'none',
+            border: '1px solid #1e1e1e',
+            borderRadius: '999px',
+            padding: '2px 8px',
+            marginLeft: 'auto',
+            color: '#4a5568',
+            fontSize: '12px',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Letterboxd List
+        </a>
       </div>
 
       {/* ══════════════════════════════════════════════════════
@@ -1323,7 +1418,7 @@ export default function FOTWLandingPage() {
                   border: '1px solid #00e054',
                   color: '#00e054',
                   borderRadius: 999,
-                  fontSize: 10,
+                  fontSize: 14,
                   fontWeight: 700,
                   letterSpacing: '0.1em',
                   padding: '4px 12px',
@@ -1347,7 +1442,7 @@ export default function FOTWLandingPage() {
               </h2>
 
               {/* Metadata */}
-              <p style={{ color: '#8a9bb0', fontSize: 13, margin: 0 }}>
+              <p style={{ color: '#8a9bb0', fontSize: 14, margin: 0 }}>
                 {film.createdAt && (
                   <span>
                     {new Date(film.createdAt).toLocaleDateString('en-US', {
@@ -1360,7 +1455,7 @@ export default function FOTWLandingPage() {
                 {film.chosenBy && (
                   <>
                     {' '}
-                    · Chosen by <span style={{ color: '#40bcf4' }}>{film.chosenBy}</span>
+                    · picked by <span style={{ color: '#40bcf4' }}>{film.chosenBy}</span>
                   </>
                 )}
               </p>
@@ -1467,7 +1562,7 @@ export default function FOTWLandingPage() {
                     <div style={{ pointerEvents: 'none', opacity: 0.4 }}>
                       <StarRating rating={0} setRating={() => {}} size="lg" />
                     </div>
-                    <span style={{ color: C.dim, fontSize: 12 }}>Watch the film first</span>
+                    <span style={{ color: C.dim, fontSize: 14 }}>Watch the film first</span>
                   </div>
                 )}
               </div>
@@ -1479,7 +1574,7 @@ export default function FOTWLandingPage() {
                   alignItems: 'center',
                   gap: 12,
                   color: '#4a5568',
-                  fontSize: 12,
+                  fontSize: 14,
                   flexWrap: 'wrap',
                   justifyContent: isMobile ? 'center' : 'flex-start',
                 }}
@@ -1503,7 +1598,7 @@ export default function FOTWLandingPage() {
                 onClick={openMyActivity}
                 style={{
                   color: '#40bcf4',
-                  fontSize: 13,
+                  fontSize: 14,
                   background: 'none',
                   border: 'none',
                   padding: 0,
@@ -1541,14 +1636,14 @@ export default function FOTWLandingPage() {
                 <span
                   style={{
                     color: '#2e2e2e',
-                    fontSize: 9,
+                    fontSize: 14,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                   }}
                 >
                   RATINGS
                 </span>
-                <span style={{ color: '#2e2e2e', fontSize: 9, textTransform: 'uppercase' }}>
+                <span style={{ color: '#2e2e2e', fontSize: 14, textTransform: 'uppercase' }}>
                   {data.allRatings?.length || 0} FANS
                 </span>
               </div>
@@ -1574,7 +1669,9 @@ export default function FOTWLandingPage() {
                     textAlign: isMobile ? 'center' : 'left',
                   }}
                 >
-                  {data.averageRating ? data.averageRating.toFixed(1) : '—'}
+                  {data.allRatings && data.allRatings.length > 4
+                    ? (data.averageRating || 0).toFixed(1)
+                    : '—'}
                 </div>
 
                 <div style={{ flex: 1, width: '100%' }}>
@@ -1599,7 +1696,7 @@ export default function FOTWLandingPage() {
                           style={{
                             flex: 1,
                             height: isMobile ? `${hpx}%` : `${hpx}%`,
-                            backgroundColor: isPeak ? '#00e054' : '#1e1e1e',
+                            backgroundColor: isPeak ? '#5f5f5f' : '#1e1e1e',
                             borderRadius: '2px 2px 0 0',
                             minHeight: 3,
                             cursor: count > 0 ? 'pointer' : 'default',
@@ -1612,8 +1709,8 @@ export default function FOTWLandingPage() {
 
                   {/* Scale */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ color: '#4a5568', fontSize: 9 }}>0.5</span>
-                    <span style={{ color: '#4a5568', fontSize: 9 }}>5.0</span>
+                    <span style={{ color: '#4a5568', fontSize: 14 }}>0.5</span>
+                    <span style={{ color: '#4a5568', fontSize: 14 }}>5.0</span>
                   </div>
                 </div>
               </div>
@@ -1695,7 +1792,7 @@ export default function FOTWLandingPage() {
               border: { display: false },
               ticks: {
                 color: '#8a9bb0',
-                font: { size: isMobile ? 9 : 11 },
+                font: { size: isMobile ? 11 : 13 },
                 maxRotation: 45,
                 minRotation: 45,
                 autoSkip: false,
@@ -1710,7 +1807,7 @@ export default function FOTWLandingPage() {
               border: { display: false, dash: [4, 4] },
               ticks: {
                 color: '#4a5568',
-                font: { size: isMobile ? 9 : 10 },
+                font: { size: isMobile ? 11 : 12 },
                 stepSize: Math.ceil(lbMax / 4),
               },
             },
@@ -1742,7 +1839,7 @@ export default function FOTWLandingPage() {
                 <Trophy size={16} color="#f5c518" />
                 Leaderboard
               </span>
-              <span style={{ color: C.dim, fontSize: 13 }}>{lb.length} members</span>
+              <span style={{ color: C.dim, fontSize: 14 }}>{lb.length} members</span>
             </div>
 
             <div
@@ -1785,7 +1882,7 @@ export default function FOTWLandingPage() {
         >
           <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
           {previousFilms.length > 0 && (
-            <span style={{ color: C.dim, fontSize: 13 }}>{previousFilms.length} films</span>
+            <span style={{ color: C.dim, fontSize: 14 }}>{previousFilms.length} films</span>
           )}
         </div>
 
@@ -1914,7 +2011,7 @@ export default function FOTWLandingPage() {
                         <p style={{ color: 'white', fontSize: 14, margin: 0 }}>
                           {rating.userId?.name || 'Anonymous'}
                         </p>
-                        <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
+                        <p style={{ color: C.dim, fontSize: 14, margin: 0 }}>
                           {new Date(rating.createdAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
@@ -1996,8 +2093,34 @@ export default function FOTWLandingPage() {
                       >
                         {myActivity.watchedCount}
                       </span>
-                      <span style={{ fontSize: 11, textTransform: 'uppercase', color: C.dim }}>
+
+                      <span style={{ fontSize: 13, textTransform: 'uppercase', color: C.dim }}>
                         Films Watched
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: 24,
+                          fontWeight: 700,
+                          color: '#f5c518',
+                          display: 'block',
+                        }}
+                      >
+                        {myActivity.currentStreak || 0}
+                      </span>
+                      <span style={{ fontSize: 13, textTransform: 'uppercase', color: C.dim }}>
+                        Current Streak
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        style={{ fontSize: 24, fontWeight: 700, color: 'white', display: 'block' }}
+                      >
+                        {myActivity.longestStreak || 0}
+                      </span>
+                      <span style={{ fontSize: 13, textTransform: 'uppercase', color: C.dim }}>
+                        Longest Streak
                       </span>
                     </div>
                   </div>
@@ -2081,7 +2204,7 @@ export default function FOTWLandingPage() {
                     {viewingUser.name}
                   </p>
                   {userActivity && (
-                    <p style={{ color: C.dim, fontSize: 13, margin: 0 }}>
+                    <p style={{ color: C.dim, fontSize: 14, margin: 0 }}>
                       {userActivity.watchedCount} films watched
                     </p>
                   )}

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWRating from '@/models/FOTWRating';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWUser from '@/models/FOTWUser';
+import { FOTWRating } from '@/lib/fotw/schemas';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {

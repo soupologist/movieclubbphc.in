@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWUser from '@/models/FOTWUser';
+import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
@@ -17,9 +17,16 @@ export async function GET(req: Request) {
     await syncTimesSuggestedFromFilms();
 
     // Includes email field, accessible only to admins
-    const leaderboard = await FOTWUser.find({ watchedCount: { $gt: 0 } })
+    // Note: admins can see all users, including those excluded
+    const leaderboard = await FOTWUser.find({
+      $or: [
+        { watchedCount: { $gt: 0 } },
+        { seasonWatchedCount: { $gt: 0 } },
+        { excludeFromLeaderboard: true },
+      ],
+    })
       .sort({ watchedCount: -1, createdAt: 1 })
-      .select('name image watchedCount email timesSuggested')
+      .select('name username image watchedCount email timesSuggested excludeFromLeaderboard')
       .lean();
 
     return NextResponse.json({ leaderboard });

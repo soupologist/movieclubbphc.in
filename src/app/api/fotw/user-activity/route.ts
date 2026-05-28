@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWRating from '@/models/FOTWRating';
-import FOTWLike from '@/models/FOTWLike';
-import FOTWUser from '@/models/FOTWUser';
-import FOTWFilm from '@/models/FOTWFilm';
+import { FOTWRating } from '@/lib/fotw/schemas';
+import { FOTWLike } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWFilm } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
 

@@ -14,3 +14,5 @@ export const FOTW_ADMINS = [
 
   'movieclub@hyderabad.bits-pilani.ac.in', //
 ];
+
+export const LETTERBOXD_LIST_URL = 'https://letterboxd.com/movieclubbphc/lists/';

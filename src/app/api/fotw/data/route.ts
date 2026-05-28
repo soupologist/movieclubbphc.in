@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWRating from '@/models/FOTWRating';
-import FOTWUser from '@/models/FOTWUser';
-import FOTWLike from '@/models/FOTWLike';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWRating } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWLike } from '@/lib/fotw/schemas';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
+import { formatDisplayName } from '@/lib/fotw/utils';
 
 const parseAdminDate = (value: unknown): Date | null => {
   const raw = (value ?? '').toString().trim();
@@ -51,8 +52,8 @@ export async function GET(req: Request) {
 
     if (currentFilm) {
       // Ensure backwards compatibility by attaching a timerDuration explicitly
-      const fallbackMs = currentFilm.timerDurationDays
-        ? currentFilm.timerDurationDays * 86400000
+      const fallbackMs = (currentFilm as any).timerDurationDays
+        ? (currentFilm as any).timerDurationDays * 86400000
         : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
     }
@@ -67,16 +68,19 @@ export async function GET(req: Request) {
     }
 
     // 2. Get Leaderboard (Top 50 users by watched count, tiebreak by oldest user)
-    // Filter out users with 0 watches (e.g. imported via CSV with 0 count)
-    const leaderboardRaw = await FOTWUser.find({ watchedCount: { $gt: 0 } })
+    // Filter out ghost/excluded users and those with 0 watched counts
+    const leaderboardRaw = await FOTWUser.find({
+      $or: [{ watchedCount: { $gt: 0 } }, { seasonWatchedCount: { $gt: 0 } }],
+      excludeFromLeaderboard: { $ne: true },
+    })
       .sort({ watchedCount: -1, createdAt: 1 })
-      .select('name image watchedCount email')
+      .select('name username image watchedCount email')
       .lean();
 
-    // Remove email from the public response payload
+    // Remove email from the public response payload and format name
     const leaderboard = (leaderboardRaw as any[]).map((u) => ({
       _id: u._id,
-      name: u.name,
+      name: formatDisplayName(u.name, u.username),
       image: u.image,
       watchedCount: u.watchedCount,
     }));
@@ -270,48 +274,63 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ message: 'Missing filmId' }, { status: 400 });
     }
 
+    // 1. Find the film by ID.
     const film = await FOTWFilm.findById(filmId).select('watchedBy').lean();
     if (!film) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
 
+    // 2. Extract all watchedBy[].userEmail entries.
     const watchedBy = Array.isArray((film as any).watchedBy) ? (film as any).watchedBy : [];
-    const watchCountByEmail = watchedBy.reduce(
-      (acc: Record<string, number>, entry: { userEmail?: string }) => {
-        const email = (entry?.userEmail || '').trim().toLowerCase();
-        if (!email) return acc;
-        acc[email] = (acc[email] || 0) + 1;
-        return acc;
-      },
-      {}
+    const uniqueEmails: string[] = Array.from(
+      new Set(
+        watchedBy
+          .map((entry: any) => (typeof entry === 'object' ? entry.userEmail : null))
+          .filter(Boolean) as string[]
+      )
     );
 
-    for (const [email, decrementBy] of Object.entries(watchCountByEmail)) {
-      await FOTWUser.updateOne({ email }, [
-        {
-          $set: {
-            watchedCount: {
-              $max: [0, { $subtract: [{ $ifNull: ['$watchedCount', 0] }, decrementBy] }],
-            },
-          },
+    // 3. For each unique email, $inc: { watchedCount: -1 } on FOTWUser using bulkWrite.
+    let watchersAffected = 0;
+    if (uniqueEmails.length > 0) {
+      const bulkOps = uniqueEmails.map((email) => ({
+        updateOne: {
+          filter: { email },
+          update: { $inc: { watchedCount: -1 } },
         },
-      ]);
+      }));
+      const userUpdateResult = await FOTWUser.bulkWrite(bulkOps);
+      watchersAffected = userUpdateResult.modifiedCount || 0;
     }
 
-    await Promise.all([
-      FOTWFilm.deleteOne({ _id: filmId }),
-      FOTWRating.deleteMany({ filmId }),
-      FOTWLike.deleteMany({ filmId }),
-    ]);
+    // 4. Delete all FOTWRating documents where filmId matches.
+    const ratingsResult = await FOTWRating.deleteMany({ filmId });
+    const ratingsRemoved = ratingsResult.deletedCount || 0;
+
+    // 5. Delete all FOTWLike documents where filmId matches.
+    const likesResult = await FOTWLike.deleteMany({ filmId });
+    const likesRemoved = likesResult.deletedCount || 0;
+
+    // 6. Delete the FOTWFilm document itself.
+    await FOTWFilm.deleteOne({ _id: filmId });
 
     await syncTimesSuggestedFromFilms();
 
     return NextResponse.json({
-      success: true,
-      decrementedUsers: Object.keys(watchCountByEmail).length,
+      deleted: true,
+      filmId,
+      ratingsRemoved,
+      likesRemoved,
+      watchersAffected,
     });
   } catch (error) {
     console.error('Error deleting film:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
+    return NextResponse.json(
+      { message: 'Internal Server Error', error: String(error) },
+      { status: 500 }
+    );
   }
 }

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import { authOptions } from '@/lib/auth';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
-import FOTWRules from '@/models/FOTWRules';
+import { FOTWRules } from '@/lib/fotw/schemas';
 
 const DEFAULT_RULES_CONTENT = `## How Film of the Week Works
 

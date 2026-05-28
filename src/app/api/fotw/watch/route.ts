@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWUser from '@/models/FOTWUser';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWRating } from '@/lib/fotw/schemas';
+import { FOTWLike } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
@@ -113,7 +115,15 @@ export async function DELETE(req: Request) {
       { new: true }
     );
 
-    return NextResponse.json({ success: true });
+    // Delete any FOTWRating and FOTWLike for this user and film
+    const ratingResult = await FOTWRating.deleteOne({ userEmail: session.user.email, filmId });
+    const likeResult = await FOTWLike.deleteOne({ userEmail: session.user.email, filmId });
+
+    return NextResponse.json({ 
+      success: true, 
+      ratingRemoved: ratingResult.deletedCount > 0, 
+      likeRemoved: likeResult.deletedCount > 0 
+    });
   } catch (error) {
     console.error('Error removing watched film:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

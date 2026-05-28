@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWUser from '@/models/FOTWUser';
-import FOTWRating from '@/models/FOTWRating';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';

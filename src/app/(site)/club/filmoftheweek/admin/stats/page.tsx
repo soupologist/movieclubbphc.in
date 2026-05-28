@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
-import FOTWUser from '@/models/FOTWUser';
-import FOTWFilm from '@/models/FOTWFilm';
-import FOTWRating from '@/models/FOTWRating';
+import { FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWRating } from '@/lib/fotw/schemas';
 import { instrumentSerif } from '@/app/fonts';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 
@@ -290,7 +290,9 @@ export default async function FOTWAdminStatsPage({
             >
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Film</th>
+                  <th style={{ textAlign: 'left', paddingBottom: 8 }}>Title</th>
+                    <th style={{ textAlign: 'left', paddingBottom: 8 }}>Year</th>
+                    <th style={{ textAlign: 'left', paddingBottom: 8 }}>Language</th>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Suggested By</th>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Date</th>
                   <th style={{ textAlign: 'left', paddingBottom: 8 }}>Watches</th>
@@ -300,9 +302,9 @@ export default async function FOTWAdminStatsPage({
               <tbody>
                 {filmsWithStats.map((f) => (
                   <tr key={f.id}>
-                    <td className="most-watched-film-title" style={{ padding: '6px 0' }}>
-                      {f.title}
-                    </td>
+                    <td className="most-watched-film-title" style={{ padding: '6px 0' }}>{f.title.replace(/\s*\(\d{4}\)$/, '')}</td>
+                    <td style={{ padding: '6px 0' }}>{f.title.match(/\((\d{4})\)$/) ? f.title.match(/\((\d{4})\)$/)[1] : '-'}</td>
+                    <td style={{ padding: '6px 0' }}>{(f as any).language || '-'}</td>
                     <td style={{ padding: '6px 0' }}>{f.chosenBy || 'Unknown'}</td>
                     <td style={{ padding: '6px 0' }}>{formatDateDDMMYYYY(f.dateSuggested)}</td>
                     <td style={{ padding: '6px 0' }}>{f.watchCount}</td>

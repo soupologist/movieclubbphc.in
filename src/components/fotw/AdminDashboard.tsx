@@ -6,6 +6,119 @@ import { Loader2, Plus, Sparkles, Edit2, Upload, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import Papa from 'papaparse';
+
+import { ChevronDown, Check } from 'lucide-react';
+function UserCombobox({
+  users,
+  valueEmail,
+  onChange,
+}: {
+  users: any[];
+  valueEmail: string;
+  onChange: (u: any) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [wrapperRef]);
+
+  const filtered = users.filter((u) => {
+    const term = search.toLowerCase();
+    const uname = (u.username || '').toLowerCase();
+    const name = (u.name || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    return uname.includes(term) || name.includes(term) || email.includes(term);
+  });
+
+  const selectedUser = users.find((u) => u.email === valueEmail);
+  const displayLabel = selectedUser
+    ? selectedUser.username
+      ? `${selectedUser.username} (${selectedUser.name})`
+      : selectedUser.name
+    : 'Select a member...';
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-3 bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg cursor-pointer text-sm"
+      >
+        <div className="flex items-center gap-2 overflow-hidden">
+          {selectedUser && selectedUser.image ? (
+            <img src={selectedUser.image} alt="" className="w-5 h-5 rounded-full" />
+          ) : selectedUser ? (
+            <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-blue-400 font-bold">
+              {selectedUser.name?.charAt(0)}
+            </div>
+          ) : null}
+          <span className="truncate" style={{ color: selectedUser ? 'white' : '#8a9bb0' }}>
+            {displayLabel}
+          </span>
+        </div>
+        <ChevronDown size={16} color="#8a9bb0" />
+      </div>
+
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg shadow-xl max-h-60 flex flex-col">
+          <input
+            type="text"
+            className="w-full p-2 bg-transparent text-sm text-white border-b border-[#1e1e1e] outline-none"
+            placeholder="Search username, name, or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          <div className="overflow-y-auto flex-1 p-1">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-sm text-[#8a9bb0]">No members found.</div>
+            ) : (
+              filtered.map((u) => {
+                const isSelected = u.email === valueEmail;
+                const dName = u.username ? `${u.username} (${u.name})` : u.name;
+                return (
+                  <div
+                    key={u.email}
+                    onClick={() => {
+                      onChange(u);
+                      setOpen(false);
+                      setSearch('');
+                    }}
+                    className="flex flex-col p-2 hover:bg-[#1e1e1e] cursor-pointer rounded-md mb-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {u.image ? (
+                          <img src={u.image} alt="" className="w-6 h-6 rounded-full" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-xs text-blue-400 font-bold">
+                            {u.name?.charAt(0)}
+                          </div>
+                        )}
+                        <span className="text-sm text-white font-medium">{dName}</span>
+                      </div>
+                      {isSelected && <Check size={14} className="text-[#00e054]" />}
+                    </div>
+                    <span className="text-xs text-[#8a9bb0] ml-8">{u.email}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 import { instrumentSerif } from '@/app/fonts';
 
 const C = {
@@ -94,7 +207,14 @@ export default function AdminDashboard() {
   // General State
   const [currentFilm, setCurrentFilm] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<
-    { name: string; watchedCount: number; email: string; timesSuggested?: number }[]
+    {
+      name: string;
+      username?: string;
+      watchedCount: number;
+      email: string;
+      timesSuggested?: number;
+      excludeFromLeaderboard?: boolean;
+    }[]
   >([]);
   const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
   const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
@@ -102,6 +222,24 @@ export default function AdminDashboard() {
   const [isSpinning, setIsSpinning] = useState(false);
 
   // Single Bulk CSV Import State
+
+  const downloadSampleCSV = () => {
+    const csvContent = `name,email,watch count,times suggested,film suggested,when suggested,Oppenheimer (2023),The Matrix (1999)
+John Doe,john@example.com,2,1,Inception,2023-10-12,5.0,
+Jane Smith,jane@example.com,1,0,,,4.5,3.0
+Bob,bob@example.com,0,0,,,,,
+`;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fotw_sample.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const [historyFile, setHistoryFile] = useState<File | null>(null);
   const [historyStep, setHistoryStep] = useState<1 | 2>(1); // 1 = Upload, 2 = Review & Submit
   const [preparedUsers, setPreparedUsers] = useState<any[]>([]);
@@ -995,7 +1133,7 @@ export default function AdminDashboard() {
           )}
           <div>
             <label className={labelClass} style={labelStyle}>
-              Chosen By
+              Picked By
             </label>
             <input
               type="text"
@@ -1270,7 +1408,7 @@ export default function AdminDashboard() {
 
             <div>
               <label className={labelClass} style={labelStyle}>
-                Chosen By
+                Picked By
               </label>
               <input
                 type="text"
@@ -1507,6 +1645,31 @@ export default function AdminDashboard() {
             Bulk CSV Upload (Users + Archive)
           </h2>
         </div>
+        <button
+          onClick={downloadSampleCSV}
+          style={{
+            background: 'transparent',
+            border: `1px solid ${C.border}`,
+            borderRadius: 6,
+            padding: '4px 10px',
+            color: C.dim,
+            fontSize: 12,
+            marginBottom: 16,
+            display: 'inline-block',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'white';
+            e.currentTarget.style.borderColor = C.muted;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = C.dim;
+            e.currentTarget.style.borderColor = C.border;
+          }}
+        >
+          Download Sample CSV
+        </button>
+
         <p style={{ color: C.dim, fontSize: 12, marginBottom: 16 }}>
           Column order must be: name, email, watch count, times suggested, film suggested, when
           suggested, then one column per film. Watch count column is ignored and recomputed from
@@ -1627,7 +1790,7 @@ export default function AdminDashboard() {
                       </span>
                     </h3>
                     <p style={{ color: C.dim, fontSize: 12, margin: '0 0 8px 0' }}>
-                      Chosen by: {film.chosenBy || 'Unknown'} • Watches: {film.watches.length} •
+                      Picked by: {film.chosenBy || 'Unknown'} • Watches: {film.watches.length} •
                       Ratings: {film.watches.filter((w: any) => Number(w.rating) > 0).length}
                     </p>
                     <div className="flex gap-2 items-center">
@@ -1706,6 +1869,78 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+      </section>
+
+      {/* ── Manage Exclusions ──────────────────────────────────────── */}
+      <section
+        className="mb-12"
+        style={{
+          backgroundColor: '#1a1005',
+          border: '1px solid rgba(255,160,100,0.2)',
+          borderRadius: 16,
+          padding: 24,
+        }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: '#ffa064', margin: '0 0 4px 0' }}>
+              Exclude Users
+            </h2>
+            <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
+              Exclude specific users (e.g. club accounts or ghost users) from showing on the
+              leaderboard.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {leaderboard.map((u) => {
+            const isExcluded = Boolean(u.excludeFromLeaderboard);
+            const dName = u.username ? `${u.username} (${u.name})` : u.name;
+            return (
+              <div
+                key={u.email}
+                className="flex justify-between items-center p-3 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg"
+              >
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-white text-sm truncate">{dName}</span>
+                  <span className="text-xs text-[#8a9bb0] truncate">{u.email}</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/fotw/admin/exclude-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: u.email, exclude: !isExcluded }),
+                      });
+                      if (res.ok) {
+                        setLeaderboard(
+                          leaderboard.map((x) =>
+                            x.email === u.email ? { ...x, excludeFromLeaderboard: !isExcluded } : x
+                          )
+                        );
+                      }
+                    } catch (e) {
+                      alert('Error updating exclusion');
+                    }
+                  }}
+                  style={{
+                    backgroundColor: isExcluded ? '#ffa064' : 'transparent',
+                    border: isExcluded ? 'none' : '1px solid #1e1e1e',
+                    color: isExcluded ? '#000' : '#8a9bb0',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isExcluded ? 'Excluded' : 'Exclude'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {/* ── Danger Zone ──────────────────────────────────────── */}
