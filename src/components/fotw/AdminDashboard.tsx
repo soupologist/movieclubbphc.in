@@ -9,17 +9,16 @@ import Papa from 'papaparse';
 import AdminSeasonsPanel from './AdminSeasonsPanel';
 
 import { ChevronDown, Check } from 'lucide-react';
-function UserCombobox({
+function UserAutocomplete({
   users,
-  valueEmail,
+  valueName,
   onChange,
 }: {
   users: any[];
-  valueEmail: string;
-  onChange: (u: any) => void;
+  valueName: string;
+  onChange: (name: string, email: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,90 +29,67 @@ function UserCombobox({
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [wrapperRef]);
+  }, []);
 
   const filtered = users.filter((u) => {
-    const term = search.toLowerCase();
+    const term = valueName.toLowerCase();
+    if (!term) return true;
     const uname = (u.username || '').toLowerCase();
     const name = (u.name || '').toLowerCase();
     const email = (u.email || '').toLowerCase();
     return uname.includes(term) || name.includes(term) || email.includes(term);
   });
 
-  const selectedUser = users.find((u) => u.email === valueEmail);
-  const displayLabel = selectedUser
-    ? selectedUser.username
-      ? `${selectedUser.username} (${selectedUser.name})`
-      : selectedUser.name
-    : 'Select a member...';
-
   return (
     <div className="relative w-full" ref={wrapperRef}>
-      <div
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-3 bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg cursor-pointer text-sm"
-      >
-        <div className="flex items-center gap-2 overflow-hidden">
-          {selectedUser && selectedUser.image ? (
-            <img src={selectedUser.image} alt="" className="w-5 h-5 rounded-full" />
-          ) : selectedUser ? (
-            <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-blue-400 font-bold">
-              {selectedUser.name?.charAt(0)}
-            </div>
-          ) : null}
-          <span className="truncate" style={{ color: selectedUser ? 'white' : '#8a9bb0' }}>
-            {displayLabel}
-          </span>
-        </div>
-        <ChevronDown size={16} color="#8a9bb0" />
-      </div>
+      <input
+        type="text"
+        value={valueName}
+        onChange={(e) => {
+          onChange(e.target.value, '');
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        className="w-full text-white transition-colors outline-none focus:border-[#2e2e2e]"
+        style={{
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #1e1e1e',
+          borderRadius: 8,
+          padding: '10px 14px',
+          fontSize: 14,
+        }}
+        placeholder="Name of the member who chose this film"
+      />
 
-      {open && (
-        <div className="absolute z-50 w-full mt-1 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg shadow-xl max-h-60 flex flex-col">
-          <input
-            type="text"
-            className="w-full p-2 bg-transparent text-sm text-white border-b border-[#1e1e1e] outline-none"
-            placeholder="Search username, name, or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-          />
-          <div className="overflow-y-auto flex-1 p-1">
-            {filtered.length === 0 ? (
-              <div className="p-3 text-sm text-[#8a9bb0]">No members found.</div>
-            ) : (
-              filtered.map((u) => {
-                const isSelected = u.email === valueEmail;
-                const dName = u.username ? `${u.username} (${u.name})` : u.name;
-                return (
-                  <div
-                    key={u.email}
-                    onClick={() => {
-                      onChange(u);
-                      setOpen(false);
-                      setSearch('');
-                    }}
-                    className="flex flex-col p-2 hover:bg-[#1e1e1e] cursor-pointer rounded-md mb-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {u.image ? (
-                          <img src={u.image} alt="" className="w-6 h-6 rounded-full" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-xs text-blue-400 font-bold">
-                            {u.name?.charAt(0)}
-                          </div>
-                        )}
-                        <span className="text-sm text-white font-medium">{dName}</span>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg shadow-xl max-h-60 overflow-y-auto flex flex-col p-1">
+          {filtered.map((u) => {
+            const dName = u.username ? `${u.username} (${u.name})` : u.name;
+            return (
+              <div
+                key={u.email}
+                onClick={() => {
+                  onChange(u.name, u.email);
+                  setOpen(false);
+                }}
+                className="flex flex-col p-2 hover:bg-[#1e1e1e] cursor-pointer rounded-md mb-1"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {u.image ? (
+                      <img src={u.image} alt="" className="w-6 h-6 rounded-full" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-xs text-blue-400 font-bold">
+                        {u.name?.charAt(0)}
                       </div>
-                      {isSelected && <Check size={14} className="text-[#00e054]" />}
-                    </div>
-                    <span className="text-xs text-[#8a9bb0] ml-8">{u.email}</span>
+                    )}
+                    <span className="text-sm text-white font-medium">{dName}</span>
                   </div>
-                );
-              })
-            )}
-          </div>
+                </div>
+                <span className="text-xs text-[#8a9bb0] ml-8">{u.email}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1124,15 +1100,12 @@ Bob,bob@example.com,0,0,,,,0,0,,
             <label className={labelClass} style={labelStyle}>
               Picked By
             </label>
-            <input
-              type="text"
-              value={formData.chosenBy}
-              onChange={(e) => {
-                setFormData({ ...formData, chosenBy: e.target.value, chosenByEmail: '' });
+            <UserAutocomplete
+              users={leaderboard}
+              valueName={formData.chosenBy}
+              onChange={(name, email) => {
+                setFormData({ ...formData, chosenBy: name, chosenByEmail: email });
               }}
-              className={inputClass}
-              style={inputStyle}
-              placeholder="Name of the member who chose this film"
             />
           </div>
           <div className="grid grid-cols-4 gap-2">
@@ -1393,12 +1366,12 @@ Bob,bob@example.com,0,0,,,,0,0,,
               <label className={labelClass} style={labelStyle}>
                 Picked By
               </label>
-              <input
-                type="text"
-                value={editData.chosenBy}
-                onChange={(e) => setEditData({ ...editData, chosenBy: e.target.value })}
-                className={inputClass}
-                style={inputStyle}
+              <UserAutocomplete
+                users={leaderboard}
+                valueName={editData.chosenBy}
+                onChange={(name, email) => {
+                  setEditData({ ...editData, chosenBy: name, chosenByEmail: email });
+                }}
               />
             </div>
 
