@@ -65,7 +65,9 @@ export async function POST(req: Request) {
 
     let newCurrentStreak = user?.currentStreak || 0;
 
-    if (previousFilm && user?.lastWatchedWeek) {
+    if (user?.lastWatchedWeek && new Date(user.lastWatchedWeek).getTime() === new Date(currentFilmAnchor).getTime()) {
+      newCurrentStreak += 1;
+    } else if (previousFilm && user?.lastWatchedWeek) {
       const prevFilmAnchor = previousFilm.dateSuggested || previousFilm.createdAt;
       const diffTime = Math.abs(
         new Date(user.lastWatchedWeek).getTime() - new Date(prevFilmAnchor).getTime()
@@ -149,16 +151,31 @@ export async function DELETE(req: Request) {
     const user = await FOTWUser.findOne({ email: session.user.email }).lean();
     const currentStreak = Math.max(0, (user?.currentStreak || 0) - 1);
 
+    const lastWatchedFilm = await FOTWFilm.findOne({
+      'watchedBy.userEmail': session.user.email,
+      _id: { $ne: filmId }
+    }).sort({ lockedAt: -1, createdAt: -1 }).lean();
+
+    const newLastWatchedWeek = lastWatchedFilm ? (lastWatchedFilm.dateSuggested || lastWatchedFilm.createdAt) : null;
+
+    const updateQuery: any = {
+      $set: {
+        name: session.user.name,
+        image: session.user.image,
+        currentStreak: currentStreak,
+      },
+      $inc: { watchedCount: -1, seasonWatchedCount: -1 },
+    };
+
+    if (newLastWatchedWeek) {
+      updateQuery.$set.lastWatchedWeek = newLastWatchedWeek;
+    } else {
+      updateQuery.$unset = { lastWatchedWeek: 1 };
+    }
+
     await FOTWUser.findOneAndUpdate(
       { email: session.user.email },
-      {
-        $set: {
-          name: session.user.name,
-          image: session.user.image,
-          currentStreak: currentStreak,
-        },
-        $inc: { watchedCount: -1, seasonWatchedCount: -1 },
-      },
+      updateQuery,
       { new: true }
     );
 
