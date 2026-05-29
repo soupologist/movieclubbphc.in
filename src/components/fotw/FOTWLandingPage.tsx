@@ -787,12 +787,9 @@ export default function FOTWLandingPage() {
                   className="absolute inset-0 z-10 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
                 >
-                  <span style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1 }}>
+                  <span style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1, marginBottom: 12 }}>
                     {af.ratingsCount > 4 ? af.averageRating.toFixed(1) : '—'}
                   </span>
-                  <div className="flex items-center justify-center gap-1 mt-1 mb-3">
-                    {af.ratingsCount > 4 && <MiniStars value={af.averageRating} size={14} />}
-                  </div>
                   <div className="flex items-center gap-2" style={{ color: C.muted }}>
                     <Eye size={13} />
                     <span style={{ fontSize: 14, fontWeight: 500 }}>{af.watchedCount}</span>
@@ -894,13 +891,13 @@ export default function FOTWLandingPage() {
                     flex: 1,
                   }}
                 >
-                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>
+                  <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>
                     {af.watchedCount}
                   </span>
                   <span
                     style={{
                       color: C.dim,
-                      fontSize: 14,
+                      fontSize: 10,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                     }}
@@ -917,13 +914,13 @@ export default function FOTWLandingPage() {
                     flex: 1,
                   }}
                 >
-                  <span style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>
+                  <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>
                     {af.ratingsCount}
                   </span>
                   <span
                     style={{
                       color: C.dim,
-                      fontSize: 14,
+                      fontSize: 10,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                     }}
@@ -940,13 +937,13 @@ export default function FOTWLandingPage() {
                     flex: 1,
                   }}
                 >
-                  <span style={{ color: C.green, fontSize: 15, fontWeight: 700 }}>
+                  <span style={{ color: C.green, fontSize: 13, fontWeight: 700 }}>
                     {af.ratingsCount > 4 ? af.averageRating.toFixed(1) : '—'}
                   </span>
                   <span
                     style={{
                       color: C.dim,
-                      fontSize: 14,
+                      fontSize: 10,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                     }}
@@ -1125,7 +1122,7 @@ export default function FOTWLandingPage() {
                               borderRadius: '50%',
                               backgroundColor: avatarBg(r.name),
                               color: C.blue,
-                              fontSize: 14,
+                              fontSize: 10,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1137,12 +1134,12 @@ export default function FOTWLandingPage() {
                           </div>
                           <div
                             className="truncate"
-                            style={{ fontSize: 14, flex: 1, color: '#ccc' }}
+                            style={{ fontSize: 12, flex: 1, color: '#ccc' }}
                           >
                             {r.name}
                           </div>
-                          <div style={{ color: C.green, fontSize: 14, fontWeight: 700 }}>
-                            ★{r.rating}
+                          <div style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>
+                            {r.rating}
                           </div>
                         </div>
                       ))
@@ -1225,7 +1222,7 @@ export default function FOTWLandingPage() {
                           borderRadius: '50%',
                           backgroundColor: avatarBg(w.name),
                           color: 'white',
-                          fontSize: 14,
+                          fontSize: 11,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1240,7 +1237,7 @@ export default function FOTWLandingPage() {
                         <div
                           style={{
                             color: 'white',
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: 500,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -1249,7 +1246,7 @@ export default function FOTWLandingPage() {
                         >
                           {w.name}
                         </div>
-                        <div style={{ color: C.dim, fontSize: 14 }}>
+                        <div style={{ color: C.dim, fontSize: 11 }}>
                           {new Date(w.watchedAt).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
