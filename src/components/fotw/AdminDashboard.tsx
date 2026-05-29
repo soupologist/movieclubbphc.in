@@ -195,7 +195,7 @@ export default function AdminDashboard() {
     }[]
   >([]);
   const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
-  const [archivedSnapshot, setArchivedSnapshot] = useState<any[] | null>(null);
+
   const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
 
   // Single Bulk CSV Import State
@@ -522,26 +522,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
     }
   };
 
-  const handleEndSeason = async () => {
-    if (
-      !window.confirm(
-        'This will archive the current season standings and reset all scores to 0. Film history and watch data will not be affected. Are you sure?'
-      )
-    )
-      return;
-    try {
-      const res = await fetch('/api/fotw/admin/season/end', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        setLeaderboard([]);
-        setArchivedSnapshot(data.archivedSeason?.snapshot || []);
-      } else {
-        alert('Failed to end season.');
-      }
-    } catch (err) {
-      alert('Error ending season.');
-    }
-  };
+
 
   const addFormDirty =
     JSON.stringify(formData) !== addBaselineRef.current ||
@@ -1829,45 +1810,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
         </div>
       </section>
 
-      {/* ── Season System ──────────────────────────────────────── */}
-      <section
-        className="mb-12"
-        style={{
-          backgroundColor: '#1a0a0a',
-          border: '1px solid rgba(255,100,100,0.2)',
-          borderRadius: 16,
-          padding: 24,
-        }}
-      >
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: '#ff6464', margin: '0 0 4px 0' }}>
-              End Season & Reset Leaderboard
-            </h2>
-            <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
-              Archives the current season standings and resets all season scores to 0. Film history
-              and watch data will not be affected.
-            </p>
-          </div>
-          <button
-            onClick={handleEndSeason}
-            style={{
-              backgroundColor: 'transparent',
-              border: '1px solid #ff6464',
-              color: '#ff6464',
-              borderRadius: 8,
-              padding: '8px 16px',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-            className="hover:bg-red-500/10 transition-colors"
-          >
-            End Season
-          </button>
-        </div>
-      </section>
+
 
       {/* ── Rules Editor ───────────────────────────────────── */}
       <section
@@ -1980,53 +1923,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
         )}
       </section>
 
-      {/* Snapshot Modal */}
-      {archivedSnapshot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="bg-[#111111] border border-[#2a2a2a] rounded-xl p-6 max-w-lg w-full max-h-[80vh] flex flex-col">
-            <h3 className="text-[18px] font-bold text-white mb-2">Season Snapshot</h3>
-            <p className="text-[#a0a0a0] text-[13px] mb-4">
-              Season ended successfully. Here is the final leaderboard snapshot that was archived.
-            </p>
-            <div className="overflow-y-auto flex-1 border border-[#2a2a2a] rounded-lg">
-              <table className="w-full text-left">
-                <thead className="bg-[#1a1a1a] sticky top-0">
-                  <tr>
-                    <th className="p-3 text-[12px] font-semibold text-[#a0a0a0]">Name</th>
-                    <th className="p-3 text-[12px] font-semibold text-[#a0a0a0]">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {archivedSnapshot.length === 0 ? (
-                    <tr>
-                      <td colSpan={2} className="p-4 text-center text-[#a0a0a0] text-[13px]">
-                        No users with score &gt; 0
-                      </td>
-                    </tr>
-                  ) : (
-                    archivedSnapshot.map((u, i) => (
-                      <tr key={i} className="border-t border-[#2a2a2a]">
-                        <td className="p-3 text-[14px] text-white">
-                          {u.name} <span className="text-[#666] text-[12px]">({u.username})</span>
-                        </td>
-                        <td className="p-3 text-[14px] font-bold text-[#40bcf4]">
-                          {u.watchedCount}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <button
-              onClick={() => setArchivedSnapshot(null)}
-              className="mt-6 w-full py-2.5 rounded-lg bg-[#40bcf4] text-black font-bold hover:bg-[#30a8df] transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
