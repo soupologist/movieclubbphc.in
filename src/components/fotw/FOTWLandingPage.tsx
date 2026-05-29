@@ -733,7 +733,7 @@ export default function FOTWLandingPage() {
     const afMax = Math.max(...afCounts, 0);
 
     const hasRatings = af.allRatings && af.allRatings.length > 0;
-    const PANELS = hasRatings ? 3 : 2;
+    const PANELS = hasRatings ? 4 : 3;
 
     return (
       <div key={af._id} style={{ width: '100%', minWidth: 150 }}>
@@ -989,7 +989,7 @@ export default function FOTWLandingPage() {
                   letterSpacing: '0.08em',
                 }}
               >
-                CLICK FOR RATINGS →
+                CLICK FOR {hasRatings ? 'RATINGS' : 'VIEWERS'} →
               </div>
             </div>
 
@@ -1204,7 +1204,7 @@ export default function FOTWLandingPage() {
                     letterSpacing: '0.1em',
                   }}
                 >
-                  Watched by
+                  WHO ALL WATCHED
                 </span>
                 <span style={{ color: C.blue, fontSize: 14, fontWeight: 700 }}>
                   {af.watchedCount}
