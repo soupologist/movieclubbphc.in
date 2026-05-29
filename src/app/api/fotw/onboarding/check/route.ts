@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
     await dbConnect();
 
-    // Check if taken (case-insensitive search typically requires regex in standard mongoose 
+    // Check if taken (case-insensitive search typically requires regex in standard mongoose
     // without collation, but we can just use exact for now or ignore case).
     // Let's use exact match or case-insensitive via regex:
     const user = await FOTWUser.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });

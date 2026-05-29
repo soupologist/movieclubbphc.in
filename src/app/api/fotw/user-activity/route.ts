@@ -26,22 +26,26 @@ export async function GET(req: Request) {
 
     await dbConnect();
 
-    // Securely resolve the target user's email 
+    // Securely resolve the target user's email
     let targetEmail = emailParam;
     let userDoc: any = null;
 
     if (userIdParam) {
-      userDoc = await FOTWUser.findById(userIdParam).select('email name username image watchedCount').lean();
+      userDoc = await FOTWUser.findById(userIdParam)
+        .select('email name username image watchedCount')
+        .lean();
       if (!userDoc) {
         return NextResponse.json({ message: 'User not found' }, { status: 404 });
       }
       targetEmail = userDoc.email;
     } else if (emailParam) {
-      userDoc = await FOTWUser.findOne({ email: emailParam }).select('email name username image watchedCount').lean();
+      userDoc = await FOTWUser.findOne({ email: emailParam })
+        .select('email name username image watchedCount')
+        .lean();
     }
 
     if (!targetEmail) {
-       return NextResponse.json({ message: 'Failed to resolve user email' }, { status: 400 });
+      return NextResponse.json({ message: 'Failed to resolve user email' }, { status: 400 });
     }
 
     // Fetch user ratings and likes
@@ -54,7 +58,7 @@ export async function GET(req: Request) {
     const ratingFilmIds = ratings.map((r: any) => r.filmId);
     const likeFilmIds = likes.map((l: any) => l.filmId);
     const allFilmIds = [...new Set([...ratingFilmIds, ...likeFilmIds].map(String))];
-    const objectIds = allFilmIds.map(id => new mongoose.Types.ObjectId(id));
+    const objectIds = allFilmIds.map((id) => new mongoose.Types.ObjectId(id));
 
     const films = await FOTWFilm.find({ _id: { $in: objectIds } })
       .select('_id title posterUrl')

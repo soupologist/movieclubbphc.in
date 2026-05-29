@@ -14,7 +14,7 @@ export async function GET() {
     await dbConnect();
 
     const user = await FOTWUser.findOne({ email: session.user.email });
-    
+
     if (!user) {
       return NextResponse.json({ hasCompletedOnboarding: false, username: null });
     }

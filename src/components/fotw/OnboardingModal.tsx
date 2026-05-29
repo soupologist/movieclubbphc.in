@@ -95,7 +95,8 @@ export default function OnboardingModal() {
       <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-2xl max-w-md w-full m-4">
         <h2 className="text-2xl font-bold text-white mb-2">Welcome to FOTW!</h2>
         <p className="text-zinc-400 mb-6 text-sm">
-          Please choose a unique display username. This will be visible on the leaderboard, picks, and ratings.
+          Please choose a unique display username. This will be visible on the leaderboard, picks,
+          and ratings.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

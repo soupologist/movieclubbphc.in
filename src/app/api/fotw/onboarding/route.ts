@@ -22,13 +22,18 @@ export async function POST(request: Request) {
     const { username } = await request.json();
 
     if (!username || !isValidUsername(username)) {
-      return NextResponse.json({ error: 'Invalid username format or contains blocked words' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid username format or contains blocked words' },
+        { status: 400 }
+      );
     }
 
     await dbConnect();
 
     // Check availability
-    const existingUser = await FOTWUser.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    const existingUser = await FOTWUser.findOne({
+      username: { $regex: new RegExp(`^${username}$`, 'i') },
+    });
     if (existingUser && existingUser.email !== session.user.email) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 409 });
     }
@@ -80,12 +85,17 @@ export async function PATCH(request: Request) {
       const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
       const timeSinceChange = Date.now() - new Date(user.lastUsernameChange).getTime();
       if (timeSinceChange < SEVEN_DAYS_MS) {
-        return NextResponse.json({ error: 'You can only change your username once every 7 days' }, { status: 429 });
+        return NextResponse.json(
+          { error: 'You can only change your username once every 7 days' },
+          { status: 429 }
+        );
       }
     }
 
     // Check availability
-    const existingUser = await FOTWUser.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    const existingUser = await FOTWUser.findOne({
+      username: { $regex: new RegExp(`^${username}$`, 'i') },
+    });
     if (existingUser && existingUser.email !== session.user.email) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 409 });
     }

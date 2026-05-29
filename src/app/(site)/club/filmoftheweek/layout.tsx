@@ -17,7 +17,7 @@ export default async function FOTWLayout({ children }: { children: React.ReactNo
 
   const email = session.user?.email || '';
   const isCollege = email.endsWith('@hyderabad.bits-pilani.ac.in');
-  
+
   // Allow admins and club members without the college email
   const role = (session.user as any)?.role;
   const isAuthorized = isCollege || role === 'admin' || role === 'club';
@@ -27,7 +27,8 @@ export default async function FOTWLayout({ children }: { children: React.ReactNo
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
         <h2 className="text-2xl font-bold text-white mb-2 text-center">Access Denied</h2>
         <p className="text-[#678] text-center text-sm">
-          You must be signed in with an @hyderabad.bits-pilani.ac.in email to access Film of the Week.
+          You must be signed in with an @hyderabad.bits-pilani.ac.in email to access Film of the
+          Week.
         </p>
       </div>
     );

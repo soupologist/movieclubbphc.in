@@ -59,7 +59,9 @@ export async function GET(req: Request) {
 
       // Update chosenBy formatted
       if (currentFilm.chosenByEmail) {
-        const chooser = await FOTWUser.findOne({ email: currentFilm.chosenByEmail }).select('name username').lean();
+        const chooser = await FOTWUser.findOne({ email: currentFilm.chosenByEmail })
+          .select('name username')
+          .lean();
         if (chooser) {
           currentFilm.chosenBy = formatDisplayName(chooser.name, chooser.username);
         }

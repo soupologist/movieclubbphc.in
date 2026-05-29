@@ -85,7 +85,9 @@ export async function GET() {
           name: formatName(userMap[w.userEmail], w.userEmail),
           image: userMap[w.userEmail]?.image ?? null,
         })),
-        chosenBy: film.chosenByEmail ? formatName(userMap[film.chosenByEmail], film.chosenBy || '') : (film.chosenBy || ''),
+        chosenBy: film.chosenByEmail
+          ? formatName(userMap[film.chosenByEmail], film.chosenBy || '')
+          : film.chosenBy || '',
       };
     });
 
