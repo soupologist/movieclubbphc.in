@@ -5,6 +5,7 @@ import { FOTWFilm } from '@/lib/fotw/schemas';
 import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTWLike } from '@/lib/fotw/schemas';
+import { FOTWReview } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
@@ -179,14 +180,16 @@ export async function DELETE(req: Request) {
       { new: true }
     );
 
-    // Delete any FOTWRating and FOTWLike for this user and film
+    // Delete any FOTWRating, FOTWLike, and FOTWReview for this user and film
     const ratingResult = await FOTWRating.deleteOne({ userEmail: session.user.email, filmId });
     const likeResult = await FOTWLike.deleteOne({ userEmail: session.user.email, filmId });
+    const reviewResult = await FOTWReview.deleteOne({ userEmail: session.user.email, filmId });
 
     return NextResponse.json({
       success: true,
       ratingRemoved: ratingResult.deletedCount > 0,
       likeRemoved: likeResult.deletedCount > 0,
+      reviewRemoved: reviewResult.deletedCount > 0,
     });
   } catch (error) {
     console.error('Error removing watched film:', error);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWFilm, FOTWSeason } from '@/lib/fotw/schemas';
+import { FOTWFilm, FOTWSeason, FOTWReview } from '@/lib/fotw/schemas';
 import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWLike } from '@/lib/fotw/schemas';
@@ -178,6 +178,8 @@ export async function GET(req: Request) {
     let hasWatched = false;
     let userLiked = false;
     let likesCount = 0;
+    let userReview: { body: string; isPrivate: boolean } | null = null;
+    let publicReviews: { userEmail: string; name: string; image: string | null; body: string; createdAt: string }[] = [];
 
     if (currentFilm) {
       const fallbackMs = currentFilm.timerDurationDays
@@ -185,7 +187,7 @@ export async function GET(req: Request) {
         : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
 
-      const [chooser, rating, ratings, likeDoc, likesTotal] = await Promise.all([
+      const [chooser, rating, ratings, likeDoc, likesTotal, myReview, filmReviews] = await Promise.all([
         currentFilm.chosenByEmail
           ? FOTWUser.findOne({ email: currentFilm.chosenByEmail }).select('name username').lean()
           : Promise.resolve(null),
@@ -193,6 +195,10 @@ export async function GET(req: Request) {
         FOTWRating.find({ filmId: currentFilm._id }).sort({ createdAt: -1 }).lean(),
         FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
         FOTWLike.countDocuments({ filmId: currentFilm._id }),
+        FOTWReview.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+        FOTWReview.find({ filmId: currentFilm._id, isPrivate: false })
+          .sort({ createdAt: -1 })
+          .lean(),
       ]);
 
       if (chooser) {
@@ -238,6 +244,32 @@ export async function GET(req: Request) {
 
       userLiked = !!likeDoc;
       likesCount = likesTotal;
+
+      // Caller's own review (regardless of privacy)
+      if (myReview) {
+        userReview = { body: (myReview as any).body, isPrivate: (myReview as any).isPrivate };
+      }
+
+      // Public reviews — join with user display info
+      if (filmReviews && (filmReviews as any[]).length > 0) {
+        const reviewerEmails = [...new Set((filmReviews as any[]).map((r: any) => r.userEmail))];
+        const reviewers = await FOTWUser.find({ email: { $in: reviewerEmails } })
+          .select('email name username image')
+          .lean();
+        const reviewerMap = new Map((reviewers as any[]).map((u) => [u.email, u]));
+
+        publicReviews = (filmReviews as any[]).map((r) => {
+          const u = reviewerMap.get(r.userEmail);
+          return {
+            userEmail: r.userEmail,
+            name: u ? formatDisplayName(u.name, u.username) : r.userEmail,
+            image: u?.image ?? null,
+            body: r.body,
+            hasSpoiler: r.hasSpoiler ?? false,
+            createdAt: r.createdAt,
+          };
+        });
+      }
     }
 
     return NextResponse.json({
@@ -251,6 +283,8 @@ export async function GET(req: Request) {
       hasWatched,
       userLiked,
       likesCount,
+      userReview,
+      publicReviews,
     });
   } catch (error) {
     console.error('Error fetching FOTW data:', error);

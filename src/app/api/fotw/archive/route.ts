@@ -5,6 +5,7 @@ import { FOTWFilm, FOTWSeason, FOTWSiteConfig } from '@/lib/fotw/schemas';
 import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWLike } from '@/lib/fotw/schemas';
+import { FOTWReview } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import { formatDisplayName } from '@/lib/fotw/utils';
 
@@ -68,12 +69,13 @@ export async function GET(req: Request) {
 
     const filmIds = archiveFilms.map((f) => f._id);
 
-    // 2. Bulk-fetch ALL ratings, ALL users, and ALL likes in 3 parallel queries.
+    // 2. Bulk-fetch ALL ratings, ALL users, and ALL likes in 4 parallel queries.
     //    No per-film or per-rating sub-queries — everything resolved in memory.
-    const [allRatings, allUsers, allLikes] = await Promise.all([
+    const [allRatings, allUsers, allLikes, allReviews] = await Promise.all([
       FOTWRating.find({ filmId: { $in: filmIds } }).lean(),
       FOTWUser.find().select('email name username image').lean(),
       FOTWLike.find({ filmId: { $in: filmIds } }).lean(),
+      FOTWReview.find({ filmId: { $in: filmIds }, isPrivate: false }).lean(),
     ]);
 
     // 3. Build O(1) lookup map: email → user document
@@ -90,6 +92,7 @@ export async function GET(req: Request) {
 
       const filmRatings = (allRatings as any[]).filter((r) => r.filmId.toString() === filmIdStr);
       const filmLikes = (allLikes as any[]).filter((l) => l.filmId.toString() === filmIdStr);
+      const filmReviews = (allReviews as any[]).filter((r) => r.filmId.toString() === filmIdStr).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       const avg =
         filmRatings.length > 0
@@ -122,6 +125,14 @@ export async function GET(req: Request) {
           watchedAt: w.watchedAt,
           name: formatName(userMap[w.userEmail], w.userEmail),
           image: userMap[w.userEmail]?.image ?? null,
+        })),
+        publicReviews: filmReviews.map((r: any) => ({
+          userEmail: r.userEmail,
+          name: formatName(userMap[r.userEmail], r.userEmail),
+          image: userMap[r.userEmail]?.image ?? null,
+          body: r.body,
+          hasSpoiler: r.hasSpoiler ?? false,
+          createdAt: r.createdAt,
         })),
         chosenBy: film.chosenByEmail
           ? formatName(userMap[film.chosenByEmail], film.chosenBy || '')

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWRating, FOTWLike, FOTWUser, FOTWFilm, FOTWSeason } from '@/lib/fotw/schemas';
+import { FOTWRating, FOTWLike, FOTWUser, FOTWFilm, FOTWSeason, FOTWReview } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
 import { formatDisplayName } from '@/lib/fotw/utils';
@@ -62,9 +62,10 @@ export async function GET(req: Request) {
       };
     }
 
-    const [ratings, likes, seasonFilms] = await Promise.all([
+    const [ratings, likes, reviews, seasonFilms] = await Promise.all([
       FOTWRating.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWLike.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
+      FOTWReview.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWFilm.find(dateFilter).select('_id title posterUrl watchedBy').lean()
     ]);
 
@@ -72,6 +73,7 @@ export async function GET(req: Request) {
 
     const filteredRatings = ratings.filter((r: any) => filmMap.has(r.filmId.toString()));
     const filteredLikes = likes.filter((l: any) => filmMap.has(l.filmId.toString()));
+    const filteredReviews = reviews.filter((r: any) => filmMap.has(r.filmId.toString()));
 
     const ratingsList = filteredRatings.map((r: any) => {
       const film: any = filmMap.get(r.filmId.toString());
@@ -94,6 +96,18 @@ export async function GET(req: Request) {
       };
     });
 
+    const reviewsList = filteredReviews.map((r: any) => {
+      const film: any = filmMap.get(r.filmId.toString());
+      return {
+        filmId: r.filmId,
+        filmTitle: film?.title ?? 'Unknown Film',
+        filmPosterUrl: film?.posterUrl ?? '',
+        body: r.body,
+        isPrivate: r.isPrivate,
+        createdAt: r.createdAt,
+      };
+    });
+
     const watchedFilms = seasonFilms
       .filter((f: any) => Array.isArray(f.watchedBy) && f.watchedBy.some((w: any) => w.userEmail === targetEmail))
       .map((f: any) => ({
@@ -110,6 +124,7 @@ export async function GET(req: Request) {
       longestStreak: (userDoc as any)?.longestStreak ?? 0,
       ratings: ratingsList,
       likes: likesList,
+      reviews: reviewsList,
       watchedFilms: watchedFilms
     });
   } catch (error) {

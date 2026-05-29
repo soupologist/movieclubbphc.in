@@ -191,6 +191,34 @@ const FOTWSiteConfigSchema: Schema<IFOTWSiteConfig> = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
+// --- FOTWReview ---
+// One review per (userEmail, filmId) pair. isPrivate=true means only the author can see it.
+export interface IFOTWReview extends Document {
+  userEmail: string;
+  filmId: mongoose.Types.ObjectId;
+  body: string;
+  isPrivate: boolean;
+  hasSpoiler: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const FOTWReviewSchema: Schema<IFOTWReview> = new Schema(
+  {
+    userEmail: { type: String, required: true },
+    filmId: { type: Schema.Types.ObjectId, ref: 'FOTWFilm', required: true },
+    body: { type: String, required: true, maxlength: 1000 },
+    isPrivate: { type: Boolean, default: false },
+    hasSpoiler: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+// One review per user per film
+FOTWReviewSchema.index({ userEmail: 1, filmId: 1 }, { unique: true });
+FOTWReviewSchema.index({ filmId: 1, isPrivate: 1 });
+FOTWReviewSchema.index({ userEmail: 1 });
+
 // --- Export Models ---
 export const FOTWFilm =
   (mongoose.models.FOTWFilm as Model<IFOTWFilm>) ||
@@ -213,4 +241,7 @@ export const FOTWSeason =
 export const FOTWSiteConfig =
   (mongoose.models.FOTWSiteConfig as Model<IFOTWSiteConfig>) ||
   mongoose.model<IFOTWSiteConfig>('FOTWSiteConfig', FOTWSiteConfigSchema);
+export const FOTWReview =
+  (mongoose.models.FOTWReview as Model<IFOTWReview>) ||
+  mongoose.model<IFOTWReview>('FOTWReview', FOTWReviewSchema);
 

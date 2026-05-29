@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import StarRating from './StarRating';
 import SeasonSelector, { Season } from './SeasonSelector';
-import { Trophy, Eye, Star, Film, Heart, X, ExternalLink } from 'lucide-react';
+import { Trophy, Eye, Star, Film, Heart, X, ExternalLink, FileText, Lock, Globe } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
 import { instrumentSerif } from '@/app/fonts';
 import { Bar } from 'react-chartjs-2';
@@ -207,6 +207,15 @@ interface RatingEntry {
   createdAt: string;
 }
 
+interface ReviewEntry {
+  userEmail: string;
+  name: string;
+  image: string | null;
+  body: string;
+  hasSpoiler: boolean;
+  createdAt: string;
+}
+
 interface FOTWData {
   currentFilm: {
     _id: string;
@@ -227,6 +236,8 @@ interface FOTWData {
   hasWatched: boolean;
   userLiked: boolean;
   likesCount: number;
+  userReview: { body: string; isPrivate: boolean } | null;
+  publicReviews: ReviewEntry[];
 }
 
 interface ArchiveFilm {
@@ -243,6 +254,7 @@ interface ArchiveFilm {
   chosenBy?: string;
   tmdbUrl?: string;
   likesCount?: number;
+  publicReviews?: ReviewEntry[];
 }
 
 interface UserActivityData {
@@ -259,6 +271,90 @@ interface UserActivityData {
     createdAt: string;
   }[];
   likes: { filmId: string; filmTitle: string; filmPosterUrl: string; createdAt: string }[];
+  reviews: {
+    filmId: string;
+    filmTitle: string;
+    filmPosterUrl: string;
+    body: string;
+    isPrivate: boolean;
+    createdAt: string;
+  }[];
+}
+
+function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = review.body.length > 120;
+
+  return (
+    <div 
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isLong) setExpanded(!expanded);
+      }}
+      style={{ 
+        backgroundColor: '#141414', 
+        padding: '10px 12px', 
+        borderRadius: 8, 
+        border: `1px solid ${C.border}`,
+        cursor: isLong ? 'pointer' : 'default'
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <div
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            backgroundColor: avatarBg(review.name),
+            color: 'white',
+            fontSize: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            fontWeight: 700,
+          }}
+        >
+          {review.name.charAt(0).toUpperCase()}
+        </div>
+        <span style={{ color: 'white', fontSize: 12, fontWeight: 500, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {review.name}
+        </span>
+      </div>
+      <p
+        style={{
+          color: C.dim,
+          fontSize: 12,
+          lineHeight: 1.4,
+          margin: 0,
+          whiteSpace: 'pre-wrap',
+          display: expanded ? 'block' : '-webkit-box',
+          WebkitLineClamp: expanded ? 'unset' : 3,
+          WebkitBoxOrient: 'vertical',
+          overflow: expanded ? 'visible' : 'hidden',
+        }}
+      >
+        {review.body}
+      </p>
+      {isLong && (
+        <button
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#40bcf4',
+            fontSize: 11,
+            padding: 0,
+            marginTop: 4,
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
+          className="hover:text-white transition-colors"
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -303,6 +399,15 @@ export default function FOTWLandingPage() {
   const [likesCount, setLikesCount] = useState(0);
   const [hasWatchedLocal, setHasWatchedLocal] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
+
+  // Review state
+  const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewPrivate, setReviewPrivate] = useState(false);
+  const [reviewSpoiler, setReviewSpoiler] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [hasReviewLocal, setHasReviewLocal] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   // Rating detail modal
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
@@ -365,6 +470,15 @@ export default function FOTWLandingPage() {
         setHasWatchedLocal(d.hasWatched || false);
         if (d.userRating) {
           setPendingRating(d.userRating);
+        }
+        if (d.userReview) {
+          setReviewBody(d.userReview.body);
+          setReviewPrivate(d.userReview.isPrivate);
+          setHasReviewLocal(true);
+        } else {
+          setReviewBody('');
+          setReviewPrivate(false);
+          setHasReviewLocal(false);
         }
         // archive is now { films, seasonLetterboxdUrl }
         setArchiveFilms(archive.films || []);
@@ -506,6 +620,10 @@ export default function FOTWLandingPage() {
             newUserLiked = false;
             newLikesCount = Math.max(0, newLikesCount - 1);
           }
+          setReviewBody('');
+          setReviewPrivate(false);
+          setHasReviewLocal(false);
+          setReviewExpanded(false);
         }
 
         return {
@@ -561,6 +679,57 @@ export default function FOTWLandingPage() {
       setLiked(!newLiked);
       setLikesCount((p) => (!newLiked ? p + 1 : Math.max(0, p - 1)));
       console.error(e);
+    }
+  };
+
+  /* ── Review handlers ─────────────────────────────────────── */
+  const handleSaveReview = async () => {
+    if (!data?.currentFilm || !reviewBody.trim()) return;
+    setReviewLoading(true);
+    try {
+      const res = await fetch('/api/fotw/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filmId: data.currentFilm._id,
+          body: reviewBody.trim(),
+          isPrivate: reviewPrivate,
+          hasSpoiler: reviewSpoiler,
+        }),
+      });
+      if (res.ok) {
+        setHasReviewLocal(true);
+        setReviewExpanded(false);
+        fetchData(); // refresh public reviews list
+      }
+    } catch (e) {
+      console.error('Review save failed', e);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!data?.currentFilm) return;
+    setReviewLoading(true);
+    try {
+      const res = await fetch('/api/fotw/review', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filmId: data.currentFilm._id }),
+      });
+      if (res.ok) {
+        setReviewBody('');
+        setReviewPrivate(false);
+        setReviewSpoiler(false);
+        setHasReviewLocal(false);
+        setReviewExpanded(false);
+        fetchData();
+      }
+    } catch (e) {
+      console.error('Review delete failed', e);
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -716,7 +885,64 @@ export default function FOTWLandingPage() {
             </div>
           </div>
         )}
-        {act.ratings.length === 0 && act.likes.length === 0 && (
+        {act.reviews?.length > 0 && (
+          <div className="mb-4">
+            <h3
+              style={{ fontSize: 14, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
+            >
+              Reviews
+            </h3>
+            <div className="space-y-3">
+              {act.reviews.map((r, i) => (
+                <div key={i} className="flex gap-3">
+                  <div
+                    className="relative shrink-0"
+                    style={{
+                      width: 40,
+                      height: 60,
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      backgroundColor: C.nested,
+                    }}
+                  >
+                    {r.filmPosterUrl && (
+                      <Image
+                        src={r.filmPosterUrl}
+                        alt={r.filmTitle}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p
+                        style={{ color: 'white', fontSize: 14, fontWeight: 500, margin: 0 }}
+                        className="truncate"
+                      >
+                        {r.filmTitle}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {r.isPrivate && <Lock size={12} color={C.muted} />}
+                        <span style={{ color: C.dim, fontSize: 12 }}>
+                          {new Date(r.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.4, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {r.body}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {act.ratings.length === 0 && act.likes.length === 0 && (!act.reviews || act.reviews.length === 0) && (
           <div style={{ color: C.dim, fontSize: 14, textAlign: 'center', padding: '32px 0' }}>
             No activity yet
           </div>
@@ -726,14 +952,25 @@ export default function FOTWLandingPage() {
   };
 
   /* ── Archive multi-flip card ─────────────────────────────── */
-  // Panels: 0 = poster, 1 = info, 2 = histogram+ratings, 3 = watched-by
+  // Panels: 0 = poster, 1 = info, 2 = histogram+ratings, 3 = watched-by, 4 = reviews
   const renderFlipCard = (af: ArchiveFilm) => {
     const step = flipStates[af._id] ?? 0;
     const afCounts = starValues.map((v) => af.allRatings.filter((r) => r.rating === v).length);
     const afMax = Math.max(...afCounts, 0);
 
     const hasRatings = af.allRatings && af.allRatings.length > 0;
-    const PANELS = hasRatings ? 4 : 3;
+    const hasReviews = af.publicReviews && af.publicReviews.length > 0;
+    
+    let PANELS = 3; // Poster, Info, WatchedBy (base)
+    if (hasRatings) PANELS++;
+    if (hasReviews) PANELS++;
+
+    // Helper to determine panel indexes
+    let currentPanelIdx = 1; // 0 is always poster
+    const infoPanelIdx = currentPanelIdx++;
+    const ratingPanelIdx = hasRatings ? currentPanelIdx++ : -1;
+    const watchedByPanelIdx = currentPanelIdx++;
+    const reviewPanelIdx = hasReviews ? currentPanelIdx++ : -1;
 
     return (
       <div key={af._id} style={{ width: '100%', minWidth: 150 }}>
@@ -986,7 +1223,7 @@ export default function FOTWLandingPage() {
                   letterSpacing: '0.08em',
                 }}
               >
-                CLICK FOR {hasRatings ? 'RATINGS' : 'VIEWERS'} →
+                CLICK FOR {hasRatings ? 'RATINGS' : hasReviews ? 'REVIEWS' : 'VIEWERS'} →
               </div>
             </div>
 
@@ -1154,7 +1391,7 @@ export default function FOTWLandingPage() {
                       letterSpacing: '0.08em',
                     }}
                   >
-                    CLICK FOR VIEWERS →
+                    CLICK FOR {hasReviews ? 'REVIEWS' : 'VIEWERS'} →
                   </div>
                 </div>
               </>
@@ -1267,10 +1504,83 @@ export default function FOTWLandingPage() {
                     letterSpacing: '0.08em',
                   }}
                 >
-                  CLICK TO RESTART →
+                  CLICK FOR {hasReviews ? 'REVIEWS' : 'RESTART'} →
                 </div>
               </div>
             </div>
+
+            {/* ── Panel 4: Reviews ── */}
+            {hasReviews && (
+              <div
+                style={{
+                  width: `${100 / PANELS}%`,
+                  flexShrink: 0,
+                  padding: isMobile ? '10px' : '14px 12px',
+                  fontSize: isMobile ? '13px' : 'inherit',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  height: '100%',
+                  maxHeight: '100%',
+                  overflowY: 'auto',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* Step indicator */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+                  {Array.from({ length: PANELS }, (_, idx) => idx).map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: i === step - 1 ? 14 : 4,
+                        height: 3,
+                        borderRadius: 2,
+                        backgroundColor: i === step - 1 ? C.green : C.border,
+                        transition: 'all 0.3s',
+                      }}
+                    />
+                  ))}
+                </div>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span
+                    style={{
+                      color: C.muted,
+                      fontSize: 14,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    REVIEWS
+                  </span>
+                  <span style={{ color: C.green, fontSize: 14, fontWeight: 700 }}>
+                    {af.publicReviews?.length || 0}
+                  </span>
+                </div>
+                <div 
+                  style={{ flex: 1, overflowY: 'auto' }} 
+                  className="space-y-3 pr-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {af.publicReviews?.map((r, idx) => (
+                    <ArchiveReviewItem key={idx} review={r} C={C} />
+                  ))}
+                </div>
+                <div style={{ marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
+                  <div
+                    style={{
+                      color: C.dim,
+                      fontSize: 14,
+                      textAlign: 'center',
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    CLICK TO RESTART →
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1590,6 +1900,27 @@ export default function FOTWLandingPage() {
                   />
                   {liked ? 'Liked' : 'Like'}
                 </button>
+
+                <button
+                  id="btn-review"
+                  onClick={() => setReviewExpanded(!reviewExpanded)}
+                  disabled={!hasWatched}
+                  style={{
+                    ...pillBtnBase,
+                    background: hasReviewLocal ? '#0a1a0a' : '#141414',
+                    borderColor: hasReviewLocal ? C.green : C.border,
+                    color: hasReviewLocal ? C.green : C.muted,
+                    opacity: hasWatched ? 1 : 0.5,
+                    cursor: hasWatched ? 'pointer' : 'not-allowed',
+                  }}
+                  title={!hasWatched ? 'Watch the film to write a review' : ''}
+                >
+                  <FileText
+                    size={15}
+                    color={hasReviewLocal ? C.green : 'currentColor'}
+                  />
+                  {hasReviewLocal ? 'Reviewed' : 'Review'}
+                </button>
               </div>
 
               {/* Star rating */}
@@ -1620,6 +1951,119 @@ export default function FOTWLandingPage() {
                 )}
               </div>
 
+              {/* Review Composer */}
+              {reviewExpanded && (
+                <div
+                  style={{
+                    backgroundColor: '#0f0f0f',
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 12,
+                    padding: 16,
+                    marginTop: 8,
+                    marginBottom: 16,
+                  }}
+                >
+                  <textarea
+                    value={reviewBody}
+                    onChange={(e) => setReviewBody(e.target.value)}
+                    placeholder="Add a review..."
+                    maxLength={1000}
+                    style={{
+                      width: '100%',
+                      minHeight: '100px',
+                      backgroundColor: C.card,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 8,
+                      padding: '12px',
+                      color: 'white',
+                      fontSize: 14,
+                      resize: 'vertical',
+                      outline: 'none',
+                      marginBottom: 12,
+                    }}
+                  />
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setReviewPrivate(!reviewPrivate)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          color: reviewPrivate ? C.muted : '#40bcf4',
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        {reviewPrivate ? <Lock size={14} /> : <Globe size={14} />}
+                        {reviewPrivate ? 'Private' : 'Visible to all'}
+                      </button>
+                      <button
+                        onClick={() => setReviewSpoiler(!reviewSpoiler)}
+                        style={{
+                          background: reviewSpoiler ? 'rgba(251,191,36,0.15)' : 'none',
+                          border: reviewSpoiler ? '1px solid rgba(251,191,36,0.4)' : '1px solid transparent',
+                          borderRadius: 6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          color: reviewSpoiler ? '#fbbf24' : C.muted,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          padding: '2px 8px',
+                          transition: 'all 0.15s ease',
+                        }}
+                        title="Mark as spoiler — readers will need to click to reveal"
+                      >
+                        {reviewSpoiler ? 'Contains spoiler' : 'Spoiler?'}
+                      </button>
+                      <span style={{ color: C.dim, fontSize: 12 }}>
+                        {reviewBody.length} / 1000
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {hasReviewLocal && (
+                        <button
+                          onClick={handleDeleteReview}
+                          disabled={reviewLoading}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: C.orange,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                            padding: '6px 12px',
+                            opacity: reviewLoading ? 0.5 : 1,
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSaveReview}
+                        disabled={reviewLoading || !reviewBody.trim() || (reviewBody.length > 1000)}
+                        style={{
+                          background: reviewBody.trim() && reviewBody.length <= 1000 ? '#40bcf4' : C.border,
+                          color: reviewBody.trim() && reviewBody.length <= 1000 ? 'black' : C.muted,
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '6px 16px',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: reviewBody.trim() && reviewBody.length <= 1000 ? 'pointer' : 'not-allowed',
+                          opacity: reviewLoading ? 0.5 : 1,
+                        }}
+                      >
+                        {reviewLoading ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Stats row */}
               <div
                 style={{
@@ -1646,9 +2090,9 @@ export default function FOTWLandingPage() {
                 </div>
               </div>
 
-              {/* View my activity */}
+              {/* View reviews */}
               <button
-                onClick={openMyActivity}
+                onClick={() => setShowAllReviews(true)}
                 style={{
                   color: '#40bcf4',
                   fontSize: 14,
@@ -1659,11 +2103,12 @@ export default function FOTWLandingPage() {
                   textAlign: isMobile ? 'center' : 'left',
                   textDecoration: 'none',
                   width: '100%',
+                  marginTop: 24,
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
                 onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
               >
-                View your activity →
+                View reviews →
               </button>
             </div>
 
@@ -2414,6 +2859,107 @@ export default function FOTWLandingPage() {
                 <SeasonSelector seasons={seasons} selected={activitySeasonId} onChange={setActivitySeasonId} />
               </div>
               {renderActivityBody(userActivity, userActivityLoading)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── All Reviews Modal ───────────────────────────────── */}
+      {showAllReviews && data?.publicReviews && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setShowAllReviews(false)}
+        >
+          <div
+            style={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 20,
+              maxWidth: isMobile ? 'none' : '800px',
+              width: isMobile ? '95vw' : '90vw',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              margin: isMobile ? '0' : 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: `1px solid ${C.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                position: 'sticky',
+                top: 0,
+                backgroundColor: C.card,
+                zIndex: 2,
+              }}
+            >
+              <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>
+                {data.publicReviews.length} {data.publicReviews.length === 1 ? 'Review' : 'Reviews'} for {data.currentFilm?.title}
+              </span>
+              <button
+                onClick={() => setShowAllReviews(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: C.muted,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  padding: 0,
+                }}
+                className="hover:text-white!"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <div className="space-y-4">
+                {data.publicReviews.map((review, idx) => (
+                  <div key={idx} style={{ backgroundColor: '#0f0f0f', padding: 16, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          backgroundColor: C.nested,
+                          overflow: 'hidden',
+                          position: 'relative',
+                        }}
+                      >
+                        {review.image ? (
+                          <Image src={review.image} alt={review.name} fill className="object-cover" unoptimized />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-sm font-medium text-white" style={{ backgroundColor: avatarBg(review.name) }}>
+                            {review.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <span style={{ color: 'white', fontSize: 14, fontWeight: 500, display: 'block' }}>{review.name}</span>
+                        <span style={{ color: C.dim, fontSize: 12 }}>
+                          {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                    <p style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                      {review.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
