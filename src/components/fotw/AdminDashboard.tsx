@@ -6,6 +6,7 @@ import { Loader2, Plus, Sparkles, Edit2, Upload, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import Papa from 'papaparse';
+import AdminSeasonsPanel from './AdminSeasonsPanel';
 
 import { ChevronDown, Check } from 'lucide-react';
 function UserCombobox({
@@ -281,7 +282,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
       fetch('/api/fotw/archive').then((r) => r.json()),
     ]);
 
-    const archiveList = Array.isArray(archive) ? archive : [];
+    const archiveList = Array.isArray(archive) ? archive : (archive.films || []);
     const nextCurrentFilm = d.currentFilm || null;
     setLeaderboard(adminData.leaderboard || []);
     setArchiveFilms(archiveList);
@@ -986,6 +987,9 @@ Bob,bob@example.com,0,0,,,,0,0,,
           </div>
         </div>
       </div>
+
+      {/* ── Seasons Management ───────────────────────────────── */}
+      <AdminSeasonsPanel />
 
       {/* ── Add New Film ─────────────────────────────────────── */}
       <section

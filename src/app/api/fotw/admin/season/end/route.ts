@@ -1,65 +1,58 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWUser, FOTWSeason } from '@/lib/fotw/schemas';
+import { FOTWSeason } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 
+// POST — close the current active season and open a new one.
+//
+// Old behaviour wrote a snapshot[] of user watch-counts and relied on
+// seasonNumber. Both are gone. The new behaviour:
+//   1. Finds the active season, stamps endDate = now, sets isActive = false.
+//   2. Creates a new season whose name is inferred from the total count.
+//
+// FOTWFilm documents are NOT touched. FOTWUser.seasonWatchedCount is NOT reset
+// (it remains as the "current rolling season" counter used by the legacy
+// leaderboard sort — the new season-filtered leaderboard computes from films).
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email || !FOTW_ADMINS.includes(session.user.email)) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.email || !FOTW_ADMINS.includes(session.user.email)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     await dbConnect();
 
-    // Find the current active season
-    let currentSeason = await FOTWSeason.findOne({ isActive: true });
+    const now = new Date();
 
-    // Snapshot all users
-    const users = await FOTWUser.find({ seasonWatchedCount: { $gt: 0 } }).lean();
-
-    const snapshot = users.map((u) => ({
-      userEmail: u.email,
-      username: u.username || '',
-      name: u.name || '',
-      watchedCount: u.seasonWatchedCount || 0,
-    }));
-
-    if (currentSeason) {
-      currentSeason.isActive = false;
-      currentSeason.endDate = new Date();
-      currentSeason.snapshot = snapshot;
-      await currentSeason.save();
-    } else {
-      // If no active season exists, we create one as season 1 and archive it immediately.
-      currentSeason = await FOTWSeason.create({
-        seasonNumber: 1,
-        startDate: new Date(new Date().setFullYear(new Date().getFullYear() - 1)), // Just an arbitrary past date for the fallback
-        endDate: new Date(),
-        isActive: false,
-        snapshot,
-      });
+    // Close the active season (if one exists)
+    const activeSeason = await FOTWSeason.findOne({ isActive: true });
+    if (activeSeason) {
+      activeSeason.isActive = false;
+      activeSeason.endDate = now;
+      await activeSeason.save();
     }
 
-    const newSeasonNumber = currentSeason.seasonNumber + 1;
+    // Infer the next season name from total document count
+    const totalSeasons = await FOTWSeason.countDocuments();
+    const nextName = `Season ${totalSeasons + 1}`;
 
-    // Create a new active season
-    await FOTWSeason.create({
-      seasonNumber: newSeasonNumber,
-      startDate: new Date(),
+    const newSeason = await FOTWSeason.create({
+      name: nextName,
+      startDate: now,
       endDate: null,
       isActive: true,
-      snapshot: [],
+      createdBy: session.user.email,
     });
 
-    // Reset seasonWatchedCount for all users to 0
-    await FOTWUser.updateMany({}, { $set: { seasonWatchedCount: 0 } });
-
-    return NextResponse.json({ success: true, archivedSeason: currentSeason });
+    return NextResponse.json({
+      success: true,
+      archivedSeason: activeSeason ?? null,
+      newSeason,
+    });
   } catch (error) {
-    console.error('Error ending season:', error);
+    console.error('[season/end] POST error:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

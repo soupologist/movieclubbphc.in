@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWFilm, FOTWSeason, FOTWSiteConfig } from '@/lib/fotw/schemas';
 import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWLike } from '@/lib/fotw/schemas';
@@ -9,8 +9,9 @@ import { authOptions } from '@/lib/auth';
 import { formatDisplayName } from '@/lib/fotw/utils';
 
 // GET: Fetch all previous (locked) FOTWs with their stats.
+// Accepts optional ?seasonId=<mongoId> to filter to a season's date window.
 // Performs exactly 4 DB queries total regardless of how many films or ratings exist.
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const [session, _] = await Promise.all([
       getServerSession(authOptions),
@@ -20,8 +21,40 @@ export async function GET() {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all films sorted by createdAt
-    const films = await FOTWFilm.find({}).sort({ createdAt: -1 }).lean();
+    // --- Season filter ---
+    const { searchParams } = new URL(req.url);
+    const seasonId = searchParams.get('seasonId');
+    let dateFilter: Record<string, unknown> = {};
+    let seasonLetterboxdUrl = '';
+
+    if (seasonId && seasonId !== 'all') {
+      const season = await FOTWSeason.findById(seasonId)
+        .select('startDate endDate letterboxdUrl')
+        .lean();
+      if (!season) {
+        return NextResponse.json({ message: 'Season not found' }, { status: 404 });
+      }
+      dateFilter = {
+        lockedAt: { $ne: null },
+        dateSuggested: {
+          $gte: season.startDate,
+          ...(season.endDate ? { $lte: season.endDate } : {}),
+        },
+      };
+      // Use season-specific URL if set, otherwise fall back to all-time config
+      if ((season as any).letterboxdUrl) {
+        seasonLetterboxdUrl = (season as any).letterboxdUrl;
+      }
+    }
+
+    // Always load the all-time URL as a fallback (one fast lean query)
+    if (!seasonLetterboxdUrl) {
+      const siteConfig = await FOTWSiteConfig.findOne({}).select('letterboxdAllTimeUrl').lean();
+      seasonLetterboxdUrl = siteConfig?.letterboxdAllTimeUrl || '';
+    }
+
+    // Fetch films (all, or filtered to the season window) sorted by createdAt
+    const films = await FOTWFilm.find(dateFilter).sort({ createdAt: -1 }).lean();
 
     // Identify the current film (newest document with lockedAt: null)
     // and separate it from the archive list.
@@ -96,7 +129,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({ films: result, seasonLetterboxdUrl });
   } catch (error) {
     console.error('Error fetching archive:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

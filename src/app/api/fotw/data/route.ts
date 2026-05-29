@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWFilm } from '@/lib/fotw/schemas';
+import { FOTWFilm, FOTWSeason } from '@/lib/fotw/schemas';
 import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWLike } from '@/lib/fotw/schemas';
@@ -9,6 +9,7 @@ import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 import { formatDisplayName } from '@/lib/fotw/utils';
+import mongoose from 'mongoose';
 
 const parseAdminDate = (value: unknown): Date | null => {
   const raw = (value ?? '').toString().trim();
@@ -49,22 +50,107 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    // --- Season filter for leaderboard ---
+    const { searchParams } = new URL(req.url);
+    const seasonId = searchParams.get('seasonId');
+    const useSeasonFilter =
+      !!seasonId &&
+      seasonId !== 'all' &&
+      mongoose.Types.ObjectId.isValid(seasonId);
+
     // Promises that can run in parallel early on
     const currentFilmPromise = FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
 
-    // Get Leaderboard (Top 50 users by watched count, tiebreak by oldest user)
-    // Filter out ghost/excluded users and those with 0 watched counts
-    const leaderboardRawPromise = FOTWUser.find({
-      $or: [{ watchedCount: { $gt: 0 } }, { seasonWatchedCount: { $gt: 0 } }],
-      excludeFromLeaderboard: { $ne: true },
-    })
-      .sort({ seasonWatchedCount: -1, createdAt: 1 })
-      .select('email username name seasonWatchedCount watchedCount currentStreak longestStreak excludeFromLeaderboard image')
-      .lean();
+    // Build leaderboard — two paths:
+    //   A) No seasonId / 'all' / invalid id: existing FOTWUser.watchedCount sort
+    //   B) Valid seasonId: fetch season films, tally watchedBy in memory, join FOTWUser
+    let leaderboardPromise: Promise<any[]>;
 
-    const [currentFilmRaw, leaderboardRaw] = await Promise.all([
+    if (useSeasonFilter) {
+      // Path B ---------------------------------------------------------------
+      // Step 1: resolve the season's date window
+      // Step 2: fetch only the watchedBy arrays of films in that window (lean, minimal projection)
+      // Step 3: tally per-user watch counts in memory — zero extra DB round-trips
+      // Step 4: fetch FOTWUser display fields for users who appear in the tally
+      leaderboardPromise = (async () => {
+        const season = await FOTWSeason.findById(seasonId).select('startDate endDate').lean();
+        if (!season) return [];
+
+        // Fetch only the field we need — watchedBy — for all locked films in the window
+        const seasonFilms = await FOTWFilm.find(
+          {
+            dateSuggested: {
+              $gte: season.startDate,
+              ...(season.endDate ? { $lte: season.endDate } : {}),
+            },
+            lockedAt: { $ne: null }, // only past (locked) films
+          },
+          { watchedBy: 1 }  // projection: only watchedBy
+        ).lean();
+
+        // Build watch-count map in memory — no extra DB query
+        const watchCountMap = new Map<string, number>();
+        for (const film of seasonFilms) {
+          const watchedBy = Array.isArray((film as any).watchedBy)
+            ? (film as any).watchedBy
+            : [];
+          for (const entry of watchedBy) {
+            const email: string = entry?.userEmail;
+            if (email) {
+              watchCountMap.set(email, (watchCountMap.get(email) ?? 0) + 1);
+            }
+          }
+        }
+
+        if (watchCountMap.size === 0) return [];
+
+        // Fetch FOTWUser display fields — only for users who appear in the tally
+        const emails = [...watchCountMap.keys()];
+        const users = await FOTWUser.find({
+          email: { $in: emails },
+          excludeFromLeaderboard: { $ne: true },
+        })
+          .select('email username name image watchedCount currentStreak longestStreak _id')
+          .lean();
+
+        // Build response, sorted by season watch count descending
+        return (users as any[])
+          .map((u) => ({
+            _id: u._id,
+            name: formatDisplayName(u.name, u.username),
+            image: u.image ?? null,
+            watchedCount: u.watchedCount,
+            seasonWatchCount: watchCountMap.get(u.email) ?? 0,
+            currentStreak: u.currentStreak || 0,
+            longestStreak: u.longestStreak || 0,
+          }))
+          .sort((a, b) => b.seasonWatchCount - a.seasonWatchCount);
+      })();
+    } else {
+      // Path A ---------------------------------------------------------------
+      // All-time: sort by the pre-aggregated FOTWUser.watchedCount
+      leaderboardPromise = FOTWUser.find({
+        watchedCount: { $gt: 0 },
+        excludeFromLeaderboard: { $ne: true },
+      })
+        .sort({ watchedCount: -1, createdAt: 1 })
+        .select('email username name watchedCount currentStreak longestStreak image')
+        .lean()
+        .then((raw) =>
+          (raw as any[]).map((u) => ({
+            _id: u._id,
+            name: formatDisplayName(u.name, u.username),
+            image: u.image,
+            watchedCount: u.watchedCount,
+            currentStreak: u.currentStreak || 0,
+            longestStreak: u.longestStreak || 0,
+          }))
+        );
+    }
+
+    const [currentFilmRaw, leaderboard] = await Promise.all([
       currentFilmPromise,
-      leaderboardRawPromise,
+      leaderboardPromise,
     ]);
 
     let currentFilm = currentFilmRaw as any;
@@ -153,17 +239,6 @@ export async function GET(req: Request) {
       userLiked = !!likeDoc;
       likesCount = likesTotal;
     }
-
-    // Remove email from the public response payload and format name
-    const leaderboard = (leaderboardRaw as any[]).map((u) => ({
-      _id: u._id,
-      name: formatDisplayName(u.name, u.username),
-      image: u.image,
-      watchedCount: u.watchedCount,
-      seasonWatchedCount: u.seasonWatchedCount,
-      currentStreak: u.currentStreak || 0,
-      longestStreak: u.longestStreak || 0,
-    }));
 
     return NextResponse.json({
       currentFilm,

@@ -138,36 +138,58 @@ FOTWUserSchema.index({ seasonWatchedCount: -1 });
 
 
 // --- FOTWSeason ---
+// Seasons are admin-defined named date ranges used as a filtering lens over
+// existing FOTWFilm data. A film belongs to a season when:
+//   film.dateSuggested >= season.startDate && film.dateSuggested <= season.endDate
+// This join is always computed at query time — no field is written back to FOTWFilm.
+// There is also always an implicit "All Time" view which applies no date filter.
 export interface IFOTWSeason extends Document {
-  seasonNumber: number;
+  /** Admin-chosen display name, e.g. "Season 1" or "Monsoon 2024" */
+  name: string;
+  /** Inclusive start of the season window */
   startDate: Date;
+  /** Inclusive end of the season window. null if the season is currently ongoing */
   endDate: Date | null;
+  /** true if this is the current live season */
   isActive: boolean;
-  snapshot: {
-    userEmail: string;
-    username: string;
-    name: string;
-    watchedCount: number;
-  }[];
+  /** Letterboxd list URL for this season */
+  letterboxdUrl?: string;
+  /** Email of the admin who created the season */
+  createdBy: string;
+  createdAt: Date;
 }
 
 const FOTWSeasonSchema: Schema<IFOTWSeason> = new Schema(
   {
-    seasonNumber: { type: Number, required: true },
-    startDate: { type: Date, default: Date.now, required: true },
+    name: { type: String, required: true, trim: true },
+    startDate: { type: Date, required: true },
     endDate: { type: Date, default: null },
-    isActive: { type: Boolean, default: true },
-    snapshot: [
-      {
-        userEmail: { type: String, required: true },
-        username: { type: String, default: '' },
-        name: { type: String, default: '' },
-        watchedCount: { type: Number, required: true },
-      },
-    ],
+    isActive: { type: Boolean, default: false },
+    letterboxdUrl: { type: String, default: '' },
+    createdBy: { type: String, required: true },
   },
   { timestamps: true }
 );
+
+// Speed up "find the active season" and date-range lookups
+FOTWSeasonSchema.index({ isActive: 1 });
+FOTWSeasonSchema.index({ startDate: 1, endDate: 1 });
+
+// --- FOTWSiteConfig ---
+// Singleton document for site-wide FOTW configuration.
+// Use FOTWSiteConfig.findOneAndUpdate({}, updates, { upsert: true }) to mutate.
+export interface IFOTWSiteConfig extends Document {
+  /** Letterboxd list URL shown when "All Time" is selected */
+  letterboxdAllTimeUrl: string;
+  updatedBy?: string;
+  updatedAt: Date;
+}
+
+const FOTWSiteConfigSchema: Schema<IFOTWSiteConfig> = new Schema({
+  letterboxdAllTimeUrl: { type: String, default: '' },
+  updatedBy: { type: String },
+  updatedAt: { type: Date, default: Date.now },
+});
 
 // --- Export Models ---
 export const FOTWFilm =
@@ -188,3 +210,7 @@ export const FOTWUser =
 export const FOTWSeason =
   (mongoose.models.FOTWSeason as Model<IFOTWSeason>) ||
   mongoose.model<IFOTWSeason>('FOTWSeason', FOTWSeasonSchema);
+export const FOTWSiteConfig =
+  (mongoose.models.FOTWSiteConfig as Model<IFOTWSiteConfig>) ||
+  mongoose.model<IFOTWSiteConfig>('FOTWSiteConfig', FOTWSiteConfigSchema);
+

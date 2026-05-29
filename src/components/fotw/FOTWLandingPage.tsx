@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { LETTERBOXD_LIST_URL } from '@/lib/fotwConfig';
 import StarRating from './StarRating';
+import SeasonSelector, { Season } from './SeasonSelector';
 import { Trophy, Eye, Star, Film, Heart, X, ExternalLink } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
 import { instrumentSerif } from '@/app/fonts';
@@ -195,6 +195,7 @@ interface LeaderboardUser {
   image?: string;
   watchedCount: number;
   seasonWatchedCount: number;
+  seasonWatchCount?: number;
   email: string;
 }
 
@@ -286,6 +287,16 @@ export default function FOTWLandingPage() {
   const [archiveFilms, setArchiveFilms] = useState<ArchiveFilm[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Season state
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [selectedArchiveSeason, setSelectedArchiveSeason] = useState<string>('');
+  const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // All-time Letterboxd URL from site config
+  const [archiveLetterboxdUrl, setArchiveLetterboxdUrl] = useState<string>('');
+
   // Inline action state
   const [pendingRating, setPendingRating] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -305,6 +316,7 @@ export default function FOTWLandingPage() {
   const [viewingUser, setViewingUser] = useState<LeaderboardUser | null>(null);
   const [userActivity, setUserActivity] = useState<UserActivityData | null>(null);
   const [userActivityLoading, setUserActivityLoading] = useState(false);
+  const [activitySeasonId, setActivitySeasonId] = useState<string>('');
 
   // Archive multi-flip state — 0: poster, 1: info, 2: histogram, 3: watched-by
   const [flipStates, setFlipStates] = useState<Record<string, number>>({});
@@ -318,6 +330,20 @@ export default function FOTWLandingPage() {
   };
 
   /* ── Data fetching ───────────────────────────────────────── */
+  const fetchSeasons = useCallback(async () => {
+    try {
+      const res = await fetch('/api/fotw/seasons');
+      const d = await res.json();
+      setSeasons(d.seasons || []);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const fetchConfig = useCallback(async () => {
+    // no-op: letterboxdUrl is now returned directly by the archive API
+  }, []);
+
   const fetchData = useCallback(() => {
     Promise.all([
       fetch('/api/fotw/data').then((r) => r.json()),
@@ -340,7 +366,9 @@ export default function FOTWLandingPage() {
         if (d.userRating) {
           setPendingRating(d.userRating);
         }
-        setArchiveFilms(Array.isArray(archive) ? archive : []);
+        // archive is now { films, seasonLetterboxdUrl }
+        setArchiveFilms(archive.films || []);
+        setArchiveLetterboxdUrl(archive.seasonLetterboxdUrl || '');
       })
       .catch((e) => console.error(e))
       .finally(() => setLoading(false));
@@ -348,45 +376,93 @@ export default function FOTWLandingPage() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchSeasons();
+    fetchConfig();
+  }, [fetchData, fetchSeasons, fetchConfig]);
 
-  /* ── My activity ─────────────────────────────────────────── */
-  const openMyActivity = async () => {
-    setShowMyActivity(true);
-    if (myActivity) return;
-    setMyActivityLoading(true);
+  const handleSeasonChange = async (id: string) => {
+    setSelectedSeason(id);
+    setLeaderboardLoading(true);
     try {
-      const email = session?.user?.email;
-      if (!email) return;
-      const res = await fetch(`/api/fotw/user-activity?email=${encodeURIComponent(email)}`, {
-        cache: 'no-store',
-      });
-      const d = await res.json();
-      setMyActivity(d);
+      const res = await fetch(`/api/fotw/data?seasonId=${id}`);
+      const newData = await res.json();
+      setData((prev) => (prev ? { ...prev, leaderboard: newData.leaderboard || [] } : newData));
     } catch (e) {
       console.error(e);
     } finally {
-      setMyActivityLoading(false);
+      setLeaderboardLoading(false);
     }
+  };
+
+  const handleArchiveSeasonChange = async (id: string) => {
+    setSelectedArchiveSeason(id);
+    setArchiveLoading(true);
+    try {
+      const res = await fetch(`/api/fotw/archive?seasonId=${id}`);
+      const newArchive = await res.json();
+      // archive is now { films, seasonLetterboxdUrl }
+      setArchiveFilms(newArchive.films || []);
+      setArchiveLetterboxdUrl(newArchive.seasonLetterboxdUrl || '');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  /* ── My activity ─────────────────────────────────────────── */
+  const openMyActivity = () => {
+    setShowMyActivity(true);
+    setActivitySeasonId(selectedSeason || 'all');
   };
 
   /* ── Public user activity ────────────────────────────────── */
-  const openUserActivity = async (user: LeaderboardUser) => {
+  const openUserActivity = (user: LeaderboardUser) => {
     setViewingUser(user);
-    setUserActivity(null);
-    setUserActivityLoading(true);
-    try {
-      const res = await fetch(`/api/fotw/user-activity?userId=${encodeURIComponent(user._id)}`, {
-        cache: 'no-store',
-      });
-      const d = await res.json();
-      setUserActivity(d);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setUserActivityLoading(false);
-    }
+    setActivitySeasonId(selectedSeason || 'all');
   };
+
+  useEffect(() => {
+    if (!showMyActivity || !session?.user?.email) return;
+    let isMounted = true;
+    const fetchAct = async () => {
+      setMyActivityLoading(true);
+      try {
+        const res = await fetch(`/api/fotw/user-activity?email=${encodeURIComponent(session.user.email || "")}&seasonId=${activitySeasonId || 'all'}`, {
+          cache: 'no-store',
+        });
+        const d = await res.json();
+        if (isMounted) setMyActivity(d);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) setMyActivityLoading(false);
+      }
+    };
+    fetchAct();
+    return () => { isMounted = false; };
+  }, [showMyActivity, activitySeasonId, session?.user?.email]);
+
+  useEffect(() => {
+    if (!viewingUser) return;
+    let isMounted = true;
+    const fetchAct = async () => {
+      setUserActivityLoading(true);
+      try {
+        const res = await fetch(`/api/fotw/user-activity?userId=${encodeURIComponent(viewingUser._id)}&seasonId=${activitySeasonId || 'all'}`, {
+          cache: 'no-store',
+        });
+        const d = await res.json();
+        if (isMounted) setUserActivity(d);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) setUserActivityLoading(false);
+      }
+    };
+    fetchAct();
+    return () => { isMounted = false; };
+  }, [viewingUser, activitySeasonId]);
 
   /* ── Watch handler ───────────────────────────────────────── */
   const handleWatch = async () => {
@@ -497,6 +573,7 @@ export default function FOTWLandingPage() {
   const hasWatched = hasWatchedLocal || (data?.hasWatched ?? false);
   // Archive API already excludes the current film server-side (lockedAt: { $ne: null })
   const previousFilms = archiveFilms;
+  // archiveLetterboxdUrl comes from state — updated by every archive fetch, always fresh
 
   /* ── Histogram ───────────────────────────────────────────── */
   const counts = starValues.map((v) => data?.allRatings.filter((r) => r.rating === v).length || 0);
@@ -1315,28 +1392,6 @@ export default function FOTWLandingPage() {
         >
           Activity →
         </button>
-        <a
-          href={LETTERBOXD_LIST_URL}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            background: 'none',
-            border: '1px solid #1e1e1e',
-            borderRadius: '999px',
-            padding: '2px 8px',
-            marginLeft: 'auto',
-            color: '#4a5568',
-            fontSize: '12px',
-            textDecoration: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
-        >
-          Letterboxd List
-        </a>
       </div>
 
       {/* ══════════════════════════════════════════════════════
@@ -1744,16 +1799,18 @@ export default function FOTWLandingPage() {
           SECTION 2: LEADERBOARD BAR CHART (Chart.js)
       ══════════════════════════════════════════════════════ */}
       {(() => {
-        if (!data || data.leaderboard.length === 0) return null;
+        if (!data) return null;
 
-        const lb = [...data.leaderboard].sort(
-          (a, b) => b.seasonWatchedCount - a.seasonWatchedCount
-        );
+        const getCount = (u: LeaderboardUser) =>
+          selectedSeason && selectedSeason !== 'all'
+            ? (u.seasonWatchCount ?? u.seasonWatchedCount ?? 0)
+            : u.watchedCount;
+
+        const lb = data.leaderboard ? [...data.leaderboard].sort((a, b) => getCount(b) - getCount(a)) : [];
 
         const labels = lb.map((u) => u.name.split(' ')[0]); // first name only
-        const lbCounts = lb.map((u) => u.seasonWatchedCount);
+        const lbCounts = lb.map((u) => getCount(u));
         const lbMax = Math.max(...lbCounts, 1);
-        const avgCount = lbCounts.reduce((a, b) => a + b, 0) / lbCounts.length;
 
         // All bars the same flat blue — no gold/silver/bronze
         const barColors = lb.map(() => '#40bcf4');
@@ -1823,37 +1880,82 @@ export default function FOTWLandingPage() {
           },
         };
 
+        const activeSeasonName = seasons.find((s) => s._id === selectedSeason)?.name;
+        const displayLabel = selectedSeason && selectedSeason !== 'all' && activeSeasonName 
+          ? activeSeasonName 
+          : 'All Time';
+
         return (
           <>
             <div
-              className="flex items-center justify-between"
-              style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32 }}
+              className="flex items-start justify-between"
+              style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32, paddingBottom: 16 }}
             >
-              <span
-                style={{
-                  color: 'white',
-                  fontSize: 18,
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <Trophy size={16} color="#f5c518" />
-                Leaderboard
-              </span>
+              <div>
+                <span
+                  style={{
+                    color: 'white',
+                    fontSize: 18,
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Trophy size={16} color="#f5c518" />
+                  Leaderboard
+                </span>
+                <div style={{ color: C.dim, fontSize: 13, marginTop: 4 }}>
+                  Showing: {displayLabel}
+                </div>
+              </div>
               <span style={{ color: C.dim, fontSize: 14 }}>{lb.length} members</span>
             </div>
 
-            <div
-              style={{
-                background: '#0f0f0f',
-                border: `1px solid ${C.border}`,
-                borderRadius: '16px',
-                padding: isMobile ? '16px' : '24px',
-                marginTop: 16,
-              }}
-            >
+            <SeasonSelector seasons={seasons} selected={selectedSeason} onChange={handleSeasonChange} />
+
+            {lb.length > 0 ? (
+              <div
+                style={{
+                  background: '#0f0f0f',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: '16px',
+                  padding: isMobile ? '16px' : '24px',
+                  marginTop: 16,
+                  position: 'relative',
+                }}
+              >
+                {leaderboardLoading && (
+                  <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: 'rgba(15, 15, 15, 0.7)',
+                    zIndex: 10,
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'space-around',
+                    borderRadius: '16px',
+                    padding: isMobile ? '16px' : '24px',
+                    paddingBottom: isMobile ? '40px' : '60px',
+                    backdropFilter: 'blur(2px)',
+                  }}
+                >
+                  {Array.from({ length: Math.min(8, lb.length || 8) }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="animate-pulse"
+                      style={{
+                        width: isMobile ? 20 : 28,
+                        height: `${30 + Math.random() * 70}%`,
+                        backgroundColor: '#40bcf4',
+                        opacity: 0.3,
+                        borderRadius: 4,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
               <div
                 style={{
                   width: '100%',
@@ -1871,6 +1973,27 @@ export default function FOTWLandingPage() {
                 </div>
               </div>
             </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 mt-4" style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    backgroundColor: C.border,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    marginBottom: 12,
+                  }}
+                >
+                  <Trophy size={24} color={C.dim} />
+                </div>
+                <span style={{ color: C.muted, fontSize: 14 }}>
+                  {selectedSeason && selectedSeason !== 'all' ? 'No members on the leaderboard for this season yet' : 'No members on the leaderboard yet'}
+                </span>
+              </div>
+            )}
           </>
         );
       })()}
@@ -1881,15 +2004,69 @@ export default function FOTWLandingPage() {
       <>
         <div
           className="flex items-center justify-between"
-          style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32 }}
+          style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32, paddingBottom: 16 }}
         >
-          <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
+          <div className="flex items-center gap-4">
+            <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
+            {archiveLetterboxdUrl && (
+              <a
+                href={archiveLetterboxdUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  background: 'none',
+                  border: '1px solid #1e1e1e',
+                  borderRadius: '999px',
+                  padding: '2px 8px',
+                  color: '#4a5568',
+                  fontSize: '12px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+              >
+                Letterboxd List
+              </a>
+            )}
+          </div>
           {previousFilms.length > 0 && (
             <span style={{ color: C.dim, fontSize: 14 }}>{previousFilms.length} films</span>
           )}
         </div>
 
-        {previousFilms.length > 0 ? (
+        <SeasonSelector seasons={seasons} selected={selectedArchiveSeason} onChange={handleArchiveSeasonChange} />
+
+        {archiveLoading ? (
+          <div
+            className="mt-4"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile
+                ? 'repeat(2, 1fr)'
+                : isTablet
+                  ? 'repeat(3, 1fr)'
+                  : 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: isMobile ? '12px' : '20px',
+            }}
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="animate-pulse"
+                style={{
+                  width: '100%',
+                  aspectRatio: '2/3',
+                  backgroundColor: C.nested,
+                  borderRadius: 12,
+                  border: `1px solid ${C.border}`,
+                }}
+              />
+            ))}
+          </div>
+        ) : previousFilms.length > 0 ? (
           <div
             className="mt-4"
             style={{
@@ -1905,7 +2082,7 @@ export default function FOTWLandingPage() {
             {previousFilms.map((af) => renderFlipCard(af))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 mt-4">
+          <div className="flex flex-col items-center justify-center py-16 mt-4" style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
             <div
               style={{
                 width: 48,
@@ -1920,7 +2097,9 @@ export default function FOTWLandingPage() {
             >
               <Film size={24} color={C.dim} />
             </div>
-            <span style={{ color: C.muted, fontSize: 14 }}>No previous films yet</span>
+            <span style={{ color: C.muted, fontSize: 14 }}>
+              {selectedArchiveSeason && selectedArchiveSeason !== 'all' ? 'No films in this season yet' : 'No previous films yet'}
+            </span>
           </div>
         )}
       </>
@@ -2085,6 +2264,9 @@ export default function FOTWLandingPage() {
               </button>
             </div>
             <div style={{ padding: '20px 24px' }}>
+              <div style={{ marginBottom: 24 }}>
+                <SeasonSelector seasons={seasons} selected={activitySeasonId} onChange={setActivitySeasonId} />
+              </div>
               {myActivityLoading ? (
                 <div style={{ color: C.dim, textAlign: 'center', padding: '40px 0' }}>
                   Loading...
@@ -2231,6 +2413,9 @@ export default function FOTWLandingPage() {
               </button>
             </div>
             <div style={{ padding: '20px 24px' }}>
+              <div style={{ marginBottom: 24 }}>
+                <SeasonSelector seasons={seasons} selected={activitySeasonId} onChange={setActivitySeasonId} />
+              </div>
               {renderActivityBody(userActivity, userActivityLoading)}
             </div>
           </div>
