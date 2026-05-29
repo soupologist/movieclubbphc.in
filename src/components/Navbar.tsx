@@ -132,19 +132,22 @@ export default function Navbar() {
                 </div>
 
                 <hr className="my-2 border-gray-700" />
-                
+
                 <div className="flex flex-col items-start gap-2">
-                  <button 
+                  <button
                     onClick={() => {
                       setDropdownOpen(false);
                       setShowChangeUsername(true);
-                    }} 
+                    }}
                     className="text-gray-300 hover:text-white hover:underline text-sm"
                   >
                     Change Username
                   </button>
 
-                  <button onClick={() => signOut()} className="text-red-400 hover:underline text-sm mt-1">
+                  <button
+                    onClick={() => signOut()}
+                    className="text-red-400 hover:underline text-sm mt-1"
+                  >
                     Sign Out
                   </button>
                 </div>
@@ -221,11 +224,11 @@ export default function Navbar() {
               <p className="truncate">{user?.email}</p>
               <p className="text-gray-400 text-xs">{getRoleLabel()}</p>
               <div className="flex flex-col items-start gap-2 mt-3">
-                <button 
+                <button
                   onClick={() => {
                     setMenuOpen(false);
                     setShowChangeUsername(true);
-                  }} 
+                  }}
                   className="text-gray-300 hover:text-white underline text-xs"
                 >
                   Change Username
@@ -247,9 +250,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      <ChangeUsernameModal 
-        isOpen={showChangeUsername} 
-        onClose={() => setShowChangeUsername(false)} 
+      <ChangeUsernameModal
+        isOpen={showChangeUsername}
+        onClose={() => setShowChangeUsername(false)}
       />
     </>
   );

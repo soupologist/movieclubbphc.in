@@ -3,7 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 
-export default function ChangeUsernameModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function ChangeUsernameModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -20,10 +26,10 @@ export default function ChangeUsernameModal({ isOpen, onClose }: { isOpen: boole
       setSuccessMsg('');
       setIsAvailable(null);
       setIsLoadingInitial(true);
-      
+
       fetch('/api/fotw/onboarding/status')
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           const fetchedUsername = data?.username || '';
           setCurrentUsername(fetchedUsername);
           setUsername(fetchedUsername);
@@ -35,31 +41,34 @@ export default function ChangeUsernameModal({ isOpen, onClose }: { isOpen: boole
     }
   }, [isOpen]);
 
-  const checkAvailability = useCallback(async (name: string) => {
-    // If they type their own current username, it's valid/available
-    if (name === currentUsername) {
-      setIsAvailable(true);
-      setIsChecking(false);
-      return;
-    }
+  const checkAvailability = useCallback(
+    async (name: string) => {
+      // If they type their own current username, it's valid/available
+      if (name === currentUsername) {
+        setIsAvailable(true);
+        setIsChecking(false);
+        return;
+      }
 
-    if (!name || name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
-      setIsAvailable(false);
-      setIsChecking(false);
-      return;
-    }
+      if (!name || name.length < 3 || name.length > 20 || !/^[a-zA-Z0-9_]+$/.test(name)) {
+        setIsAvailable(false);
+        setIsChecking(false);
+        return;
+      }
 
-    try {
-      const res = await fetch(`/api/fotw/onboarding/check?username=${encodeURIComponent(name)}`);
-      const data = await res.json();
-      setIsAvailable(data.available);
-    } catch (err) {
-      console.error(err);
-      setIsAvailable(false);
-    } finally {
-      setIsChecking(false);
-    }
-  }, [currentUsername]);
+      try {
+        const res = await fetch(`/api/fotw/onboarding/check?username=${encodeURIComponent(name)}`);
+        const data = await res.json();
+        setIsAvailable(data.available);
+      } catch (err) {
+        console.error(err);
+        setIsAvailable(false);
+      } finally {
+        setIsChecking(false);
+      }
+    },
+    [currentUsername]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -68,7 +77,7 @@ export default function ChangeUsernameModal({ isOpen, onClose }: { isOpen: boole
       setIsAvailable(null);
       return;
     }
-    
+
     setIsChecking(true);
     setIsAvailable(null);
     const delayDebounceFn = setTimeout(() => {
@@ -128,7 +137,8 @@ export default function ChangeUsernameModal({ isOpen, onClose }: { isOpen: boole
 
         <h2 className="text-2xl font-bold text-white mb-2">Change Username</h2>
         <p className="text-zinc-400 mb-6 text-sm">
-          You can change your username once every 7 days. This will update your display name across the Film of the Week platform.
+          You can change your username once every 7 days. This will update your display name across
+          the Film of the Week platform.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
