@@ -96,7 +96,7 @@ export interface IFOTWUser extends Document {
   lastUsernameChange?: Date;
   image?: string;
   watchedCount: number;
-  seasonWatchedCount?: number;
+  seasonWatchedCount: number;
   excludeFromLeaderboard?: boolean;
   timesSuggested: number;
   filmSuggested?: string;
@@ -121,20 +121,34 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
   { timestamps: true }
 );
 
-// --- FOTWSeason (Stub) ---
+// --- FOTWSeason ---
 export interface IFOTWSeason extends Document {
-  name: string;
+  seasonNumber: number;
   startDate: Date;
-  endDate?: Date;
+  endDate: Date | null;
   isActive: boolean;
+  snapshot: {
+    userEmail: string;
+    username: string;
+    name: string;
+    watchedCount: number;
+  }[];
 }
 
 const FOTWSeasonSchema: Schema<IFOTWSeason> = new Schema(
   {
-    name: { type: String, required: true },
-    startDate: { type: Date, default: Date.now },
-    endDate: { type: Date },
+    seasonNumber: { type: Number, required: true },
+    startDate: { type: Date, default: Date.now, required: true },
+    endDate: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
+    snapshot: [
+      {
+        userEmail: { type: String, required: true },
+        username: { type: String, default: '' },
+        name: { type: String, default: '' },
+        watchedCount: { type: Number, required: true },
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -194,6 +194,7 @@ interface LeaderboardUser {
   name: string;
   image?: string;
   watchedCount: number;
+  seasonWatchedCount: number;
   email: string;
 }
 
@@ -1745,10 +1746,12 @@ export default function FOTWLandingPage() {
       {(() => {
         if (!data || data.leaderboard.length === 0) return null;
 
-        const lb = [...data.leaderboard].sort((a, b) => b.watchedCount - a.watchedCount);
+        const lb = [...data.leaderboard].sort(
+          (a, b) => b.seasonWatchedCount - a.seasonWatchedCount
+        );
 
         const labels = lb.map((u) => u.name.split(' ')[0]); // first name only
-        const lbCounts = lb.map((u) => u.watchedCount);
+        const lbCounts = lb.map((u) => u.seasonWatchedCount);
         const lbMax = Math.max(...lbCounts, 1);
         const avgCount = lbCounts.reduce((a, b) => a + b, 0) / lbCounts.length;
 

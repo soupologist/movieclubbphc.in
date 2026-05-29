@@ -83,8 +83,8 @@ export async function GET(req: Request) {
       $or: [{ watchedCount: { $gt: 0 } }, { seasonWatchedCount: { $gt: 0 } }],
       excludeFromLeaderboard: { $ne: true },
     })
-      .sort({ watchedCount: -1, createdAt: 1 })
-      .select('name username image watchedCount email')
+      .sort({ seasonWatchedCount: -1, createdAt: 1 })
+      .select('name username image watchedCount seasonWatchedCount email')
       .lean();
 
     // Remove email from the public response payload and format name
@@ -93,6 +93,7 @@ export async function GET(req: Request) {
       name: formatDisplayName(u.name, u.username),
       image: u.image,
       watchedCount: u.watchedCount,
+      seasonWatchedCount: u.seasonWatchedCount,
     }));
 
     let userRating = null;
@@ -300,13 +301,13 @@ export async function DELETE(req: Request) {
       )
     );
 
-    // 3. For each unique email, $inc: { watchedCount: -1 } on FOTWUser using bulkWrite.
+    // 3. For each unique email, $inc: { watchedCount: -1, seasonWatchedCount: -1 } on FOTWUser using bulkWrite.
     let watchersAffected = 0;
     if (uniqueEmails.length > 0) {
       const bulkOps = uniqueEmails.map((email) => ({
         updateOne: {
           filter: { email },
-          update: { $inc: { watchedCount: -1 } },
+          update: { $inc: { watchedCount: -1, seasonWatchedCount: -1 } },
         },
       }));
       const userUpdateResult = await FOTWUser.bulkWrite(bulkOps);

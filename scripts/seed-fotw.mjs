@@ -63,6 +63,7 @@ const FOTWUserSchema = new Schema(
     name: String,
     image: String,
     watchedCount: { type: Number, default: 0 },
+    seasonWatchedCount: { type: Number, default: 0 },
     _seeded: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -87,10 +88,10 @@ const FOTWLikeSchema = new Schema({
 });
 FOTWLikeSchema.index({ userEmail: 1, filmId: 1 }, { unique: true });
 
-const FOTWFilm   = models.FOTWFilm   || model('FOTWFilm',   FOTWFilmSchema);
-const FOTWUser   = models.FOTWUser   || model('FOTWUser',   FOTWUserSchema);
+const FOTWFilm = models.FOTWFilm || model('FOTWFilm', FOTWFilmSchema);
+const FOTWUser = models.FOTWUser || model('FOTWUser', FOTWUserSchema);
 const FOTWRating = models.FOTWRating || model('FOTWRating', FOTWRatingSchema);
-const FOTWLike   = models.FOTWLike   || model('FOTWLike',   FOTWLikeSchema);
+const FOTWLike = models.FOTWLike || model('FOTWLike', FOTWLikeSchema);
 
 // ── Seed data ─────────────────────────────────────────────────────────
 
@@ -123,67 +124,69 @@ const FILM_TITLES = [
 ];
 
 const MEMBERS = [
-  ['Arjun Sharma',      'arjun@bits-hyd.ac.in'],
-  ['Priya Nair',        'priya@bits-hyd.ac.in'],
-  ['Rohan Mehta',       'rohan@bits-hyd.ac.in'],
-  ['Sneha Reddy',       'sneha@bits-hyd.ac.in'],
-  ['Vikram Iyer',       'vikram@bits-hyd.ac.in'],
-  ['Ananya Singh',      'ananya@bits-hyd.ac.in'],
-  ['Karthik Rao',       'karthik@bits-hyd.ac.in'],
-  ['Meera Pillai',      'meera@bits-hyd.ac.in'],
-  ['Aditya Kumar',      'aditya@bits-hyd.ac.in'],
-  ['Pooja Verma',       'pooja@bits-hyd.ac.in'],
-  ['Siddharth Das',     'siddharth@bits-hyd.ac.in'],
-  ['Divya Krishnan',    'divya@bits-hyd.ac.in'],
-  ['Rahul Gupta',       'rahul@bits-hyd.ac.in'],
-  ['Neha Joshi',        'neha@bits-hyd.ac.in'],
-  ['Abhishek Patel',    'abhishek@bits-hyd.ac.in'],
-  ['Lakshmi Subramaniam','lakshmi@bits-hyd.ac.in'],
-  ['Tanay Bose',        'tanay@bits-hyd.ac.in'],
-  ['Shreya Agarwal',    'shreya@bits-hyd.ac.in'],
-  ['Nikhil Menon',      'nikhil@bits-hyd.ac.in'],
-  ['Isha Chatterjee',   'isha@bits-hyd.ac.in'],
-  ['Dhruv Malhotra',    'dhruv@bits-hyd.ac.in'],
-  ['Ritika Saxena',     'ritika@bits-hyd.ac.in'],
-  ['Arun Balaji',       'arun@bits-hyd.ac.in'],
-  ['Kavya Nambiar',     'kavya@bits-hyd.ac.in'],
-  ['Parth Desai',       'parth@bits-hyd.ac.in'],
-  ['Swati Bhatt',       'swati@bits-hyd.ac.in'],
-  ['Gaurav Thakur',     'gaurav@bits-hyd.ac.in'],
-  ['Riya Shetty',       'riya@bits-hyd.ac.in'],
-  ['Manav Oberoi',      'manav@bits-hyd.ac.in'],
-  ['Preethi Chandrasekar','preethi@bits-hyd.ac.in'],
-  ['Aarav Shah',        'aarav@bits-hyd.ac.in'],
-  ['Tanya Khanna',      'tanya@bits-hyd.ac.in'],
-  ['Varun Kapoor',      'varun@bits-hyd.ac.in'],
-  ['Ishita Roy',        'ishita@bits-hyd.ac.in'],
-  ['Kabir Bhattacharya','kabir@bits-hyd.ac.in'],
-  ['Zara Mirza',        'zara@bits-hyd.ac.in'],
-  ['Harsh Vardhan',     'harsh@bits-hyd.ac.in'],
-  ['Sakshi Yadav',      'sakshi@bits-hyd.ac.in'],
-  ['Aniket Kulkarni',   'aniket@bits-hyd.ac.in'],
-  ['Nanditha Prasad',   'nanditha@bits-hyd.ac.in'],
-  ['Devansh Tripathi',  'devansh@bits-hyd.ac.in'],
-  ['Shalini Mishra',    'shalini@bits-hyd.ac.in'],
-  ['Roopesh Nair',      'roopesh@bits-hyd.ac.in'],
-  ['Amrita Balu',       'amrita@bits-hyd.ac.in'],
-  ['Krunal Pandya',     'krunal@bits-hyd.ac.in'],
-  ['Vaishnavi Iyer',    'vaishnavi@bits-hyd.ac.in'],
-  ['Tarun Ghosh',       'tarun@bits-hyd.ac.in'],
-  ['Leela Suresh',      'leela@bits-hyd.ac.in'],
-  ['Mihir Jain',        'mihir@bits-hyd.ac.in'],
-  ['Parveen Akhtar',    'parveen@bits-hyd.ac.in'],
-  ['Chandana Mohan',    'chandana@bits-hyd.ac.in'],
-  ['Suraj Venkataraman','suraj@bits-hyd.ac.in'],
-  ['Ankita Bose',       'ankita@bits-hyd.ac.in'],
-  ['Yash Singhania',    'yash@bits-hyd.ac.in'],
-  ['Bharati Kesavan',   'bharati@bits-hyd.ac.in'],
-  ['Omkar Patil',       'omkar@bits-hyd.ac.in'],
+  ['Arjun Sharma', 'arjun@bits-hyd.ac.in'],
+  ['Priya Nair', 'priya@bits-hyd.ac.in'],
+  ['Rohan Mehta', 'rohan@bits-hyd.ac.in'],
+  ['Sneha Reddy', 'sneha@bits-hyd.ac.in'],
+  ['Vikram Iyer', 'vikram@bits-hyd.ac.in'],
+  ['Ananya Singh', 'ananya@bits-hyd.ac.in'],
+  ['Karthik Rao', 'karthik@bits-hyd.ac.in'],
+  ['Meera Pillai', 'meera@bits-hyd.ac.in'],
+  ['Aditya Kumar', 'aditya@bits-hyd.ac.in'],
+  ['Pooja Verma', 'pooja@bits-hyd.ac.in'],
+  ['Siddharth Das', 'siddharth@bits-hyd.ac.in'],
+  ['Divya Krishnan', 'divya@bits-hyd.ac.in'],
+  ['Rahul Gupta', 'rahul@bits-hyd.ac.in'],
+  ['Neha Joshi', 'neha@bits-hyd.ac.in'],
+  ['Abhishek Patel', 'abhishek@bits-hyd.ac.in'],
+  ['Lakshmi Subramaniam', 'lakshmi@bits-hyd.ac.in'],
+  ['Tanay Bose', 'tanay@bits-hyd.ac.in'],
+  ['Shreya Agarwal', 'shreya@bits-hyd.ac.in'],
+  ['Nikhil Menon', 'nikhil@bits-hyd.ac.in'],
+  ['Isha Chatterjee', 'isha@bits-hyd.ac.in'],
+  ['Dhruv Malhotra', 'dhruv@bits-hyd.ac.in'],
+  ['Ritika Saxena', 'ritika@bits-hyd.ac.in'],
+  ['Arun Balaji', 'arun@bits-hyd.ac.in'],
+  ['Kavya Nambiar', 'kavya@bits-hyd.ac.in'],
+  ['Parth Desai', 'parth@bits-hyd.ac.in'],
+  ['Swati Bhatt', 'swati@bits-hyd.ac.in'],
+  ['Gaurav Thakur', 'gaurav@bits-hyd.ac.in'],
+  ['Riya Shetty', 'riya@bits-hyd.ac.in'],
+  ['Manav Oberoi', 'manav@bits-hyd.ac.in'],
+  ['Preethi Chandrasekar', 'preethi@bits-hyd.ac.in'],
+  ['Aarav Shah', 'aarav@bits-hyd.ac.in'],
+  ['Tanya Khanna', 'tanya@bits-hyd.ac.in'],
+  ['Varun Kapoor', 'varun@bits-hyd.ac.in'],
+  ['Ishita Roy', 'ishita@bits-hyd.ac.in'],
+  ['Kabir Bhattacharya', 'kabir@bits-hyd.ac.in'],
+  ['Zara Mirza', 'zara@bits-hyd.ac.in'],
+  ['Harsh Vardhan', 'harsh@bits-hyd.ac.in'],
+  ['Sakshi Yadav', 'sakshi@bits-hyd.ac.in'],
+  ['Aniket Kulkarni', 'aniket@bits-hyd.ac.in'],
+  ['Nanditha Prasad', 'nanditha@bits-hyd.ac.in'],
+  ['Devansh Tripathi', 'devansh@bits-hyd.ac.in'],
+  ['Shalini Mishra', 'shalini@bits-hyd.ac.in'],
+  ['Roopesh Nair', 'roopesh@bits-hyd.ac.in'],
+  ['Amrita Balu', 'amrita@bits-hyd.ac.in'],
+  ['Krunal Pandya', 'krunal@bits-hyd.ac.in'],
+  ['Vaishnavi Iyer', 'vaishnavi@bits-hyd.ac.in'],
+  ['Tarun Ghosh', 'tarun@bits-hyd.ac.in'],
+  ['Leela Suresh', 'leela@bits-hyd.ac.in'],
+  ['Mihir Jain', 'mihir@bits-hyd.ac.in'],
+  ['Parveen Akhtar', 'parveen@bits-hyd.ac.in'],
+  ['Chandana Mohan', 'chandana@bits-hyd.ac.in'],
+  ['Suraj Venkataraman', 'suraj@bits-hyd.ac.in'],
+  ['Ankita Bose', 'ankita@bits-hyd.ac.in'],
+  ['Yash Singhania', 'yash@bits-hyd.ac.in'],
+  ['Bharati Kesavan', 'bharati@bits-hyd.ac.in'],
+  ['Omkar Patil', 'omkar@bits-hyd.ac.in'],
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 function shuffle(arr) {
   const a = [...arr];
@@ -194,7 +197,9 @@ function shuffle(arr) {
   return a;
 }
 
-function sample(arr, n) { return shuffle(arr).slice(0, n); }
+function sample(arr, n) {
+  return shuffle(arr).slice(0, n);
+}
 
 /** Realistic half-star rating biased towards 3-4.5 */
 function randRating() {
@@ -220,7 +225,16 @@ async function seed() {
     MEMBERS.map(([name, email]) =>
       FOTWUser.findOneAndUpdate(
         { email },
-        { $setOnInsert: { email, name, image: null, watchedCount: 0, _seeded: true } },
+        {
+          $setOnInsert: {
+            email,
+            name,
+            image: null,
+            watchedCount: 0,
+            seasonWatchedCount: 0,
+            _seeded: true,
+          },
+        },
         { upsert: true, new: true }
       )
     )
@@ -256,9 +270,12 @@ async function seed() {
     let retries = 3;
     while (retries > 0) {
       try {
-        const tmdbRes = await fetch(`https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(queryTitle)}&api_key=${envVars['NEXT_PUBLIC_TMDB_API_KEY']}`, {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        const tmdbRes = await fetch(
+          `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(queryTitle)}&api_key=${envVars['NEXT_PUBLIC_TMDB_API_KEY']}`,
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
         if (!tmdbRes.ok) throw new Error(`Status ${tmdbRes.status}`);
         tmdbData = await tmdbRes.json();
         break;
@@ -269,9 +286,12 @@ async function seed() {
       }
     }
     const movie = tmdbData.results[0];
-    
+
     const title = movie ? movie.title : queryTitle;
-    const posterUrl = movie && movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster';
+    const posterUrl =
+      movie && movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : 'https://via.placeholder.com/500x750?text=No+Poster';
 
     // Pick random watchers: 60-100% of club attended
     const watcherCount = Math.floor(MEMBERS.length * (0.6 + Math.random() * 0.4));
@@ -320,7 +340,9 @@ async function seed() {
           { upsert: true }
         );
         ratingCount++;
-      } catch (_) { /* duplicate — skip */ }
+      } catch (_) {
+        /* duplicate — skip */
+      }
     }
   }
   console.log(`   ✓ ${ratingCount} ratings\n`);
@@ -335,11 +357,20 @@ async function seed() {
       try {
         await FOTWLike.findOneAndUpdate(
           { userEmail: email, filmId: film._id },
-          { $setOnInsert: { userEmail: email, filmId: film._id, _seeded: true, createdAt: randDate(new Date(film.createdAt)) } },
+          {
+            $setOnInsert: {
+              userEmail: email,
+              filmId: film._id,
+              _seeded: true,
+              createdAt: randDate(new Date(film.createdAt)),
+            },
+          },
           { upsert: true }
         );
         likeCount++;
-      } catch (_) { /* duplicate — skip */ }
+      } catch (_) {
+        /* duplicate — skip */
+      }
     }
   }
   console.log(`   ✓ ${likeCount} likes\n`);
@@ -348,7 +379,10 @@ async function seed() {
   console.log('📊 Recomputing watchedCount per user...');
   for (const [, email] of MEMBERS) {
     const count = await FOTWFilm.countDocuments({ 'watchedBy.userEmail': email });
-    await FOTWUser.updateOne({ email }, { $set: { watchedCount: count } });
+    await FOTWUser.updateOne(
+      { email },
+      { $set: { watchedCount: count, seasonWatchedCount: count } }
+    );
   }
   console.log('   ✓ watchedCount synced\n');
 

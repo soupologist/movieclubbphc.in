@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       { email: session.user.email },
       {
         $set: { name: session.user.name, image: session.user.image },
-        $inc: { watchedCount: 1 },
+        $inc: { watchedCount: 1, seasonWatchedCount: 1 },
       },
       { upsert: true, new: true }
     );
@@ -110,7 +110,7 @@ export async function DELETE(req: Request) {
       { email: session.user.email },
       {
         $set: { name: session.user.name, image: session.user.image },
-        $inc: { watchedCount: -1 },
+        $inc: { watchedCount: -1, seasonWatchedCount: -1 },
       },
       { new: true }
     );
