@@ -8,15 +8,16 @@ import { Parser } from 'json2csv';
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email || !FOTW_ADMINS.includes(session.user.email)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
     const format = searchParams.get('format') || 'csv';
-
-    await dbConnect();
 
     // Fetch data concurrently
     const [filmsRaw, ratingsRaw, usersRaw, likesRaw, seasonsRaw] = await Promise.all([

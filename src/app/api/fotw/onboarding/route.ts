@@ -14,12 +14,15 @@ const isValidUsername = (username: string) => {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      request.json().catch(() => ({})),
+    ]);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { username } = await request.json();
+    const { username } = body;
 
     if (!username || !isValidUsername(username)) {
       return NextResponse.json(
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
     // Check availability
     const existingUser = await FOTWUser.findOne({
       username: { $regex: new RegExp(`^${username}$`, 'i') },
-    });
+    }).lean();
     if (existingUser && existingUser.email !== session.user.email) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 409 });
     }
@@ -62,12 +65,15 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      request.json().catch(() => ({})),
+    ]);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { username } = await request.json();
+    const { username } = body;
 
     if (!username || !isValidUsername(username)) {
       return NextResponse.json({ error: 'Invalid username format' }, { status: 400 });
@@ -95,7 +101,7 @@ export async function PATCH(request: Request) {
     // Check availability
     const existingUser = await FOTWUser.findOne({
       username: { $regex: new RegExp(`^${username}$`, 'i') },
-    });
+    }).lean();
     if (existingUser && existingUser.email !== session.user.email) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 409 });
     }

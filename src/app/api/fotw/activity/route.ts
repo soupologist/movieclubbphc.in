@@ -8,12 +8,13 @@ import { authOptions } from '@/lib/auth';
 // GET: Fetch the current user's activity across all films
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
-
-    await dbConnect();
 
     // Get all user's ratings
     const ratings = await FOTWRating.find({ userEmail: session.user.email })

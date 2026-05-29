@@ -8,20 +8,23 @@ import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      req.json().catch(() => ({})),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const { filmId, rating } = await req.json();
+    const { filmId, rating } = body;
 
     if (rating < 0.5 || rating > 5) {
       return NextResponse.json({ message: 'Invalid rating' }, { status: 400 });
     }
 
     // Ensure film exists
-    const film = await FOTWFilm.findById(filmId);
+    const film = await FOTWFilm.findById(filmId).lean();
     if (!film) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
@@ -47,26 +50,19 @@ export async function POST(req: Request) {
 
     // Check if already rated — if so, update; otherwise create.
     // The compound unique index (userEmail + filmId) prevents duplicates at DB level.
-    const existingRating = await FOTWRating.findOne({
-      userEmail: session.user.email,
-      filmId,
-    });
-
-    if (existingRating) {
-      existingRating.rating = rating;
-      await existingRating.save();
-    } else {
-      // Leaderboard score is NOT affected by rating, only by watching.
-      await FOTWRating.create({ userEmail: session.user.email, filmId, rating });
-    }
-
-    // Keep name/image in sync — user must already exist (they watched to reach here),
-    // so upsert: false avoids accidentally creating orphan records.
-    await FOTWUser.findOneAndUpdate(
-      { email: session.user.email },
-      { $set: { name: session.user.name, image: session.user.image } },
-      { upsert: false }
-    );
+    // We run the rating upsert and user name/image sync concurrently.
+    const [existingRating] = await Promise.all([
+      FOTWRating.findOneAndUpdate(
+        { userEmail: session.user.email, filmId },
+        { $set: { rating } },
+        { upsert: true, new: false }
+      ),
+      FOTWUser.findOneAndUpdate(
+        { email: session.user.email },
+        { $set: { name: session.user.name, image: session.user.image } },
+        { upsert: false }
+      ),
+    ]);
 
     return NextResponse.json({ success: true, updated: !!existingRating });
   } catch (error) {

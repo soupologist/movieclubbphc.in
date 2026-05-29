@@ -11,23 +11,28 @@ import { authOptions } from '@/lib/auth';
 // Performs exactly 4 DB queries total regardless of how many films or ratings exist.
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
+    // Fetch all films sorted by createdAt
+    const films = await FOTWFilm.find({}).sort({ createdAt: -1 }).lean();
 
-    // Identify the current film the same way GET /api/fotw/data does —
-    // newest document with lockedAt: null. We exclude it from the archive
-    // by _id so that old films (which may also have lockedAt: null because
-    // they predate the auto-lock system) still appear in the archive.
-    const currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
+    // Identify the current film (newest document with lockedAt: null)
+    // and separate it from the archive list.
+    let currentFilm = null;
+    let archiveFilms = films;
+    const unlockedIndex = films.findIndex((f) => f.lockedAt === null);
+    if (unlockedIndex !== -1) {
+      currentFilm = films[unlockedIndex];
+      archiveFilms = films.filter((_, idx) => idx !== unlockedIndex);
+    }
 
-    const archiveQuery = currentFilm ? { _id: { $ne: currentFilm._id } } : {};
-    const films = await FOTWFilm.find(archiveQuery).sort({ createdAt: -1 }).lean();
-
-    const filmIds = films.map((f) => f._id);
+    const filmIds = archiveFilms.map((f) => f._id);
 
     // 2. Bulk-fetch ALL ratings, ALL users, and ALL likes in 3 parallel queries.
     //    No per-film or per-rating sub-queries — everything resolved in memory.
@@ -47,7 +52,7 @@ export async function GET() {
     };
 
     // 4. Assemble per-film stats in memory — zero additional DB queries
-    const result = films.map((film) => {
+    const result = archiveFilms.map((film) => {
       const filmIdStr = film._id.toString();
 
       const filmRatings = (allRatings as any[]).filter((r) => r.filmId.toString() === filmIdStr);

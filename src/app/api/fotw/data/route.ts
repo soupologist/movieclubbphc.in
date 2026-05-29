@@ -40,12 +40,14 @@ const parseAdminDate = (value: unknown): Date | null => {
 // GET: Fetch current film, leaderboard, and user's rating status
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
+
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
-
-    await dbConnect();
 
     // Promises that can run in parallel early on
     const currentFilmPromise = FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
@@ -57,7 +59,7 @@ export async function GET(req: Request) {
       excludeFromLeaderboard: { $ne: true },
     })
       .sort({ seasonWatchedCount: -1, createdAt: 1 })
-      .select('name username image watchedCount seasonWatchedCount currentStreak longestStreak')
+      .select('email username name seasonWatchedCount watchedCount currentStreak longestStreak excludeFromLeaderboard image')
       .lean();
 
     const [currentFilmRaw, leaderboardRaw] = await Promise.all([
@@ -67,46 +69,20 @@ export async function GET(req: Request) {
 
     let currentFilm = currentFilmRaw as any;
 
-    if (currentFilm) {
+    // Auto-lock if the timer duration has passed and timer is not paused
+    if (currentFilm && !currentFilm.timerPaused) {
       // Ensure backwards compatibility by attaching a timerDuration explicitly
       const fallbackMs = currentFilm.timerDurationDays
         ? currentFilm.timerDurationDays * 86400000
         : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
 
-      // Update chosenBy formatted
-      if (currentFilm.chosenByEmail) {
-        const chooser = await FOTWUser.findOne({ email: currentFilm.chosenByEmail })
-          .select('name username')
-          .lean();
-        if (chooser) {
-          currentFilm.chosenBy = formatDisplayName(
-            (chooser as any).name,
-            (chooser as any).username
-          );
-        }
-      }
-    }
-
-    // Auto-lock if the timer duration has passed and timer is not paused
-    if (currentFilm && !currentFilm.timerPaused) {
       const deadline = new Date(currentFilm.createdAt).getTime() + currentFilm.timerDuration;
       if (Date.now() > deadline) {
         await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
         currentFilm = null;
       }
     }
-
-    // Remove email from the public response payload and format name
-    const leaderboard = (leaderboardRaw as any[]).map((u) => ({
-      _id: u._id,
-      name: formatDisplayName(u.name, u.username),
-      image: u.image,
-      watchedCount: u.watchedCount,
-      seasonWatchedCount: u.seasonWatchedCount,
-      currentStreak: u.currentStreak || 0,
-      longestStreak: u.longestStreak || 0,
-    }));
 
     let userRating = null;
     let isAdmin = FOTW_ADMINS.includes(session.user.email);
@@ -118,12 +94,27 @@ export async function GET(req: Request) {
     let likesCount = 0;
 
     if (currentFilm) {
-      const [rating, ratings, likeDoc, likesTotal] = await Promise.all([
+      const fallbackMs = currentFilm.timerDurationDays
+        ? currentFilm.timerDurationDays * 86400000
+        : 7 * 86400000;
+      currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
+
+      const [chooser, rating, ratings, likeDoc, likesTotal] = await Promise.all([
+        currentFilm.chosenByEmail
+          ? FOTWUser.findOne({ email: currentFilm.chosenByEmail }).select('name username').lean()
+          : Promise.resolve(null),
         FOTWRating.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
         FOTWRating.find({ filmId: currentFilm._id }).sort({ createdAt: -1 }).lean(),
         FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
         FOTWLike.countDocuments({ filmId: currentFilm._id }),
       ]);
+
+      if (chooser) {
+        currentFilm.chosenBy = formatDisplayName(
+          (chooser as any).name,
+          (chooser as any).username
+        );
+      }
 
       if (rating) {
         userRating = (rating as any).rating;
@@ -162,6 +153,17 @@ export async function GET(req: Request) {
       userLiked = !!likeDoc;
       likesCount = likesTotal;
     }
+
+    // Remove email from the public response payload and format name
+    const leaderboard = (leaderboardRaw as any[]).map((u) => ({
+      _id: u._id,
+      name: formatDisplayName(u.name, u.username),
+      image: u.image,
+      watchedCount: u.watchedCount,
+      seasonWatchedCount: u.seasonWatchedCount,
+      currentStreak: u.currentStreak || 0,
+      longestStreak: u.longestStreak || 0,
+    }));
 
     return NextResponse.json({
       currentFilm,

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     // Check if taken (case-insensitive search typically requires regex in standard mongoose
     // without collation, but we can just use exact for now or ignore case).
     // Let's use exact match or case-insensitive via regex:
-    const user = await FOTWUser.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    const user = await FOTWUser.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } }).lean();
 
     if (user) {
       // If it's taken, but it's the CURRENT user's username, they technically can use it / have it

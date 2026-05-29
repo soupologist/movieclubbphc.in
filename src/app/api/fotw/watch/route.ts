@@ -9,14 +9,17 @@ import { authOptions } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      req.json().catch(() => ({})),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       console.error('Watch API failed: Unauthorized');
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const { filmId } = await req.json();
+    const { filmId } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
@@ -51,13 +54,14 @@ export async function POST(req: Request) {
     }
 
     // Increment watchedCount exactly once per unique watch. (safe to do since atomic update succeeded)
-    const user = await FOTWUser.findOne({ email: session.user.email });
+    const user = await FOTWUser.findOne({ email: session.user.email }).lean();
 
     const currentFilmAnchor = result.dateSuggested || result.createdAt;
 
     const previousFilm = await FOTWFilm.findOne({ lockedAt: { $ne: null } })
       .sort({ lockedAt: -1 })
-      .select('dateSuggested createdAt lockedAt');
+      .select('dateSuggested createdAt lockedAt')
+      .lean();
 
     let newCurrentStreak = user?.currentStreak || 0;
 
@@ -102,14 +106,17 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      req.json().catch(() => ({})),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       console.error('Watch API DELETE failed: Unauthorized');
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const { filmId } = await req.json();
+    const { filmId } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
@@ -139,7 +146,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: true, notWatched: true });
     }
 
-    const user = await FOTWUser.findOne({ email: session.user.email });
+    const user = await FOTWUser.findOne({ email: session.user.email }).lean();
     const currentStreak = Math.max(0, (user?.currentStreak || 0) - 1);
 
     await FOTWUser.findOneAndUpdate(

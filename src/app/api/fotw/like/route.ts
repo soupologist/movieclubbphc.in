@@ -9,13 +9,16 @@ import { authOptions } from '@/lib/auth';
 // POST: Like a film (idempotent)
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      req.json().catch(() => ({})),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const { filmId } = await req.json();
+    const { filmId } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });
@@ -33,19 +36,18 @@ export async function POST(req: Request) {
       );
     }
 
-    await FOTWLike.findOneAndUpdate(
-      { userEmail: session.user.email, filmId },
-      { userEmail: session.user.email, filmId },
-      { upsert: true, new: true }
-    );
-
-    // Keep name/image in sync. upsert: false — only update if the user already exists
-    // (they must have watched at least once to appear on the leaderboard).
-    await FOTWUser.findOneAndUpdate(
-      { email: session.user.email },
-      { $set: { name: session.user.name, image: session.user.image } },
-      { upsert: false }
-    );
+    await Promise.all([
+      FOTWLike.findOneAndUpdate(
+        { userEmail: session.user.email, filmId },
+        { userEmail: session.user.email, filmId },
+        { upsert: true, new: true }
+      ),
+      FOTWUser.findOneAndUpdate(
+        { email: session.user.email },
+        { $set: { name: session.user.name, image: session.user.image } },
+        { upsert: false }
+      ),
+    ]);
 
     return NextResponse.json({ liked: true });
   } catch (error) {
@@ -57,13 +59,16 @@ export async function POST(req: Request) {
 // DELETE: Unlike a film
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      req.json().catch(() => ({})),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const { filmId } = await req.json();
+    const { filmId } = body;
 
     if (!filmId) {
       return NextResponse.json({ message: 'Film ID is required' }, { status: 400 });

@@ -6,14 +6,16 @@ import { FOTWUser } from '@/lib/fotw/schemas';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-
-    const user = await FOTWUser.findOne({ email: session.user.email });
+    const user = await FOTWUser.findOne({ email: session.user.email }).lean();
 
     if (!user) {
       return NextResponse.json({ hasCompletedOnboarding: false, username: null });

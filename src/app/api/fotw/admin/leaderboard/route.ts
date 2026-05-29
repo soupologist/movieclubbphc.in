@@ -8,12 +8,14 @@ import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email || !FOTW_ADMINS.includes(session.user.email)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
-    await dbConnect();
     await syncTimesSuggestedFromFilms();
 
     // Includes email field, accessible only to admins

@@ -41,6 +41,9 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
   { timestamps: true }
 );
 
+FOTWFilmSchema.index({ lockedAt: 1 });
+
+
 // --- FOTWLike ---
 export interface IFOTWLike extends Document {
   userEmail: string;
@@ -55,6 +58,8 @@ const FOTWLikeSchema = new Schema<IFOTWLike>({
 });
 
 FOTWLikeSchema.index({ userEmail: 1, filmId: 1 }, { unique: true });
+FOTWLikeSchema.index({ filmId: 1 });
+
 
 // --- FOTWRating ---
 export interface IFOTWRating extends Document {
@@ -72,7 +77,9 @@ const FOTWRatingSchema: Schema<IFOTWRating> = new Schema(
   { timestamps: true }
 );
 
-FOTWRatingSchema.index({ userEmail: 1, filmId: 1 }, { unique: true });
+FOTWRatingSchema.index({ filmId: 1, userEmail: 1 }, { unique: true });
+FOTWRatingSchema.index({ userEmail: 1 });
+
 
 // --- FOTWRules ---
 export interface IFOTWRules extends Document {
@@ -126,6 +133,9 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
   },
   { timestamps: true }
 );
+
+FOTWUserSchema.index({ seasonWatchedCount: -1 });
+
 
 // --- FOTWSeason ---
 export interface IFOTWSeason extends Document {

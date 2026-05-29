@@ -11,7 +11,10 @@ import { formatDisplayName } from '@/lib/fotw/utils';
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, _] = await Promise.all([
+      getServerSession(authOptions),
+      dbConnect(),
+    ]);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -23,8 +26,6 @@ export async function GET(req: Request) {
     if (!emailParam && !userIdParam) {
       return NextResponse.json({ message: 'Missing email or userId param' }, { status: 400 });
     }
-
-    await dbConnect();
 
     // Securely resolve the target user's email
     let targetEmail = emailParam;

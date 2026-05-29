@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     query.status = 'released';
   }
 
-  const films = await FilmModel.find(query).sort({ date: -1 });
+  const films = await FilmModel.find(query).sort({ date: -1 }).lean();
   return NextResponse.json(films);
 }
 export async function POST(req: Request) {
