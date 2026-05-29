@@ -18,15 +18,35 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const format = searchParams.get('format') || 'csv';
+    const seasonIdsParam = searchParams.get('seasonId');
 
-    // Fetch data concurrently
-    const [filmsRaw, ratingsRaw, usersRaw, likesRaw, seasonsRaw] = await Promise.all([
-      FOTWFilm.find().sort({ createdAt: 1 }).lean(),
+    // Fetch non-film data concurrently
+    const [ratingsRaw, usersRaw, likesRaw, seasonsRaw] = await Promise.all([
       FOTWRating.find().lean(),
       FOTWUser.find().lean(),
       FOTWLike.find().lean(),
       FOTWSeason.find().lean()
     ]);
+
+    let filmsQuery: any = {};
+    if (seasonIdsParam && seasonIdsParam !== 'all') {
+      const ids = seasonIdsParam.split(',');
+      const selectedSeasons = seasonsRaw.filter((s: any) => ids.includes(s._id.toString()));
+      if (selectedSeasons.length > 0) {
+        const orConditions = selectedSeasons.map((s: any) => ({
+          dateSuggested: {
+            $ne: null,
+            $gte: s.startDate,
+            ...(s.endDate ? { $lte: s.endDate } : {})
+          }
+        }));
+        filmsQuery = { $or: orConditions };
+      } else {
+        filmsQuery = { _id: null };
+      }
+    }
+
+    const filmsRaw = await FOTWFilm.find(filmsQuery).sort({ createdAt: 1 }).lean();
 
     if (format === 'json') {
       return NextResponse.json({ users: usersRaw, films: filmsRaw, ratings: ratingsRaw, likes: likesRaw, seasons: seasonsRaw });

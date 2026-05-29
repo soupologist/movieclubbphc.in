@@ -198,6 +198,40 @@ export default function AdminDashboard() {
 
   const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
 
+  // Export Modal State
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportSeasons, setExportSeasons] = useState<any[]>([]);
+  const [exportLoadingSeasons, setExportLoadingSeasons] = useState(false);
+  const [selectedExportSeasons, setSelectedExportSeasons] = useState<string[]>(['all']);
+
+  const openExportModal = async () => {
+    setExportModalOpen(true);
+    setExportLoadingSeasons(true);
+    try {
+      const res = await fetch('/api/fotw/admin/seasons');
+      const data = await res.json();
+      if (res.ok) {
+        setExportSeasons(data.seasons || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setExportLoadingSeasons(false);
+    }
+  };
+
+  const getExportUrl = (format: 'csv' | 'json') => {
+    const url = new URL(window.location.origin + '/api/fotw/admin/export');
+    url.searchParams.set('format', format);
+    if (!selectedExportSeasons.includes('all') && selectedExportSeasons.length > 0) {
+      url.searchParams.set('seasonId', selectedExportSeasons.join(','));
+    } else {
+      url.searchParams.set('seasonId', 'all');
+    }
+    return url.toString();
+  };
+
+
   // Single Bulk CSV Import State
 
   const downloadSampleCSV = () => {
@@ -909,39 +943,22 @@ Bob,bob@example.com,0,0,,,,0,0,,
           </h1>
         </div>
 
-        {/* ── Export Data Dropdown ────────────────────────────── */}
+        {/* ── Export Data Button ────────────────────────────── */}
         <div className="relative">
-          <div className="group inline-block">
-            <button
-              className="flex items-center gap-2 px-4 py-2 hover:bg-[#1a1a1a] transition-colors focus:outline-none"
-              style={{
-                backgroundColor: C.card,
-                border: `1px solid ${C.border}`,
-                borderRadius: 8,
-                color: 'white',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              Export Data <ChevronDown size={14} />
-            </button>
-            <div className="absolute right-0 mt-2 w-48 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              <a
-                href="/api/fotw/admin/export?format=csv"
-                className="block px-4 py-3 text-sm text-white hover:bg-[#1a1a1a] rounded-t-lg transition-colors border-b border-[#1e1e1e]"
-              >
-                Export as CSV
-              </a>
-              <a
-                href="/api/fotw/admin/export?format=json"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block px-4 py-3 text-sm text-white hover:bg-[#1a1a1a] rounded-b-lg transition-colors"
-              >
-                Export as JSON
-              </a>
-            </div>
-          </div>
+          <button
+            onClick={openExportModal}
+            className="flex items-center gap-2 px-4 py-2 hover:bg-[#1a1a1a] transition-colors focus:outline-none"
+            style={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              color: 'white',
+              fontSize: 14,
+              fontWeight: 500,
+            }}
+          >
+            Export Data <Upload size={14} />
+          </button>
         </div>
       </div>
 
@@ -1924,6 +1941,86 @@ Bob,bob@example.com,0,0,,,,0,0,,
       </section>
 
 
+      {/* Export Modal */}
+      {exportModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, width: '100%', maxWidth: 440, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: 0 }}>
+                Export Data
+              </h3>
+              <button onClick={() => setExportModalOpen(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', padding: 0 }} className="hover:text-white">
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: 20 }}>
+              <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>
+                Select the seasons you want to include in the export.
+              </p>
+              
+              {exportLoadingSeasons ? (
+                <div style={{ color: C.dim, textAlign: 'center', padding: '20px 0' }}>Loading seasons...</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, maxHeight: 200, overflowY: 'auto' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedExportSeasons.includes('all')}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedExportSeasons(['all']);
+                        else setSelectedExportSeasons([]);
+                      }}
+                      style={{ accentColor: C.green, width: 16, height: 16 }}
+                    />
+                    <span style={{ color: 'white', fontSize: 14 }}>All Seasons</span>
+                  </label>
+                  {exportSeasons.map(s => (
+                    <label key={s._id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedExportSeasons.includes(s._id) && !selectedExportSeasons.includes('all')}
+                        onChange={(e) => {
+                          let newSelected = selectedExportSeasons.filter(id => id !== 'all');
+                          if (e.target.checked) {
+                            newSelected.push(s._id);
+                          } else {
+                            newSelected = newSelected.filter(id => id !== s._id);
+                          }
+                          setSelectedExportSeasons(newSelected);
+                        }}
+                        style={{ accentColor: C.green, width: 16, height: 16 }}
+                      />
+                      <span style={{ color: selectedExportSeasons.includes('all') ? C.dim : 'white', fontSize: 14 }}>
+                        {s.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <a
+                  href={getExportUrl('csv')}
+                  onClick={() => setExportModalOpen(false)}
+                  style={{ backgroundColor: C.input, border: `1px solid ${C.border}`, color: 'white', fontSize: 14, fontWeight: 500, padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}
+                  className="hover:bg-[#1a1a1a]"
+                >
+                  Export CSV
+                </a>
+                <a
+                  href={getExportUrl('json')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setExportModalOpen(false)}
+                  style={{ backgroundColor: 'white', color: 'black', fontSize: 14, fontWeight: 600, padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}
+                >
+                  Export JSON
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
