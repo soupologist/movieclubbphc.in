@@ -6,6 +6,7 @@ import { FOTWFilm } from '@/lib/fotw/schemas';
 import { FOTWRating } from '@/lib/fotw/schemas';
 import { instrumentSerif } from '@/app/fonts';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
+import { formatDisplayName } from '@/lib/fotw/utils';
 
 export const metadata: Metadata = {
   title: 'Film of the Week Stats',
@@ -43,6 +44,31 @@ const formatDateDDMMYYYY = (value: unknown) => {
   }).format(date);
 };
 
+const getLanguageFromTmdb = async (tmdbUrl: string) => {
+  const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
+  if (!tmdbUrl || !apiKey) return '-';
+  const match = tmdbUrl.match(/\/movie\/(\d+)/);
+  if (!match) return '-';
+  const tmdbId = match[1];
+
+  try {
+    const res = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}`);
+    if (!res.ok) return '-';
+    const data = await res.json();
+    if (data.original_language) {
+      try {
+        const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
+        return languageNames.of(data.original_language) || data.original_language;
+      } catch {
+        return data.original_language.toUpperCase();
+      }
+    }
+    return '-';
+  } catch {
+    return '-';
+  }
+};
+
 export default async function FOTWAdminStatsPage({
   searchParams,
 }: {
@@ -59,10 +85,10 @@ export default async function FOTWAdminStatsPage({
 
   const [users, archivedFilms, ratings, currentFilm] = await Promise.all([
     FOTWUser.find({})
-      .select('name email watchedCount timesSuggested filmSuggested whenSuggested')
+      .select('name username email watchedCount timesSuggested filmSuggested whenSuggested')
       .lean(),
     FOTWFilm.find({ lockedAt: { $ne: null } })
-      .select('title watchedBy chosenBy chosenByEmail createdAt dateSuggested')
+      .select('title watchedBy chosenBy chosenByEmail createdAt dateSuggested tmdbUrl')
       .sort({ createdAt: -1 })
       .lean(),
     FOTWRating.find({}).select('filmId rating').lean(),
@@ -113,17 +139,21 @@ export default async function FOTWAdminStatsPage({
     }
   }
 
-  const filmsWithStats = (archivedFilms as any[])
-    .map((film) => {
+  const filmsWithStatsUnsorted = await Promise.all(
+    (archivedFilms as any[]).map(async (film) => {
       const filmRatings = ratingsByFilm.get(String(film._id)) || [];
       const avgRating =
         filmRatings.length > 0
           ? Number((filmRatings.reduce((acc, v) => acc + v, 0) / filmRatings.length).toFixed(2))
           : null;
+      let language = '-';
+      if (film.tmdbUrl) {
+        language = await getLanguageFromTmdb(film.tmdbUrl);
+      }
       return {
         id: String(film._id),
         title: film.title || 'Untitled',
-        chosenBy: film.chosenBy || 'Unknown',
+        chosenBy: formatDisplayName(film.chosenBy || 'Unknown', film.chosenByEmail ? undefined : undefined),
         dateSuggested:
           film.dateSuggested ||
           userSuggestedDateByFilm.get(normalizeTitle(film.title || '')) ||
@@ -131,17 +161,20 @@ export default async function FOTWAdminStatsPage({
         watchCount: Array.isArray(film.watchedBy) ? film.watchedBy.length : 0,
         ratingsCount: filmRatings.length,
         avgRating,
+        language,
       };
     })
-    .sort((a, b) => {
-      const dir = sortOrder === 'asc' ? 1 : -1;
-      if (sortKey === 'watches') return dir * (a.watchCount - b.watchCount);
-      if (sortKey === 'avg') return dir * ((a.avgRating ?? -1) - (b.avgRating ?? -1));
+  );
 
-      const aDate = a.dateSuggested ? new Date(a.dateSuggested).getTime() : 0;
-      const bDate = b.dateSuggested ? new Date(b.dateSuggested).getTime() : 0;
-      return dir * (aDate - bDate);
-    });
+  const filmsWithStats = filmsWithStatsUnsorted.sort((a, b) => {
+    const dir = sortOrder === 'asc' ? 1 : -1;
+    if (sortKey === 'watches') return dir * (a.watchCount - b.watchCount);
+    if (sortKey === 'avg') return dir * ((a.avgRating ?? -1) - (b.avgRating ?? -1));
+
+    const aDate = a.dateSuggested ? new Date(a.dateSuggested).getTime() : 0;
+    const bDate = b.dateSuggested ? new Date(b.dateSuggested).getTime() : 0;
+    return dir * (aDate - bDate);
+  });
 
   const sortLinkStyle = (active: boolean) => ({
     color: active ? 'white' : C.muted,
@@ -304,7 +337,7 @@ export default async function FOTWAdminStatsPage({
                   <tr key={f.id}>
                     <td className="most-watched-film-title" style={{ padding: '6px 0' }}>{f.title.replace(/\s*\(\d{4}\)$/, '')}</td>
                     <td style={{ padding: '6px 0' }}>{f.title.match(/\((\d{4})\)$/) ? f.title.match(/\((\d{4})\)$/)[1] : '-'}</td>
-                    <td style={{ padding: '6px 0' }}>{(f as any).language || '-'}</td>
+                    <td style={{ padding: '6px 0' }}>{f.language}</td>
                     <td style={{ padding: '6px 0' }}>{f.chosenBy || 'Unknown'}</td>
                     <td style={{ padding: '6px 0' }}>{formatDateDDMMYYYY(f.dateSuggested)}</td>
                     <td style={{ padding: '6px 0' }}>{f.watchCount}</td>
@@ -337,7 +370,7 @@ export default async function FOTWAdminStatsPage({
               <tbody>
                 {allUsers.map((u: any, i) => (
                   <tr key={`${u.email}-${i}`}>
-                    <td style={{ padding: '6px 0' }}>{u.name || u.email}</td>
+                    <td style={{ padding: '6px 0' }}>{formatDisplayName(u.name || u.email, u.username)}</td>
                     <td style={{ padding: '6px 0' }}>{u.watchedCount || 0}</td>
                     <td style={{ padding: '6px 0' }}>{u.timesSuggested || 0}</td>
                   </tr>

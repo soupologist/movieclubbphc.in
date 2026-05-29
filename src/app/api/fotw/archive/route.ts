@@ -6,6 +6,7 @@ import { FOTWRating } from '@/lib/fotw/schemas';
 import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWLike } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
+import { formatDisplayName } from '@/lib/fotw/utils';
 
 // GET: Fetch all previous (locked) FOTWs with their stats.
 // Performs exactly 4 DB queries total regardless of how many films or ratings exist.
@@ -46,9 +47,8 @@ export async function GET() {
     const userMap = Object.fromEntries((allUsers as any[]).map((u) => [u.email, u]));
 
     const formatName = (user: any, fallback: string) => {
-      if (!user) return fallback;
-      if (user.username && user.username.trim().length > 0) return user.username.trim();
-      return user.name ?? fallback;
+      if (!user) return formatDisplayName(fallback);
+      return formatDisplayName(user.name ?? fallback, user.username);
     };
 
     // 4. Assemble per-film stats in memory — zero additional DB queries

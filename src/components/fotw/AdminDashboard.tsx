@@ -170,7 +170,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(defaultAddForm);
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [autoFilled, setAutoFilled] = useState(false);
+
 
   // TMDB Fetch State
   const [tmdbUrlInput, setTmdbUrlInput] = useState('');
@@ -220,8 +220,6 @@ export default function AdminDashboard() {
   const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
   const [archivedSnapshot, setArchivedSnapshot] = useState<any[] | null>(null);
   const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
-  const [cycleReset, setCycleReset] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
 
   // Single Bulk CSV Import State
 
@@ -454,7 +452,6 @@ Bob,bob@example.com,0,0,,,,0,0,,
       if (res.ok) {
         showAddMessage('success', 'Film added successfully! Redirecting...');
         setFormData(defaultAddForm);
-        setAutoFilled(false);
         setTmdbUrlInput('');
         setFetchedMovie(null);
         addBaselineRef.current = JSON.stringify(defaultAddForm);
@@ -572,8 +569,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
   const addFormDirty =
     JSON.stringify(formData) !== addBaselineRef.current ||
     tmdbUrlInput.trim() !== '' ||
-    !!fetchedMovie ||
-    autoFilled;
+    !!fetchedMovie;
   const editFormDirty = JSON.stringify(editData) !== editBaselineRef.current;
   const rulesDirty = rulesContent !== rulesBaselineRef.current;
   const historyDirty =
@@ -633,70 +629,6 @@ Bob,bob@example.com,0,0,,,,0,0,,
     };
   }, []);
 
-  const handleSpin = () => {
-    if (leaderboard.length === 0) return;
-    setIsSpinning(true);
-    setWinner(null);
-    setCycleReset(false);
-
-    const alreadyChosenEmails = archiveFilms
-      .map((f) => f.chosenByEmail)
-      .filter(Boolean) as string[];
-    const alreadyChosenNames = archiveFilms
-      .filter((f) => !f.chosenByEmail)
-      .map((f) => f.chosenBy)
-      .filter(Boolean) as string[];
-
-    const maxScore = Math.max(...leaderboard.map((u) => u.seasonWatchedCount), 0);
-    const topTied = leaderboard.filter((u) => u.seasonWatchedCount === maxScore && maxScore > 0);
-    // Fallback to all if none watched
-    let candidates = topTied.length > 0 ? topTied : leaderboard;
-
-    // Filter out candidates with no name and users who already suggested before.
-    candidates = candidates.filter(
-      (u) => u.name && u.name.trim() !== '' && (u.timesSuggested ?? 0) === 0
-    );
-    if (candidates.length === 0) {
-      alert(
-        'No eligible users found. Either names are missing or everyone already suggested a film.'
-      );
-      setIsSpinning(false);
-      return;
-    }
-
-    let pool = candidates.filter(
-      (u) => !alreadyChosenEmails.includes(u.email) && !alreadyChosenNames.includes(u.name)
-    );
-    if (pool.length === 0) {
-      // Full cycle complete — resetting eligibility
-      pool = candidates;
-      setCycleReset(true);
-    }
-
-    let elapsed = 0;
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    // Pick the actual winner from the eligible pool
-    const finalWinner = pool[Math.floor(Math.random() * pool.length)];
-
-    timerRef.current = setInterval(() => {
-      // Visually spin through ALL names for dramatic effect
-      const randomVisual = leaderboard[Math.floor(Math.random() * leaderboard.length)];
-      setWinner({ name: randomVisual.name, email: randomVisual.email });
-      elapsed += 100;
-      if (elapsed >= 3000) {
-        clearInterval(timerRef.current!);
-        setIsSpinning(false);
-        setWinner({ name: finalWinner.name, email: finalWinner.email });
-        setFormData((prev) => ({
-          ...prev,
-          chosenBy: finalWinner.name,
-          chosenByEmail: finalWinner.email,
-        }));
-        setAutoFilled(true);
-      }
-    }, 100);
-  };
 
   const handleHistoryFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1192,18 +1124,12 @@ Bob,bob@example.com,0,0,,,,0,0,,
               type="text"
               value={formData.chosenBy}
               onChange={(e) => {
-                setFormData({ ...formData, chosenBy: e.target.value });
-                setAutoFilled(false);
+                setFormData({ ...formData, chosenBy: e.target.value, chosenByEmail: '' });
               }}
               className={inputClass}
               style={inputStyle}
               placeholder="Name of the member who chose this film"
             />
-            {autoFilled && (
-              <p className="mt-2" style={{ color: C.blue, fontSize: 11 }}>
-                Auto-filled from tie-breaker
-              </p>
-            )}
           </div>
           <div className="grid grid-cols-4 gap-2">
             <div>
@@ -1610,77 +1536,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
         </section>
       )}
 
-      {/* ── Tie Breaker ──────────────────────────────────────── */}
-      <section
-        className="mb-12"
-        style={{
-          backgroundColor: C.card,
-          border: `1px solid ${C.border}`,
-          borderRadius: 16,
-          padding: 24,
-        }}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <Sparkles size={18} style={{ color: C.orange }} />
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>Tie Breaker</h2>
-          </div>
-          <button
-            onClick={handleSpin}
-            disabled={isSpinning || leaderboard.length === 0}
-            className="rounded transition-all duration-200 disabled:opacity-50 hover:bg-[#ff8000]/10"
-            style={{
-              backgroundColor: 'transparent',
-              border: `1px solid ${C.orange}`,
-              color: C.orange,
-              padding: '8px 16px',
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            {isSpinning ? 'Spinning...' : 'Spin for Winner'}
-          </button>
-        </div>
 
-        <div
-          className="text-center py-14"
-          style={{ backgroundColor: C.input, borderRadius: 8, border: `1px solid ${C.border}` }}
-        >
-          {winner ? (
-            <div>
-              <p
-                className="mb-2"
-                style={{
-                  color: C.dim,
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {isSpinning ? 'SPINNING...' : 'THE WINNER IS'}
-              </p>
-              <p
-                className="font-bold transition-all duration-300"
-                style={{
-                  color: isSpinning ? C.muted : C.green,
-                  fontSize: 32,
-                }}
-              >
-                {winner.name}
-              </p>
-              {!isSpinning && cycleReset && (
-                <p style={{ color: '#8a9bb0', fontSize: 12, marginTop: 8 }}>
-                  All eligible members have had a turn — starting a new cycle.
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm" style={{ color: C.dim }}>
-              Click spin to pick a winner from the top scorers.
-            </p>
-          )}
-        </div>
-      </section>
 
       {/* ── Bulk CSV Import ──────────────────────────────────────── */}
       <section
