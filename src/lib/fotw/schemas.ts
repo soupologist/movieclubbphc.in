@@ -92,6 +92,8 @@ export interface IFOTWUser extends Document {
   email: string;
   name: string;
   username?: string;
+  hasCompletedOnboarding: boolean;
+  lastUsernameChange?: Date;
   image?: string;
   watchedCount: number;
   seasonWatchedCount?: number;
@@ -105,7 +107,9 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
   {
     email: { type: String, required: true, unique: true },
     name: { type: String },
-    username: { type: String },
+    username: { type: String, unique: true, sparse: true, trim: true },
+    hasCompletedOnboarding: { type: Boolean, default: false },
+    lastUsernameChange: { type: Date },
     image: { type: String },
     watchedCount: { type: Number, default: 0 },
     seasonWatchedCount: { type: Number, default: 0 },

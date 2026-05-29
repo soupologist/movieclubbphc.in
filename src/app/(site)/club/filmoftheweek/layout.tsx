@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import OnboardingModal from '@/components/fotw/OnboardingModal';
 
 export const metadata: Metadata = {
   title: 'Film of the Week | Movie Club BPHC',
@@ -32,5 +33,10 @@ export default async function FOTWLayout({ children }: { children: React.ReactNo
     );
   }
 
-  return <div className="min-h-screen bg-black pt-20 px-4 max-w-7xl mx-auto">{children}</div>;
+  return (
+    <div className="min-h-screen bg-black pt-20 px-4 max-w-7xl mx-auto">
+      {children}
+      <OnboardingModal />
+    </div>
+  );
 }

@@ -12,11 +12,8 @@ export function formatDisplayName(name?: string, username?: string): string {
 
   if (!name) return 'Anonymous';
 
-  // Clean extra spaces
   let words = name.trim().split(/[\s]+/);
 
-  // Filter out initials (e.g. "J", "J.", "U.", "A")
-  // Only keep words that have length > 1 after stripping punctuation
   const meaningfulWords = words.filter((w) => {
     const clean = w.replace(/[^a-zA-Z0-9]/g, '');
     return clean.length > 1;
@@ -27,9 +24,6 @@ export function formatDisplayName(name?: string, username?: string): string {
     words = meaningfulWords;
   }
 
-  // Pick the first meaningful word if we just want a short display name?
-  // The user says "show thomas", meaning they might want the first meaningful word or all of them.
-  // We'll join them. "j thomas" -> "Thomas". "Thomas Smith" -> "Thomas Smith".
   const cleanedName = words.join(' ');
   return toTitleCase(cleanedName);
 }

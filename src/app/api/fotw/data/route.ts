@@ -56,6 +56,14 @@ export async function GET(req: Request) {
         ? (currentFilm as any).timerDurationDays * 86400000
         : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
+
+      // Update chosenBy formatted
+      if (currentFilm.chosenByEmail) {
+        const chooser = await FOTWUser.findOne({ email: currentFilm.chosenByEmail }).select('name username').lean();
+        if (chooser) {
+          currentFilm.chosenBy = formatDisplayName(chooser.name, chooser.username);
+        }
+      }
     }
 
     // Auto-lock if the timer duration has passed and timer is not paused
@@ -121,12 +129,12 @@ export async function GET(req: Request) {
       allRatings = await Promise.all(
         ratings.map(async (rating: any) => {
           const user = await FOTWUser.findOne({ email: rating.userEmail })
-            .select('name image')
+            .select('name username image')
             .lean();
           return {
             ...rating,
             userId: user
-              ? { name: user.name, image: user.image }
+              ? { name: formatDisplayName(user.name, user.username), image: user.image }
               : { name: 'Anonymous', image: null },
           };
         })

@@ -33,12 +33,18 @@ export async function GET() {
     //    No per-film or per-rating sub-queries — everything resolved in memory.
     const [allRatings, allUsers, allLikes] = await Promise.all([
       FOTWRating.find({ filmId: { $in: filmIds } }).lean(),
-      FOTWUser.find().select('email name image').lean(),
+      FOTWUser.find().select('email name username image').lean(),
       FOTWLike.find({ filmId: { $in: filmIds } }).lean(),
     ]);
 
     // 3. Build O(1) lookup map: email → user document
     const userMap = Object.fromEntries((allUsers as any[]).map((u) => [u.email, u]));
+
+    const formatName = (user: any, fallback: string) => {
+      if (!user) return fallback;
+      if (user.username && user.username.trim().length > 0) return user.username.trim();
+      return user.name ?? fallback;
+    };
 
     // 4. Assemble per-film stats in memory — zero additional DB queries
     const result = films.map((film) => {
@@ -68,7 +74,7 @@ export async function GET() {
         likesCount: filmLikes.length,
         allRatings: filmRatings.map((r) => ({
           userEmail: r.userEmail,
-          name: userMap[r.userEmail]?.name ?? r.userEmail,
+          name: formatName(userMap[r.userEmail], r.userEmail),
           image: userMap[r.userEmail]?.image ?? null,
           rating: r.rating,
           createdAt: r.createdAt,
@@ -76,10 +82,10 @@ export async function GET() {
         watchedBy: watchedBy.map((w: any) => ({
           userEmail: w.userEmail,
           watchedAt: w.watchedAt,
-          name: userMap[w.userEmail]?.name ?? w.userEmail,
+          name: formatName(userMap[w.userEmail], w.userEmail),
           image: userMap[w.userEmail]?.image ?? null,
         })),
-        chosenBy: film.chosenBy || '',
+        chosenBy: film.chosenByEmail ? formatName(userMap[film.chosenByEmail], film.chosenBy || '') : (film.chosenBy || ''),
       };
     });
 

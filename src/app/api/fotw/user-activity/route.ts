@@ -7,6 +7,7 @@ import { FOTWUser } from '@/lib/fotw/schemas';
 import { FOTWFilm } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
+import { formatDisplayName } from '@/lib/fotw/utils';
 
 export async function GET(req: Request) {
   try {
@@ -30,13 +31,13 @@ export async function GET(req: Request) {
     let userDoc: any = null;
 
     if (userIdParam) {
-      userDoc = await FOTWUser.findById(userIdParam).select('email name image watchedCount').lean();
+      userDoc = await FOTWUser.findById(userIdParam).select('email name username image watchedCount').lean();
       if (!userDoc) {
         return NextResponse.json({ message: 'User not found' }, { status: 404 });
       }
       targetEmail = userDoc.email;
     } else if (emailParam) {
-      userDoc = await FOTWUser.findOne({ email: emailParam }).select('email name image watchedCount').lean();
+      userDoc = await FOTWUser.findOne({ email: emailParam }).select('email name username image watchedCount').lean();
     }
 
     if (!targetEmail) {
@@ -83,7 +84,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({
-      name: (userDoc as any)?.name ?? targetEmail,
+      name: userDoc ? formatDisplayName(userDoc.name, userDoc.username) : targetEmail,
       image: (userDoc as any)?.image ?? null,
       watchedCount: (userDoc as any)?.watchedCount ?? 0,
       ratings: ratingsList,
