@@ -101,6 +101,9 @@ export interface IFOTWUser extends Document {
   timesSuggested: number;
   filmSuggested?: string;
   whenSuggested?: Date | null;
+  currentStreak: number;
+  longestStreak: number;
+  lastWatchedWeek?: Date;
 }
 
 const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
@@ -117,6 +120,9 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
     timesSuggested: { type: Number, default: 0 },
     filmSuggested: { type: String, default: '' },
     whenSuggested: { type: Date, default: null },
+    currentStreak: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 },
+    lastWatchedWeek: { type: Date },
   },
   { timestamps: true }
 );

@@ -51,10 +51,41 @@ export async function POST(req: Request) {
     }
 
     // Increment watchedCount exactly once per unique watch. (safe to do since atomic update succeeded)
+    const user = await FOTWUser.findOne({ email: session.user.email });
+
+    const currentFilmAnchor = result.dateSuggested || result.createdAt;
+
+    const previousFilm = await FOTWFilm.findOne({ lockedAt: { $ne: null } })
+      .sort({ lockedAt: -1 })
+      .select('dateSuggested createdAt lockedAt');
+
+    let newCurrentStreak = user?.currentStreak || 0;
+
+    if (previousFilm && user?.lastWatchedWeek) {
+      const prevFilmAnchor = previousFilm.dateSuggested || previousFilm.createdAt;
+      const diffTime = Math.abs(new Date(user.lastWatchedWeek).getTime() - new Date(prevFilmAnchor).getTime());
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      if (diffDays <= 1) {
+        newCurrentStreak += 1;
+      } else {
+        newCurrentStreak = 1;
+      }
+    } else {
+      newCurrentStreak = 1;
+    }
+
+    const newLongestStreak = Math.max(user?.longestStreak || 0, newCurrentStreak);
+
     await FOTWUser.findOneAndUpdate(
       { email: session.user.email },
       {
-        $set: { name: session.user.name, image: session.user.image },
+        $set: { 
+          name: session.user.name, 
+          image: session.user.image,
+          currentStreak: newCurrentStreak,
+          longestStreak: newLongestStreak,
+          lastWatchedWeek: currentFilmAnchor,
+        },
         $inc: { watchedCount: 1, seasonWatchedCount: 1 },
       },
       { upsert: true, new: true }
@@ -106,10 +137,17 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: true, notWatched: true });
     }
 
+    const user = await FOTWUser.findOne({ email: session.user.email });
+    const currentStreak = Math.max(0, (user?.currentStreak || 0) - 1);
+
     await FOTWUser.findOneAndUpdate(
       { email: session.user.email },
       {
-        $set: { name: session.user.name, image: session.user.image },
+        $set: { 
+          name: session.user.name, 
+          image: session.user.image,
+          currentStreak: currentStreak,
+        },
         $inc: { watchedCount: -1, seasonWatchedCount: -1 },
       },
       { new: true }

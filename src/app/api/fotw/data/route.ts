@@ -84,7 +84,7 @@ export async function GET(req: Request) {
       excludeFromLeaderboard: { $ne: true },
     })
       .sort({ seasonWatchedCount: -1, createdAt: 1 })
-      .select('name username image watchedCount seasonWatchedCount email')
+      .select('name username image watchedCount seasonWatchedCount email currentStreak longestStreak')
       .lean();
 
     // Remove email from the public response payload and format name
@@ -94,6 +94,8 @@ export async function GET(req: Request) {
       image: u.image,
       watchedCount: u.watchedCount,
       seasonWatchedCount: u.seasonWatchedCount,
+      currentStreak: u.currentStreak || 0,
+      longestStreak: u.longestStreak || 0,
     }));
 
     let userRating = null;
