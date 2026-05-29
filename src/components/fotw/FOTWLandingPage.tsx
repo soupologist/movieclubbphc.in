@@ -2063,7 +2063,9 @@ export default function FOTWLandingPage() {
                 alignItems: 'center',
               }}
             >
-              <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>Your Activity</span>
+              <div className="flex items-center gap-4">
+                <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>Your Activity</span>
+              </div>
               <button
                 onClick={() => setShowMyActivity(false)}
                 style={{

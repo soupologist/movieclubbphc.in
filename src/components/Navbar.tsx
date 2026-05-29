@@ -6,12 +6,14 @@ import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { User, Menu, X } from 'lucide-react';
+import ChangeUsernameModal from './ChangeUsernameModal';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showChangeUsername, setShowChangeUsername] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: session, status } = useSession();
@@ -130,10 +132,22 @@ export default function Navbar() {
                 </div>
 
                 <hr className="my-2 border-gray-700" />
+                
+                <div className="flex flex-col items-start gap-2">
+                  <button 
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      setShowChangeUsername(true);
+                    }} 
+                    className="text-gray-300 hover:text-white hover:underline text-sm"
+                  >
+                    Change Username
+                  </button>
 
-                <button onClick={() => signOut()} className="text-red-400 hover:underline text-sm">
-                  Sign Out
-                </button>
+                  <button onClick={() => signOut()} className="text-red-400 hover:underline text-sm mt-1">
+                    Sign Out
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -206,9 +220,20 @@ export default function Navbar() {
             <div className="pt-6 border-t border-gray-800 text-sm text-gray-300">
               <p className="truncate">{user?.email}</p>
               <p className="text-gray-400 text-xs">{getRoleLabel()}</p>
-              <button onClick={() => signOut()} className="text-red-400 underline text-xs mt-2">
-                Sign Out
-              </button>
+              <div className="flex flex-col items-start gap-2 mt-3">
+                <button 
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowChangeUsername(true);
+                  }} 
+                  className="text-gray-300 hover:text-white underline text-xs"
+                >
+                  Change Username
+                </button>
+                <button onClick={() => signOut()} className="text-red-400 underline text-xs">
+                  Sign Out
+                </button>
+              </div>
             </div>
           ) : (
             <Link
@@ -221,6 +246,11 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      <ChangeUsernameModal 
+        isOpen={showChangeUsername} 
+        onClose={() => setShowChangeUsername(false)} 
+      />
     </>
   );
 }
