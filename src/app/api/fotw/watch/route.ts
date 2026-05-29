@@ -63,7 +63,9 @@ export async function POST(req: Request) {
 
     if (previousFilm && user?.lastWatchedWeek) {
       const prevFilmAnchor = previousFilm.dateSuggested || previousFilm.createdAt;
-      const diffTime = Math.abs(new Date(user.lastWatchedWeek).getTime() - new Date(prevFilmAnchor).getTime());
+      const diffTime = Math.abs(
+        new Date(user.lastWatchedWeek).getTime() - new Date(prevFilmAnchor).getTime()
+      );
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
       if (diffDays <= 1) {
         newCurrentStreak += 1;
@@ -79,8 +81,8 @@ export async function POST(req: Request) {
     await FOTWUser.findOneAndUpdate(
       { email: session.user.email },
       {
-        $set: { 
-          name: session.user.name, 
+        $set: {
+          name: session.user.name,
           image: session.user.image,
           currentStreak: newCurrentStreak,
           longestStreak: newLongestStreak,
@@ -143,8 +145,8 @@ export async function DELETE(req: Request) {
     await FOTWUser.findOneAndUpdate(
       { email: session.user.email },
       {
-        $set: { 
-          name: session.user.name, 
+        $set: {
+          name: session.user.name,
           image: session.user.image,
           currentStreak: currentStreak,
         },

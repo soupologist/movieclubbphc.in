@@ -26,7 +26,9 @@ export async function GET(req: Request) {
       ],
     })
       .sort({ watchedCount: -1, createdAt: 1 })
-      .select('name username image watchedCount seasonWatchedCount email timesSuggested excludeFromLeaderboard currentStreak longestStreak')
+      .select(
+        'name username image watchedCount seasonWatchedCount email timesSuggested excludeFromLeaderboard currentStreak longestStreak'
+      )
       .lean();
 
     return NextResponse.json({ leaderboard });

@@ -47,13 +47,30 @@ export async function GET(req: Request) {
 
     await dbConnect();
 
-    // 1. Get Current Film (Latest unlocked one)
-    let currentFilm = await FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
+    // Promises that can run in parallel early on
+    const currentFilmPromise = FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
+
+    // Get Leaderboard (Top 50 users by watched count, tiebreak by oldest user)
+    // Filter out ghost/excluded users and those with 0 watched counts
+    const leaderboardRawPromise = FOTWUser.find({
+      $or: [{ watchedCount: { $gt: 0 } }, { seasonWatchedCount: { $gt: 0 } }],
+      excludeFromLeaderboard: { $ne: true },
+    })
+      .sort({ seasonWatchedCount: -1, createdAt: 1 })
+      .select('name username image watchedCount seasonWatchedCount currentStreak longestStreak')
+      .lean();
+
+    const [currentFilmRaw, leaderboardRaw] = await Promise.all([
+      currentFilmPromise,
+      leaderboardRawPromise,
+    ]);
+
+    let currentFilm = currentFilmRaw as any;
 
     if (currentFilm) {
       // Ensure backwards compatibility by attaching a timerDuration explicitly
-      const fallbackMs = (currentFilm as any).timerDurationDays
-        ? (currentFilm as any).timerDurationDays * 86400000
+      const fallbackMs = currentFilm.timerDurationDays
+        ? currentFilm.timerDurationDays * 86400000
         : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
 
@@ -63,7 +80,10 @@ export async function GET(req: Request) {
           .select('name username')
           .lean();
         if (chooser) {
-          currentFilm.chosenBy = formatDisplayName(chooser.name, chooser.username);
+          currentFilm.chosenBy = formatDisplayName(
+            (chooser as any).name,
+            (chooser as any).username
+          );
         }
       }
     }
@@ -76,16 +96,6 @@ export async function GET(req: Request) {
         currentFilm = null;
       }
     }
-
-    // 2. Get Leaderboard (Top 50 users by watched count, tiebreak by oldest user)
-    // Filter out ghost/excluded users and those with 0 watched counts
-    const leaderboardRaw = await FOTWUser.find({
-      $or: [{ watchedCount: { $gt: 0 } }, { seasonWatchedCount: { $gt: 0 } }],
-      excludeFromLeaderboard: { $ne: true },
-    })
-      .sort({ seasonWatchedCount: -1, createdAt: 1 })
-      .select('name username image watchedCount seasonWatchedCount email currentStreak longestStreak')
-      .lean();
 
     // Remove email from the public response payload and format name
     const leaderboard = (leaderboardRaw as any[]).map((u) => ({
@@ -108,54 +118,47 @@ export async function GET(req: Request) {
     let likesCount = 0;
 
     if (currentFilm) {
-      // 3. Check if current user rated this film
-      const rating = await FOTWRating.findOne({
-        userEmail: session.user.email,
-        filmId: currentFilm._id,
-      });
+      const [rating, ratings, likeDoc, likesTotal] = await Promise.all([
+        FOTWRating.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+        FOTWRating.find({ filmId: currentFilm._id }).sort({ createdAt: -1 }).lean(),
+        FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+        FOTWLike.countDocuments({ filmId: currentFilm._id }),
+      ]);
+
       if (rating) {
-        userRating = rating.rating;
+        userRating = (rating as any).rating;
       }
 
-      // Watched count from watchedBy array
       watchedCount = Array.isArray(currentFilm.watchedBy) ? currentFilm.watchedBy.length : 0;
-
-      // Check if current user has watched
       hasWatched = Array.isArray(currentFilm.watchedBy)
         ? currentFilm.watchedBy.some((w: any) => w.userEmail === session.user.email)
         : false;
 
-      // 4. Get all ratings for current film
-      const ratings = await FOTWRating.find({ filmId: currentFilm._id })
-        .sort({ createdAt: -1 })
+      // Extract unique emails from ratings to fetch user profiles efficiently
+      const userEmails = [...new Set((ratings as any[]).map((r: any) => r.userEmail))];
+
+      const raters = await FOTWUser.find({ email: { $in: userEmails } })
+        .select('name username image email')
         .lean();
 
-      // Fetch user data for each rating
-      allRatings = await Promise.all(
-        ratings.map(async (rating: any) => {
-          const user = await FOTWUser.findOne({ email: rating.userEmail })
-            .select('name username image')
-            .lean();
-          return {
-            ...rating,
-            userId: user
-              ? { name: formatDisplayName(user.name, user.username), image: user.image }
-              : { name: 'Anonymous', image: null },
-          };
-        })
-      );
+      const ratersMap = new Map((raters as any[]).map((u) => [u.email, u]));
 
-      // 5. Calculate average rating
+      // Fetch user data for each rating
+      allRatings = (ratings as any[]).map((rating: any) => {
+        const user = ratersMap.get(rating.userEmail);
+        return {
+          ...rating,
+          userId: user
+            ? { name: formatDisplayName(user.name, user.username), image: user.image }
+            : { name: 'Anonymous', image: null },
+        };
+      });
+
       if (allRatings.length > 0) {
         const sum = allRatings.reduce((acc, r: any) => acc + r.rating, 0);
         averageRating = Math.round((sum / allRatings.length) * 10) / 10;
       }
 
-      // 6. Likes for current film
-      const [likeDoc, likesTotal] = await Promise.all([
-        FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
-        FOTWLike.countDocuments({ filmId: currentFilm._id }),
-      ]);
       userLiked = !!likeDoc;
       likesCount = likesTotal;
     }

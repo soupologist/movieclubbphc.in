@@ -226,10 +226,10 @@ export default function AdminDashboard() {
   // Single Bulk CSV Import State
 
   const downloadSampleCSV = () => {
-    const csvContent = `name,email,watch count,times suggested,film suggested,when suggested,Oppenheimer (2023),The Matrix (1999)
-John Doe,john@example.com,2,1,Inception,2023-10-12,5.0,
-Jane Smith,jane@example.com,1,0,,,4.5,3.0
-Bob,bob@example.com,0,0,,,,,
+    const csvContent = `name,email,watch count,times suggested,film suggested,when suggested,current streak,longest streak,Oppenheimer (2023),The Matrix (1999)
+John Doe,john@example.com,2,1,Inception,2023-10-12,2,4,5.0,
+Jane Smith,jane@example.com,1,0,,,,1,1,4.5,3.0
+Bob,bob@example.com,0,0,,,,0,0,,
 `;
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -718,72 +718,73 @@ Bob,bob@example.com,0,0,,,,,
       skipEmptyLines: true,
       complete: (results) => {
         const rawData = results.data as string[][];
-
-        if (rawData.length < 2 || (rawData[0] || []).length < 7) {
-          setHistoryMsg({
-            type: 'error',
-            text: 'CSV must include at least 7 columns: name, email, watch count, times suggested, film suggested, when suggested, and films.',
-          });
+        if (rawData.length < 2 || (rawData[0] || []).length < 2) {
+          setHistoryMsg({ type: 'error', text: 'CSV must include headers and at least name/email or film columns.' });
           return;
         }
 
         const topRow = rawData[0];
+        const knownUserFields = [
+          'name', 'email', 'watchcount', 'timessuggested', 'filmsuggested',
+          'whensuggested', 'date', 'suggesteddate', 'currentstreak', 'longeststreak',
+          'lastwatchedweek', 'seasonwatchedcount', 'excludefromleaderboard',
+          'hascompletedonboarding', 'username', 'image', 'lastusernamechange',
+          'createdat', 'updatedat'
+        ];
 
-        const required = ['name', 'email', 'watchcount', 'timessuggested', 'filmsuggested'];
-        const normalizedFirstFive = topRow
-          .slice(0, 5)
-          .map((h) => normalizeHeader((h || '').trim()));
-        const headersMatch = required.every((field, idx) => normalizedFirstFive[idx] === field);
-        const whenSuggestedHeader = normalizeHeader((topRow[5] || '').trim());
-        const whenSuggestedHeaderValid = ['whensuggested', 'date', 'suggesteddate'].includes(
-          whenSuggestedHeader
-        );
+        const colMapping: Record<string, number> = {};
+        const filmsFound: any[] = [];
 
-        if (!headersMatch || !whenSuggestedHeaderValid) {
-          setHistoryMsg({
-            type: 'error',
-            text: 'CSV headers must be ordered as: name, email, watch count, times suggested, film suggested, when suggested, then movie columns.',
-          });
+        topRow.forEach((rawH, idx) => {
+          const norm = normalizeHeader((rawH || '').trim());
+          if (knownUserFields.includes(norm)) {
+            if (norm === 'date' || norm === 'suggesteddate') colMapping['whensuggested'] = idx;
+            else colMapping[norm] = idx;
+          } else if (rawH && rawH.trim()) {
+            filmsFound.push({
+              idx,
+              title: rawH.trim(),
+              originalTitle: rawH.trim(),
+              chosenBy: '',
+              chosenByEmail: '',
+              dateSuggested: '',
+              tmdbUrl: '',
+              posterUrl: '',
+              watches: [],
+              fetchLoading: false,
+              fetchError: null,
+            });
+          }
+        });
+
+        if (colMapping['email'] === undefined) {
+          setHistoryMsg({ type: 'error', text: 'CSV must contain at least an "email" column.' });
           return;
         }
-
-        const filmsFound: any[] = topRow.slice(6).map((filmTitleRaw) => ({
-          title: (filmTitleRaw || '').trim(),
-          originalTitle: (filmTitleRaw || '').trim(),
-          chosenBy: '',
-          chosenByEmail: '',
-          dateSuggested: '',
-          tmdbUrl: '',
-          posterUrl: '',
-          watches: [],
-          fetchLoading: false,
-          fetchError: null,
-        }));
 
         const usersFound: any[] = [];
 
         for (let r = 1; r < rawData.length; r++) {
           const row = rawData[r] || [];
-          const name = (row[0] || '').trim();
-          const email = (row[1] || '').trim();
+          
+          const getValue = (key: string) => {
+            const i = colMapping[key];
+            return i !== undefined ? (row[i] || '').trim() : '';
+          };
+
+          const email = getValue('email');
           if (!email) continue;
+          
+          const name = getValue('name');
 
-          const timesSuggested = Number.parseInt((row[3] || '0').trim(), 10);
-          const filmSuggested = (row[4] || '').trim();
-          const whenSuggested = (row[5] || '').trim();
           let computedWatchCount = 0;
-
-          for (let col = 6; col < topRow.length; col++) {
-            const cellVal = (row[col] || '').trim();
+          for (const film of filmsFound) {
+            const cellVal = (row[film.idx] || '').trim();
             if (!cellVal) continue;
 
-            // Any non-blank cell means user watched this film.
             computedWatchCount += 1;
-
-            const film = filmsFound[col - 6];
-            if (!film?.title) continue;
-
-            let rating: number | null = null;
+            
+            let rating = null;
             if (cellVal !== '0') {
               const parsed = Number(cellVal);
               if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
@@ -800,11 +801,22 @@ Bob,bob@example.com,0,0,,,,,
 
           usersFound.push({
             name: name || email.split('@')[0],
+            username: getValue('username'),
             email,
-            watchedCount: computedWatchCount,
-            timesSuggested: Number.isNaN(timesSuggested) ? 0 : timesSuggested,
-            filmSuggested,
-            whenSuggested,
+            watchedCount: getValue('watchcount') ? Number(getValue('watchcount')) : computedWatchCount,
+            seasonWatchedCount: getValue('seasonwatchedcount') ? Number(getValue('seasonwatchedcount')) : computedWatchCount,
+            timesSuggested: Number(getValue('timessuggested')) || 0,
+            filmSuggested: getValue('filmsuggested'),
+            whenSuggested: getValue('whensuggested'),
+            currentStreak: Number(getValue('currentstreak')) || 0,
+            longestStreak: Number(getValue('longeststreak')) || 0,
+            excludeFromLeaderboard: getValue('excludefromleaderboard'),
+            hasCompletedOnboarding: getValue('hascompletedonboarding'),
+            lastWatchedWeek: getValue('lastwatchedweek'),
+            createdAt: getValue('createdat'),
+            updatedAt: getValue('updatedat'),
+            image: getValue('image'),
+            lastUsernameChange: getValue('lastusernamechange'),
           });
         }
 
@@ -988,19 +1000,59 @@ Bob,bob@example.com,0,0,,,,,
       style={{ backgroundColor: C.bg, minHeight: '100vh' }}
     >
       {/* ── Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col mb-10 pt-4" style={{ gap: 8 }}>
-        <Link
-          href="/club/filmoftheweek"
-          className="hover:text-white transition-colors"
-          style={{ color: C.muted, fontSize: 14 }}
-        >
-          ← Film of the Week
-        </Link>
-        <h1
-          className={`text-4xl sm:text-5xl font-bold text-white tracking-tight m-0 ${instrumentSerif.className}`}
-        >
-          Admin Dashboard
-        </h1>
+      <div
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-10 pt-4"
+        style={{ gap: 16 }}
+      >
+        <div className="flex flex-col" style={{ gap: 8 }}>
+          <Link
+            href="/club/filmoftheweek"
+            className="hover:text-white transition-colors"
+            style={{ color: C.muted, fontSize: 14 }}
+          >
+            ← Film of the Week
+          </Link>
+          <h1
+            className={`text-4xl sm:text-5xl font-bold text-white tracking-tight m-0 ${instrumentSerif.className}`}
+          >
+            Admin Dashboard
+          </h1>
+        </div>
+
+        {/* ── Export Data Dropdown ────────────────────────────── */}
+        <div className="relative">
+          <div className="group inline-block">
+            <button
+              className="flex items-center gap-2 px-4 py-2 hover:bg-[#1a1a1a] transition-colors focus:outline-none"
+              style={{
+                backgroundColor: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: 8,
+                color: 'white',
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              Export Data <ChevronDown size={14} />
+            </button>
+            <div className="absolute right-0 mt-2 w-48 bg-[#0f0f0f] border border-[#1e1e1e] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <a
+                href="/api/fotw/admin/export?format=csv"
+                className="block px-4 py-3 text-sm text-white hover:bg-[#1a1a1a] rounded-t-lg transition-colors border-b border-[#1e1e1e]"
+              >
+                Export as CSV
+              </a>
+              <a
+                href="/api/fotw/admin/export?format=json"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block px-4 py-3 text-sm text-white hover:bg-[#1a1a1a] rounded-b-lg transition-colors"
+              >
+                Export as JSON
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Add New Film ─────────────────────────────────────── */}
