@@ -292,6 +292,32 @@ export async function GET(req: Request) {
   }
 }
 
+// Helper: fetch language + year from TMDB given a tmdbUrl.
+// Returns null fields on any failure so the caller can still proceed.
+async function fetchTmdbMetadata(
+  tmdbUrl: string
+): Promise<{ language: string; year: number } | null> {
+  try {
+    const match = tmdbUrl.match(/\/movie\/(\d+)/);
+    if (!match) return null;
+    const tmdbId = match[1];
+    const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
+    if (!apiKey) return null;
+    const res = await fetch(
+      `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}`,
+      { method: 'GET' }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      language: data.original_language || '',
+      year: data.release_date ? new Date(data.release_date).getFullYear() : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // POST: Admin creates a new film
 export async function POST(req: Request) {
   try {
@@ -307,6 +333,9 @@ export async function POST(req: Request) {
     await dbConnect();
     const { title, posterUrl, tmdbUrl, chosenBy, chosenByEmail, timerDuration } = await req.json();
 
+    // Fetch TMDB metadata in parallel with nothing else — fast extra call
+    const tmdbMeta = tmdbUrl ? await fetchTmdbMetadata(tmdbUrl) : null;
+
     const newFilm = await FOTWFilm.create({
       title,
       posterUrl,
@@ -316,6 +345,8 @@ export async function POST(req: Request) {
       dateSuggested: new Date(),
       addedBy: session.user.email,
       timerDuration: timerDuration ?? 604800000,
+      language: tmdbMeta?.language ?? '',
+      year: tmdbMeta?.year ?? 0,
     });
 
     await syncTimesSuggestedFromFilms();

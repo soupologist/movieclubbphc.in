@@ -76,7 +76,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       title: data.title,
       posterUrl: `https://image.tmdb.org/t/p/w500${data.poster_path}`,
-      year: new Date(data.release_date).getFullYear(),
+      year: data.release_date ? new Date(data.release_date).getFullYear() : 0,
+      language: data.original_language || '',
     });
   } catch (error) {
     console.error('Error resolving TMDB URL:', error);

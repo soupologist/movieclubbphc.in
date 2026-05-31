@@ -14,6 +14,10 @@ export interface IFOTWFilm extends Document {
   lockedAt: Date | null;
   timerPaused: boolean;
   timerDuration: number;
+  /** ISO 639-1 original language code returned by TMDB (e.g. "en", "fr", "hi") */
+  language: string;
+  /** Release year as a 4-digit integer, e.g. 2023 */
+  year: number;
 }
 
 const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
@@ -37,6 +41,8 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
     lockedAt: { type: Date, default: null },
     timerPaused: { type: Boolean, default: false },
     timerDuration: { type: Number, default: 604800000 },
+    language: { type: String, default: '' },
+    year: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
