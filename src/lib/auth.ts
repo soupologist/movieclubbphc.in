@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import type { Session, NextAuthOptions } from 'next-auth';
+import dbConnect from '@/lib/dbConnect';
+import { FOTWUser } from '@/lib/fotw/schemas';
 
 // TODO: fix naming
 
@@ -21,7 +23,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn() {
+    async signIn({ user }) {
+      try {
+        if (user.email) {
+          await dbConnect();
+          await FOTWUser.findOneAndUpdate(
+            { email: user.email },
+            { $set: { image: user.image || '', name: user.name || 'Unknown' } }
+          );
+        }
+      } catch (error) {
+        console.error('Error updating user on sign in:', error);
+      }
       return true;
     },
     async session({ session }: { session: Session }) {
