@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWFilm, FOTWSeason } from '@/lib/fotw/schemas';
+import { FOTWFilm, FOTWSeason, FOTWUser } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
+import { formatDisplayName, normalizeLanguage } from '@/lib/fotw/utils';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
@@ -92,6 +95,7 @@ export async function GET(req: Request) {
           language: { $cond: [{ $in: ['$language', [null, '']] }, 'Unknown', '$language'] },
           dateSuggested: 1,
           chosenBy: { $cond: [{ $in: ['$chosenBy', [null, '']] }, 'Unknown', '$chosenBy'] },
+          chosenByEmail: 1,
           watchCount: { $size: { $ifNull: ['$watchedBy', []] } },
           ratingCount: { $size: '$ratings' },
           avgRatingRaw: { $avg: '$ratings.rating' },
@@ -185,12 +189,20 @@ export async function GET(req: Request) {
       {
         $group: {
           _id: {
-            $cond: [{ $in: ['$chosenBy', [null, '']] }, 'Unknown', '$chosenBy'],
+            email: { $cond: [{ $in: ['$chosenByEmail', [null, '']] }, '$chosenBy', '$chosenByEmail'] },
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$dateSuggested' } }
           },
-          count: { $sum: 1 },
+          fallbackName: { $first: '$chosenBy' }
         },
       },
-      { $project: { name: '$_id', count: 1, _id: 0 } },
+      {
+        $group: {
+          _id: '$_id.email',
+          count: { $sum: 1 },
+          fallbackName: { $first: '$fallbackName' }
+        }
+      },
+      { $project: { name: '$_id', count: 1, fallbackName: 1, _id: 0 } },
       { $sort: { count: -1 } },
     ];
 
@@ -243,28 +255,68 @@ export async function GET(req: Request) {
       ratingDistribution[Number(row._id).toFixed(1)] = row.count;
     }
 
+    // Fetch all users for formatting names efficiently
+    const allUsers = await FOTWUser.find().select('email name username').lean();
+    const userMap = Object.fromEntries((allUsers as any[]).map(u => [u.email, u]));
+
     // Format Films
-    const films = filmsResult.map((f) => ({
-      filmId: f.filmId.toString(),
-      title: f.title,
-      year: f.year,
-      language: f.language,
-      dateSuggested: f.dateSuggested,
-      chosenBy: f.chosenBy,
-      watchCount: f.watchCount,
-      avgRating: f.avgRating,
-      ratingCount: f.ratingCount,
-    }));
+    const films = filmsResult.map((f) => {
+      const u = userMap[f.chosenByEmail];
+      return {
+        filmId: f.filmId.toString(),
+        title: f.title,
+        year: f.year,
+        language: normalizeLanguage(f.language),
+        dateSuggested: f.dateSuggested,
+        chosenBy: u ? formatDisplayName(u.name, u.username) : formatDisplayName(f.chosenBy),
+        watchCount: f.watchCount,
+        avgRating: f.avgRating,
+        ratingCount: f.ratingCount,
+      };
+    });
+
+    const formattedLeaderboard = leaderboardResult.map(l => {
+      return {
+        ...l,
+        name: formatDisplayName(l.name, l.username),
+      };
+    });
+
+    // Group normalized languages in case multiple raw codes map to the same normalized name
+    const groupedLanguages: Record<string, number> = {};
+    languageResult.forEach(l => {
+      const norm = normalizeLanguage(l.language);
+      groupedLanguages[norm] = (groupedLanguages[norm] || 0) + l.count;
+    });
+    const languageBreakdown = Object.entries(groupedLanguages)
+      .map(([language, count]) => ({ language, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const chosenByBreakdown = chosenByResult.map(c => {
+      // c.name might be an email or a raw string fallback
+      const u = userMap[c.name];
+      const displayName = u ? formatDisplayName(u.name, u.username) : formatDisplayName(c.fallbackName || c.name);
+      return { name: displayName, count: Math.round(c.count) };
+    });
+    
+    // Deduplicate chosenByBreakdown in case multiple emails map to same display name or same fallback
+    const groupedChosenBy: Record<string, number> = {};
+    chosenByBreakdown.forEach(c => {
+      groupedChosenBy[c.name] = (groupedChosenBy[c.name] || 0) + c.count;
+    });
+    const finalChosenByBreakdown = Object.entries(groupedChosenBy)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
 
     return NextResponse.json({
       season,
       overview,
       films,
-      leaderboard: leaderboardResult,
+      leaderboard: formattedLeaderboard,
       ratingDistribution,
       participationByFilm: participationResult,
-      languageBreakdown: languageResult,
-      chosenByBreakdown: chosenByResult,
+      languageBreakdown,
+      chosenByBreakdown: finalChosenByBreakdown,
     });
   } catch (error) {
     console.error('Stats API Error:', error);

@@ -259,14 +259,14 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
       {/* Section 4: Charts */}
       <section>
         <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 18, fontWeight: 600 }}>Charts</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-6">
           
           {/* Participation Over Time */}
           <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
             <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Participation Over Time</h3>
-            {loading ? <Skeleton className="h-64 w-full" /> : 
-             !data?.participationByFilm || data.participationByFilm.length === 0 ? <div className="h-64 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
-              <div className="h-64">
+            {loading ? <Skeleton className="h-96 w-full" /> : 
+             !data?.participationByFilm || data.participationByFilm.length === 0 ? <div className="h-96 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
+              <div className="h-96">
                 <Bar 
                   data={{
                     labels: data.participationByFilm.map(d => d.title.replace(/\s*\(\d{4}\)$/, '')),
@@ -294,9 +294,9 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
           {/* Rating Distribution */}
           <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
             <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Rating Distribution</h3>
-            {loading ? <Skeleton className="h-64 w-full" /> : 
-             !data?.ratingDistribution || Object.keys(data.ratingDistribution).length === 0 ? <div className="h-64 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
-              <div className="h-64">
+            {loading ? <Skeleton className="h-96 w-full" /> : 
+             !data?.ratingDistribution || Object.keys(data.ratingDistribution).length === 0 ? <div className="h-96 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
+              <div className="h-96">
                 {(() => {
                   const labels = ['0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'];
                   const vals = labels.map(l => data.ratingDistribution[l] || 0);
@@ -330,9 +330,9 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
           {/* Language Breakdown */}
           <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
             <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Language Breakdown</h3>
-            {loading ? <Skeleton className="h-64 w-full" /> : 
-             !data?.languageBreakdown || data.languageBreakdown.length === 0 ? <div className="h-64 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
-              <div className="h-64 flex items-center justify-center">
+            {loading ? <Skeleton className="h-96 w-full" /> : 
+             !data?.languageBreakdown || data.languageBreakdown.length === 0 ? <div className="h-96 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
+              <div className="h-96 flex items-center justify-center">
                 <Doughnut 
                   data={{
                     labels: data.languageBreakdown.map(d => d.language),
@@ -359,14 +359,14 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
           {/* Picked By Breakdown */}
           <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
             <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Picked By Breakdown</h3>
-            {loading ? <Skeleton className="h-64 w-full" /> : 
-             !data?.chosenByBreakdown || data.chosenByBreakdown.length === 0 ? <div className="h-64 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
-              <div className="h-64">
+            {loading ? <Skeleton className="h-96 w-full" /> : 
+             !data?.chosenByBreakdown || data.chosenByBreakdown.length === 0 ? <div className="h-96 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
+              <div className="h-96">
                 <Bar 
                   data={{
                     labels: data.chosenByBreakdown.map(d => d.name),
                     datasets: [{
-                      label: 'Films Picked',
+                      label: 'Weeks',
                       data: data.chosenByBreakdown.map(d => d.count),
                       backgroundColor: '#3b82f6',
                       borderRadius: 4,
