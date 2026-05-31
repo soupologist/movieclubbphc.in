@@ -361,7 +361,7 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
             <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Picked By Breakdown</h3>
             {loading ? <Skeleton className="h-96 w-full" /> : 
              !data?.chosenByBreakdown || data.chosenByBreakdown.length === 0 ? <div className="h-96 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
-              <div className="h-96">
+              <div style={{ height: Math.max(384, data.chosenByBreakdown.length * 32) }}>
                 <Bar 
                   data={{
                     labels: data.chosenByBreakdown.map(d => d.name),
