@@ -41,10 +41,7 @@ const parseAdminDate = (value: unknown): Date | null => {
 // GET: Fetch current film, leaderboard, and user's rating status
 export async function GET(req: Request) {
   try {
-    const [session, _] = await Promise.all([
-      getServerSession(authOptions),
-      dbConnect(),
-    ]);
+    const [session, _] = await Promise.all([getServerSession(authOptions), dbConnect()]);
 
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -54,9 +51,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const seasonId = searchParams.get('seasonId');
     const useSeasonFilter =
-      !!seasonId &&
-      seasonId !== 'all' &&
-      mongoose.Types.ObjectId.isValid(seasonId);
+      !!seasonId && seasonId !== 'all' && mongoose.Types.ObjectId.isValid(seasonId);
 
     // Promises that can run in parallel early on
     const currentFilmPromise = FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean();
@@ -84,15 +79,13 @@ export async function GET(req: Request) {
               ...(season.endDate ? { $lte: season.endDate } : {}),
             },
           },
-          { watchedBy: 1 }  // projection: only watchedBy
+          { watchedBy: 1 } // projection: only watchedBy
         ).lean();
 
         // Build watch-count map in memory — no extra DB query
         const watchCountMap = new Map<string, number>();
         for (const film of seasonFilms) {
-          const watchedBy = Array.isArray((film as any).watchedBy)
-            ? (film as any).watchedBy
-            : [];
+          const watchedBy = Array.isArray((film as any).watchedBy) ? (film as any).watchedBy : [];
           for (const entry of watchedBy) {
             const email: string = entry?.userEmail;
             if (email) {
@@ -178,7 +171,13 @@ export async function GET(req: Request) {
     let userLiked = false;
     let likesCount = 0;
     let userReview: { body: string; isPrivate: boolean } | null = null;
-    let publicReviews: { userEmail: string; name: string; image: string | null; body: string; createdAt: string }[] = [];
+    let publicReviews: {
+      userEmail: string;
+      name: string;
+      image: string | null;
+      body: string;
+      createdAt: string;
+    }[] = [];
 
     if (currentFilm) {
       const fallbackMs = currentFilm.timerDurationDays
@@ -186,25 +185,23 @@ export async function GET(req: Request) {
         : 7 * 86400000;
       currentFilm.timerDuration = currentFilm.timerDuration ?? fallbackMs;
 
-      const [chooser, rating, ratings, likeDoc, likesTotal, myReview, filmReviews] = await Promise.all([
-        currentFilm.chosenByEmail
-          ? FOTWUser.findOne({ email: currentFilm.chosenByEmail }).select('name username').lean()
-          : Promise.resolve(null),
-        FOTWRating.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
-        FOTWRating.find({ filmId: currentFilm._id }).sort({ createdAt: -1 }).lean(),
-        FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
-        FOTWLike.countDocuments({ filmId: currentFilm._id }),
-        FOTWReview.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
-        FOTWReview.find({ filmId: currentFilm._id, isPrivate: false })
-          .sort({ createdAt: -1 })
-          .lean(),
-      ]);
+      const [chooser, rating, ratings, likeDoc, likesTotal, myReview, filmReviews] =
+        await Promise.all([
+          currentFilm.chosenByEmail
+            ? FOTWUser.findOne({ email: currentFilm.chosenByEmail }).select('name username').lean()
+            : Promise.resolve(null),
+          FOTWRating.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+          FOTWRating.find({ filmId: currentFilm._id }).sort({ createdAt: -1 }).lean(),
+          FOTWLike.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+          FOTWLike.countDocuments({ filmId: currentFilm._id }),
+          FOTWReview.findOne({ userEmail: session.user.email, filmId: currentFilm._id }).lean(),
+          FOTWReview.find({ filmId: currentFilm._id, isPrivate: false })
+            .sort({ createdAt: -1 })
+            .lean(),
+        ]);
 
       if (chooser) {
-        currentFilm.chosenBy = formatDisplayName(
-          (chooser as any).name,
-          (chooser as any).username
-        );
+        currentFilm.chosenBy = formatDisplayName((chooser as any).name, (chooser as any).username);
       }
 
       if (rating) {
@@ -302,10 +299,9 @@ async function fetchTmdbMetadata(
     const tmdbId = match[1];
     const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
     if (!apiKey) return null;
-    const res = await fetch(
-      `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}`,
-      { method: 'GET' }
-    );
+    const res = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}`, {
+      method: 'GET',
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return {

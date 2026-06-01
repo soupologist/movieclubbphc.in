@@ -6,7 +6,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import StarRating from './StarRating';
 import SeasonSelector, { Season } from './SeasonSelector';
-import { Trophy, Eye, Star, Film, Heart, X, ExternalLink, FileText, Lock, Globe } from 'lucide-react';
+import {
+  Trophy,
+  Eye,
+  Star,
+  Film,
+  Heart,
+  X,
+  ExternalLink,
+  FileText,
+  Lock,
+  Globe,
+} from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
 import { instrumentSerif } from '@/app/fonts';
 import { Bar } from 'react-chartjs-2';
@@ -286,17 +297,17 @@ function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
   const isLong = review.body.length > 120;
 
   return (
-    <div 
+    <div
       onClick={(e) => {
         e.stopPropagation();
         if (isLong) setExpanded(!expanded);
       }}
-      style={{ 
-        backgroundColor: '#141414', 
-        padding: '10px 12px', 
-        borderRadius: 8, 
+      style={{
+        backgroundColor: '#141414',
+        padding: '10px 12px',
+        borderRadius: 8,
         border: `1px solid ${C.border}`,
-        cursor: isLong ? 'pointer' : 'default'
+        cursor: isLong ? 'pointer' : 'default',
       }}
     >
       <div className="flex items-center gap-2 mb-2">
@@ -317,7 +328,17 @@ function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
         >
           {review.name.charAt(0).toUpperCase()}
         </div>
-        <span style={{ color: 'white', fontSize: 12, fontWeight: 500, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span
+          style={{
+            color: 'white',
+            fontSize: 12,
+            fontWeight: 500,
+            flex: 1,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
           {review.name}
         </span>
       </div>
@@ -543,9 +564,12 @@ export default function FOTWLandingPage() {
     const fetchAct = async () => {
       setMyActivityLoading(true);
       try {
-        const res = await fetch(`/api/fotw/user-activity?email=${encodeURIComponent(session.user.email || "")}&seasonId=${activitySeasonId || 'all'}`, {
-          cache: 'no-store',
-        });
+        const res = await fetch(
+          `/api/fotw/user-activity?email=${encodeURIComponent(session.user.email || '')}&seasonId=${activitySeasonId || 'all'}`,
+          {
+            cache: 'no-store',
+          }
+        );
         const d = await res.json();
         if (isMounted) setMyActivity(d);
       } catch (e) {
@@ -555,7 +579,9 @@ export default function FOTWLandingPage() {
       }
     };
     fetchAct();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [showMyActivity, activitySeasonId, session?.user?.email]);
 
   useEffect(() => {
@@ -564,9 +590,12 @@ export default function FOTWLandingPage() {
     const fetchAct = async () => {
       setUserActivityLoading(true);
       try {
-        const res = await fetch(`/api/fotw/user-activity?userId=${encodeURIComponent(viewingUser._id)}&seasonId=${activitySeasonId || 'all'}`, {
-          cache: 'no-store',
-        });
+        const res = await fetch(
+          `/api/fotw/user-activity?userId=${encodeURIComponent(viewingUser._id)}&seasonId=${activitySeasonId || 'all'}`,
+          {
+            cache: 'no-store',
+          }
+        );
         const d = await res.json();
         if (isMounted) setUserActivity(d);
       } catch (e) {
@@ -576,7 +605,9 @@ export default function FOTWLandingPage() {
       }
     };
     fetchAct();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [viewingUser, activitySeasonId]);
 
   /* ── Watch handler ───────────────────────────────────────── */
@@ -934,7 +965,18 @@ export default function FOTWLandingPage() {
                         </span>
                       </div>
                     </div>
-                    <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.4, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p
+                      style={{
+                        color: C.muted,
+                        fontSize: 13,
+                        lineHeight: 1.4,
+                        margin: 0,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
                       {r.body}
                     </p>
                   </div>
@@ -943,11 +985,13 @@ export default function FOTWLandingPage() {
             </div>
           </div>
         )}
-        {act.ratings.length === 0 && act.likes.length === 0 && (!act.reviews || act.reviews.length === 0) && (
-          <div style={{ color: C.dim, fontSize: 14, textAlign: 'center', padding: '32px 0' }}>
-            No activity yet
-          </div>
-        )}
+        {act.ratings.length === 0 &&
+          act.likes.length === 0 &&
+          (!act.reviews || act.reviews.length === 0) && (
+            <div style={{ color: C.dim, fontSize: 14, textAlign: 'center', padding: '32px 0' }}>
+              No activity yet
+            </div>
+          )}
       </>
     );
   };
@@ -961,7 +1005,7 @@ export default function FOTWLandingPage() {
 
     const hasRatings = af.allRatings && af.allRatings.length > 0;
     const hasReviews = af.publicReviews && af.publicReviews.length > 0;
-    
+
     let PANELS = 3; // Poster, Info, WatchedBy (base)
     if (hasRatings) PANELS++;
     if (hasReviews) PANELS++;
@@ -1025,7 +1069,15 @@ export default function FOTWLandingPage() {
                   className="absolute inset-0 z-10 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
                 >
-                  <span style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1, marginBottom: 12 }}>
+                  <span
+                    style={{
+                      fontSize: 36,
+                      fontWeight: 700,
+                      color: 'white',
+                      lineHeight: 1,
+                      marginBottom: 12,
+                    }}
+                  >
                     {af.ratingsCount > 4 ? af.averageRating.toFixed(1) : '—'}
                   </span>
                   <div className="flex items-center gap-2" style={{ color: C.muted }}>
@@ -1559,8 +1611,8 @@ export default function FOTWLandingPage() {
                     {af.publicReviews?.length || 0}
                   </span>
                 </div>
-                <div 
-                  style={{ flex: 1, overflowY: 'auto' }} 
+                <div
+                  style={{ flex: 1, overflowY: 'auto' }}
                   className="space-y-3 pr-1"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -1568,7 +1620,9 @@ export default function FOTWLandingPage() {
                     <ArchiveReviewItem key={idx} review={r} C={C} />
                   ))}
                 </div>
-                <div style={{ marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
+                <div
+                  style={{ marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${C.border}` }}
+                >
                   <div
                     style={{
                       color: C.dim,
@@ -1916,10 +1970,7 @@ export default function FOTWLandingPage() {
                   }}
                   title={!hasWatched ? 'Watch the film to write a review' : ''}
                 >
-                  <FileText
-                    size={15}
-                    color={hasReviewLocal ? C.green : 'currentColor'}
-                  />
+                  <FileText size={15} color={hasReviewLocal ? C.green : 'currentColor'} />
                   {hasReviewLocal ? 'Reviewed' : 'Review'}
                 </button>
               </div>
@@ -2006,7 +2057,9 @@ export default function FOTWLandingPage() {
                         onClick={() => setReviewSpoiler(!reviewSpoiler)}
                         style={{
                           background: reviewSpoiler ? 'rgba(251,191,36,0.15)' : 'none',
-                          border: reviewSpoiler ? '1px solid rgba(251,191,36,0.4)' : '1px solid transparent',
+                          border: reviewSpoiler
+                            ? '1px solid rgba(251,191,36,0.4)'
+                            : '1px solid transparent',
                           borderRadius: 6,
                           display: 'flex',
                           alignItems: 'center',
@@ -2021,9 +2074,7 @@ export default function FOTWLandingPage() {
                       >
                         {reviewSpoiler ? 'Contains spoiler' : 'Spoiler?'}
                       </button>
-                      <span style={{ color: C.dim, fontSize: 12 }}>
-                        {reviewBody.length} / 1000
-                      </span>
+                      <span style={{ color: C.dim, fontSize: 12 }}>{reviewBody.length} / 1000</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {hasReviewLocal && (
@@ -2045,16 +2096,20 @@ export default function FOTWLandingPage() {
                       )}
                       <button
                         onClick={handleSaveReview}
-                        disabled={reviewLoading || !reviewBody.trim() || (reviewBody.length > 1000)}
+                        disabled={reviewLoading || !reviewBody.trim() || reviewBody.length > 1000}
                         style={{
-                          background: reviewBody.trim() && reviewBody.length <= 1000 ? '#40bcf4' : C.border,
+                          background:
+                            reviewBody.trim() && reviewBody.length <= 1000 ? '#40bcf4' : C.border,
                           color: reviewBody.trim() && reviewBody.length <= 1000 ? 'black' : C.muted,
                           border: 'none',
                           borderRadius: 6,
                           padding: '6px 16px',
                           fontSize: 13,
                           fontWeight: 500,
-                          cursor: reviewBody.trim() && reviewBody.length <= 1000 ? 'pointer' : 'not-allowed',
+                          cursor:
+                            reviewBody.trim() && reviewBody.length <= 1000
+                              ? 'pointer'
+                              : 'not-allowed',
                           opacity: reviewLoading ? 0.5 : 1,
                         }}
                       >
@@ -2249,7 +2304,9 @@ export default function FOTWLandingPage() {
             ? (u.seasonWatchCount ?? u.seasonWatchedCount ?? 0)
             : u.watchedCount;
 
-        const lb = data.leaderboard ? [...data.leaderboard].sort((a, b) => getCount(b) - getCount(a)) : [];
+        const lb = data.leaderboard
+          ? [...data.leaderboard].sort((a, b) => getCount(b) - getCount(a))
+          : [];
 
         const labels = lb.map((u) => u.name.split(' ')[0]); // first name only
         const lbCounts = lb.map((u) => getCount(u));
@@ -2324,15 +2381,20 @@ export default function FOTWLandingPage() {
         };
 
         const activeSeasonName = seasons.find((s) => s._id === selectedSeason)?.name;
-        const displayLabel = selectedSeason && selectedSeason !== 'all' && activeSeasonName 
-          ? activeSeasonName 
-          : 'All Time';
+        const displayLabel =
+          selectedSeason && selectedSeason !== 'all' && activeSeasonName
+            ? activeSeasonName
+            : 'All Time';
 
         return (
           <>
             <div
               className="flex items-start justify-between"
-              style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32, paddingBottom: 16 }}
+              style={{
+                marginTop: isMobile ? 24 : 48,
+                paddingTop: isMobile ? 20 : 32,
+                paddingBottom: 16,
+              }}
             >
               <div>
                 <span
@@ -2355,7 +2417,11 @@ export default function FOTWLandingPage() {
               <span style={{ color: C.dim, fontSize: 14 }}>{lb.length} members</span>
             </div>
 
-            <SeasonSelector seasons={seasons} selected={selectedSeason} onChange={handleSeasonChange} />
+            <SeasonSelector
+              seasons={seasons}
+              selected={selectedSeason}
+              onChange={handleSeasonChange}
+            />
 
             {lb.length > 0 ? (
               <div
@@ -2370,54 +2436,61 @@ export default function FOTWLandingPage() {
               >
                 {leaderboardLoading && (
                   <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    backgroundColor: 'rgba(15, 15, 15, 0.7)',
-                    zIndex: 10,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'space-around',
-                    borderRadius: '16px',
-                    padding: isMobile ? '16px' : '24px',
-                    paddingBottom: isMobile ? '40px' : '60px',
-                    backdropFilter: 'blur(2px)',
-                  }}
-                >
-                  {Array.from({ length: Math.min(8, lb.length || 8) }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="animate-pulse"
-                      style={{
-                        width: isMobile ? 20 : 28,
-                        height: `${30 + Math.random() * 70}%`,
-                        backgroundColor: '#40bcf4',
-                        opacity: 0.3,
-                        borderRadius: 4,
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-              <div
-                style={{
-                  width: '100%',
-                  overflowX: 'auto',
-                  WebkitOverflowScrolling: 'touch',
-                }}
-              >
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundColor: 'rgba(15, 15, 15, 0.7)',
+                      zIndex: 10,
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'space-around',
+                      borderRadius: '16px',
+                      padding: isMobile ? '16px' : '24px',
+                      paddingBottom: isMobile ? '40px' : '60px',
+                      backdropFilter: 'blur(2px)',
+                    }}
+                  >
+                    {Array.from({ length: Math.min(8, lb.length || 8) }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="animate-pulse"
+                        style={{
+                          width: isMobile ? 20 : 28,
+                          height: `${30 + Math.random() * 70}%`,
+                          backgroundColor: '#40bcf4',
+                          opacity: 0.3,
+                          borderRadius: 4,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
                 <div
                   style={{
-                    height: isMobile ? '240px' : '360px',
-                    minWidth: `max(100%, ${lb.length * (isMobile ? 32 : 40)}px)`,
+                    width: '100%',
+                    overflowX: 'auto',
+                    WebkitOverflowScrolling: 'touch',
                   }}
                 >
-                  <Bar data={chartData} options={options as any} />
+                  <div
+                    style={{
+                      height: isMobile ? '240px' : '360px',
+                      minWidth: `max(100%, ${lb.length * (isMobile ? 32 : 40)}px)`,
+                    }}
+                  >
+                    <Bar data={chartData} options={options as any} />
+                  </div>
                 </div>
               </div>
-            </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 mt-4" style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+              <div
+                className="flex flex-col items-center justify-center py-16 mt-4"
+                style={{
+                  backgroundColor: C.card,
+                  borderRadius: 16,
+                  border: `1px solid ${C.border}`,
+                }}
+              >
                 <div
                   style={{
                     width: 48,
@@ -2433,7 +2506,9 @@ export default function FOTWLandingPage() {
                   <Trophy size={24} color={C.dim} />
                 </div>
                 <span style={{ color: C.muted, fontSize: 14 }}>
-                  {selectedSeason && selectedSeason !== 'all' ? 'No members on the leaderboard for this season yet' : 'No members on the leaderboard yet'}
+                  {selectedSeason && selectedSeason !== 'all'
+                    ? 'No members on the leaderboard for this season yet'
+                    : 'No members on the leaderboard yet'}
                 </span>
               </div>
             )}
@@ -2447,7 +2522,11 @@ export default function FOTWLandingPage() {
       <>
         <div
           className="flex items-center justify-between"
-          style={{ marginTop: isMobile ? 24 : 48, paddingTop: isMobile ? 20 : 32, paddingBottom: 16 }}
+          style={{
+            marginTop: isMobile ? 24 : 48,
+            paddingTop: isMobile ? 20 : 32,
+            paddingBottom: 16,
+          }}
         >
           <div className="flex items-center gap-4">
             <span style={{ color: 'white', fontSize: 18, fontWeight: 500 }}>Previous Films</span>
@@ -2480,7 +2559,11 @@ export default function FOTWLandingPage() {
           )}
         </div>
 
-        <SeasonSelector seasons={seasons} selected={selectedArchiveSeason} onChange={handleArchiveSeasonChange} />
+        <SeasonSelector
+          seasons={seasons}
+          selected={selectedArchiveSeason}
+          onChange={handleArchiveSeasonChange}
+        />
 
         {archiveLoading ? (
           <div
@@ -2525,7 +2608,10 @@ export default function FOTWLandingPage() {
             {previousFilms.map((af) => renderFlipCard(af))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 mt-4" style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <div
+            className="flex flex-col items-center justify-center py-16 mt-4"
+            style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}
+          >
             <div
               style={{
                 width: 48,
@@ -2541,7 +2627,9 @@ export default function FOTWLandingPage() {
               <Film size={24} color={C.dim} />
             </div>
             <span style={{ color: C.muted, fontSize: 14 }}>
-              {selectedArchiveSeason && selectedArchiveSeason !== 'all' ? 'No films in this season yet' : 'No previous films yet'}
+              {selectedArchiveSeason && selectedArchiveSeason !== 'all'
+                ? 'No films in this season yet'
+                : 'No previous films yet'}
             </span>
           </div>
         )}
@@ -2708,7 +2796,11 @@ export default function FOTWLandingPage() {
             </div>
             <div style={{ padding: '20px 24px' }}>
               <div style={{ marginBottom: 24 }}>
-                <SeasonSelector seasons={seasons} selected={activitySeasonId} onChange={setActivitySeasonId} />
+                <SeasonSelector
+                  seasons={seasons}
+                  selected={activitySeasonId}
+                  onChange={setActivitySeasonId}
+                />
               </div>
               {myActivityLoading ? (
                 <div style={{ color: C.dim, textAlign: 'center', padding: '40px 0' }}>
@@ -2857,7 +2949,11 @@ export default function FOTWLandingPage() {
             </div>
             <div style={{ padding: '20px 24px' }}>
               <div style={{ marginBottom: 24 }}>
-                <SeasonSelector seasons={seasons} selected={activitySeasonId} onChange={setActivitySeasonId} />
+                <SeasonSelector
+                  seasons={seasons}
+                  selected={activitySeasonId}
+                  onChange={setActivitySeasonId}
+                />
               </div>
               {renderActivityBody(userActivity, userActivityLoading)}
             </div>
@@ -2908,7 +3004,8 @@ export default function FOTWLandingPage() {
               }}
             >
               <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>
-                {data.publicReviews.length} {data.publicReviews.length === 1 ? 'Review' : 'Reviews'} for {data.currentFilm?.title}
+                {data.publicReviews.length} {data.publicReviews.length === 1 ? 'Review' : 'Reviews'}{' '}
+                for {data.currentFilm?.title}
               </span>
               <button
                 onClick={() => setShowAllReviews(false)}
@@ -2928,7 +3025,15 @@ export default function FOTWLandingPage() {
             <div style={{ padding: '20px 24px' }}>
               <div className="space-y-4">
                 {data.publicReviews.map((review, idx) => (
-                  <div key={idx} style={{ backgroundColor: '#0f0f0f', padding: 16, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: '#0f0f0f',
+                      padding: 16,
+                      borderRadius: 12,
+                      border: `1px solid ${C.border}`,
+                    }}
+                  >
                     <div className="flex items-center gap-3 mb-3">
                       <div
                         style={{
@@ -2941,21 +3046,51 @@ export default function FOTWLandingPage() {
                         }}
                       >
                         {review.image ? (
-                          <Image src={review.image} alt={review.name} fill className="object-cover" unoptimized />
+                          <Image
+                            src={review.image}
+                            alt={review.name}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-medium text-white" style={{ backgroundColor: avatarBg(review.name) }}>
+                          <div
+                            className="w-full h-full flex items-center justify-center text-sm font-medium text-white"
+                            style={{ backgroundColor: avatarBg(review.name) }}
+                          >
                             {review.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
                       <div>
-                        <span style={{ color: 'white', fontSize: 14, fontWeight: 500, display: 'block' }}>{review.name}</span>
+                        <span
+                          style={{
+                            color: 'white',
+                            fontSize: 14,
+                            fontWeight: 500,
+                            display: 'block',
+                          }}
+                        >
+                          {review.name}
+                        </span>
                         <span style={{ color: C.dim, fontSize: 12 }}>
-                          {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          {new Date(review.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                         </span>
                       </div>
                     </div>
-                    <p style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                    <p
+                      style={{
+                        color: '#e2e8f0',
+                        fontSize: 14,
+                        lineHeight: 1.6,
+                        margin: 0,
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
                       {review.body}
                     </p>
                   </div>
