@@ -341,6 +341,10 @@ export async function POST(req: Request) {
       year: tmdbMeta?.year ?? 0,
     });
 
+    if (chosenByEmail) {
+      await FOTWUser.updateOne({ email: chosenByEmail }, { $inc: { timesSuggested: 1 } });
+    }
+
     return NextResponse.json({ success: true, film: newFilm });
   } catch (error) {
     console.error('Error creating film:', error);
@@ -388,10 +392,18 @@ export async function PATCH(req: Request) {
     if (timerPaused !== undefined) updates.timerPaused = timerPaused;
     if (timerDuration !== undefined) updates.timerDuration = timerDuration;
 
+    const oldFilm = await FOTWFilm.findById(filmId).select('chosenByEmail').lean();
     const updatedFilm = await FOTWFilm.findByIdAndUpdate(filmId, { $set: updates }, { new: true });
 
     if (!updatedFilm) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
+    }
+
+    if (oldFilm && (oldFilm as any).chosenByEmail !== updatedFilm.chosenByEmail) {
+      const oldEmail = (oldFilm as any).chosenByEmail;
+      const newEmail = updatedFilm.chosenByEmail;
+      if (oldEmail) await FOTWUser.updateOne({ email: oldEmail }, { $inc: { timesSuggested: -1 } });
+      if (newEmail) await FOTWUser.updateOne({ email: newEmail }, { $inc: { timesSuggested: 1 } });
     }
 
     return NextResponse.json({ success: true, film: updatedFilm });
@@ -421,7 +433,7 @@ export async function DELETE(req: Request) {
     }
 
     // 1. Find the film by ID.
-    const film = await FOTWFilm.findById(filmId).select('watchedBy').lean();
+    const film = await FOTWFilm.findById(filmId).select('watchedBy chosenByEmail').lean();
     if (!film) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
@@ -457,7 +469,12 @@ export async function DELETE(req: Request) {
     const likesResult = await FOTWLike.deleteMany({ filmId });
     const likesRemoved = likesResult.deletedCount || 0;
 
-    // 6. Delete the FOTWFilm document itself.
+    // 6. Decrement timesSuggested for the chooser.
+    if ((film as any).chosenByEmail) {
+      await FOTWUser.updateOne({ email: (film as any).chosenByEmail }, { $inc: { timesSuggested: -1 } });
+    }
+
+    // 7. Delete the FOTWFilm document itself.
     await FOTWFilm.deleteOne({ _id: filmId });
 
     return NextResponse.json({

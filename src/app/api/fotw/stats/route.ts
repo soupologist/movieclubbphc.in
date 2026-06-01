@@ -234,12 +234,12 @@ export async function GET(req: Request) {
             { $group: { _id: '$watchedBy.userEmail' } },
             { $count: 'count' },
           ],
-          films: filmsPipeline.slice(1),
-          leaderboard: leaderboardPipeline.slice(1),
-          ratingDist: ratingDistributionPipeline.slice(1),
-          participation: participationPipeline.slice(1),
-          language: languagePipeline.slice(1),
-          chosenBy: chosenByPipeline.slice(1)
+          films: filmsPipeline.slice(1) as any[],
+          leaderboard: leaderboardPipeline.slice(1) as any[],
+          ratingDist: ratingDistributionPipeline.slice(1) as any[],
+          participation: participationPipeline.slice(1) as any[],
+          language: languagePipeline.slice(1) as any[],
+          chosenBy: chosenByPipeline.slice(1) as any[]
         }
       }
     ]);
@@ -299,7 +299,7 @@ export async function GET(req: Request) {
     const userMap = Object.fromEntries((involvedUsers as any[]).map(u => [u.email, u]));
 
     // Format Films
-    const films = filmsResult.map((f) => {
+    const films = filmsResult.map((f: any) => {
       const u = userMap[f.chosenByEmail];
       return {
         filmId: f.filmId.toString(),
@@ -314,7 +314,7 @@ export async function GET(req: Request) {
       };
     });
 
-    const formattedLeaderboard = leaderboardResult.map(l => {
+    const formattedLeaderboard = leaderboardResult.map((l: any) => {
       return {
         ...l,
         name: formatDisplayName(l.name, l.username),
@@ -323,7 +323,7 @@ export async function GET(req: Request) {
 
     // Group normalized languages in case multiple raw codes map to the same normalized name
     const groupedLanguages: Record<string, number> = {};
-    languageResult.forEach(l => {
+    languageResult.forEach((l: any) => {
       const norm = normalizeLanguage(l.language);
       groupedLanguages[norm] = (groupedLanguages[norm] || 0) + l.count;
     });
@@ -331,7 +331,7 @@ export async function GET(req: Request) {
       .map(([language, count]) => ({ language, count }))
       .sort((a, b) => b.count - a.count);
 
-    const chosenByBreakdown = chosenByResult.map(c => {
+    const chosenByBreakdown = chosenByResult.map((c: any) => {
       // c.name might be an email or a raw string fallback
       const u = userMap[c.name];
       const displayName = u ? formatDisplayName(u.name, u.username) : formatDisplayName(c.fallbackName || c.name);
@@ -340,7 +340,7 @@ export async function GET(req: Request) {
     
     // Deduplicate chosenByBreakdown in case multiple emails map to same display name or same fallback
     const groupedChosenBy: Record<string, number> = {};
-    chosenByBreakdown.forEach(c => {
+    chosenByBreakdown.forEach((c: any) => {
       groupedChosenBy[c.name] = (groupedChosenBy[c.name] || 0) + c.count;
     });
     const finalChosenByBreakdown = Object.entries(groupedChosenBy)
