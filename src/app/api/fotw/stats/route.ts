@@ -206,32 +206,62 @@ export async function GET(req: Request) {
       { $sort: { count: -1 } },
     ];
 
-    const [
-      overviewResult,
-      filmsResult,
-      leaderboardResult,
-      ratingDistResult,
-      participationResult,
-      languageResult,
-      chosenByResult,
-    ] = await Promise.all([
-      FOTWFilm.aggregate(overviewPipeline as any[]),
-      FOTWFilm.aggregate(filmsPipeline as any[]),
-      FOTWFilm.aggregate(leaderboardPipeline as any[]),
-      FOTWFilm.aggregate(ratingDistributionPipeline as any[]),
-      FOTWFilm.aggregate(participationPipeline as any[]),
-      FOTWFilm.aggregate(languagePipeline as any[]),
-      FOTWFilm.aggregate(chosenByPipeline as any[]),
+    const aggregatedResults = await FOTWFilm.aggregate([
+      { $match: dateFilter },
+      {
+        $facet: {
+          overviewStats: [
+            {
+              $lookup: {
+                from: 'fotwratings',
+                localField: '_id',
+                foreignField: 'filmId',
+                as: 'ratings',
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                totalFilms: { $sum: 1 },
+                totalWatches: { $sum: { $size: { $ifNull: ['$watchedBy', []] } } },
+                totalRatings: { $sum: { $size: '$ratings' } },
+                totalRatingSum: { $sum: { $sum: '$ratings.rating' } },
+              },
+            },
+          ],
+          overviewUniqueWatchers: [
+            { $unwind: '$watchedBy' },
+            { $group: { _id: '$watchedBy.userEmail' } },
+            { $count: 'count' },
+          ],
+          films: filmsPipeline.slice(1),
+          leaderboard: leaderboardPipeline.slice(1),
+          ratingDist: ratingDistributionPipeline.slice(1),
+          participation: participationPipeline.slice(1),
+          language: languagePipeline.slice(1),
+          chosenBy: chosenByPipeline.slice(1)
+        }
+      }
     ]);
 
+    const resultBlock = aggregatedResults[0] || {};
+    const overviewStatsResult = resultBlock.overviewStats || [];
+    const overviewUniqueWatchersResult = resultBlock.overviewUniqueWatchers || [];
+    const filmsResult = resultBlock.films || [];
+    const leaderboardResult = resultBlock.leaderboard || [];
+    const ratingDistResult = resultBlock.ratingDist || [];
+    const participationResult = resultBlock.participation || [];
+    const languageResult = resultBlock.language || [];
+    const chosenByResult = resultBlock.chosenBy || [];
+
     // Format Overview
-    const stats = overviewResult[0]?.stats[0] || {
+    const stats = overviewStatsResult[0] || {
       totalFilms: 0,
       totalWatches: 0,
       totalRatings: 0,
       totalRatingSum: 0,
     };
-    const uniqueWatchers = overviewResult[0]?.uniqueWatchers[0]?.count || 0;
+    const uniqueWatchers = overviewUniqueWatchersResult[0]?.count || 0;
 
     let overviewAvgRating = null;
     if (stats.totalRatings >= 5) {
@@ -255,9 +285,18 @@ export async function GET(req: Request) {
       ratingDistribution[Number(row._id).toFixed(1)] = row.count;
     }
 
-    // Fetch all users for formatting names efficiently
-    const allUsers = await FOTWUser.find().select('email name username').lean();
-    const userMap = Object.fromEntries((allUsers as any[]).map(u => [u.email, u]));
+    // Extract unique emails from results to avoid fetching ALL users
+    const uniqueEmails = new Set<string>();
+    filmsResult.forEach((f: any) => {
+      if (f.chosenByEmail) uniqueEmails.add(f.chosenByEmail);
+    });
+    chosenByResult.forEach((c: any) => {
+      if (c.name && c.name.includes('@')) uniqueEmails.add(c.name);
+    });
+
+    // Fetch only required users for formatting names efficiently
+    const involvedUsers = await FOTWUser.find({ email: { $in: Array.from(uniqueEmails) } }).select('email name username').lean();
+    const userMap = Object.fromEntries((involvedUsers as any[]).map(u => [u.email, u]));
 
     // Format Films
     const films = filmsResult.map((f) => {

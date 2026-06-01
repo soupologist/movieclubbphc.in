@@ -65,6 +65,7 @@ export async function POST(req: Request) {
     let usersImported = 0;
     let duplicatesSkipped = 0;
 
+    const userBulkOps = [];
     for (const u of data.users) {
       if (!u.email) continue;
 
@@ -96,12 +97,18 @@ export async function POST(req: Request) {
           if (parsedUa) payload.updatedAt = parsedUa;
       }
 
-      await FOTWUser.findOneAndUpdate(
-        { email: parsedEmail },
-        { $set: payload },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      userBulkOps.push({
+        updateOne: {
+          filter: { email: parsedEmail },
+          update: { $set: payload },
+          upsert: true
+        }
+      });
       usersImported++;
+    }
+    
+    if (userBulkOps.length > 0) {
+      await FOTWUser.bulkWrite(userBulkOps);
     }
 
     const suggestionEntriesByFilm = new Map<string, Array<{ email: string; name: string; when: Date | null }>>();
@@ -182,12 +189,13 @@ export async function POST(req: Request) {
 
       await FOTWRating.deleteMany({ filmId: importedFilmId });
 
+      const ratingsToInsert = [];
       for (const w of watches) {
         if (!w.email) continue;
         watchesImported++;
 
         if (w.rating !== undefined && w.rating !== null && w.rating >= 1 && w.rating <= 5) {
-          await FOTWRating.create({
+          ratingsToInsert.push({
             userEmail: w.email,
             filmId: importedFilmId,
             rating: w.rating,
@@ -195,9 +203,11 @@ export async function POST(req: Request) {
           ratingsImported++;
         }
       }
-    }
 
-    await syncTimesSuggestedFromFilms();
+      if (ratingsToInsert.length > 0) {
+        await FOTWRating.insertMany(ratingsToInsert);
+      }
+    }
 
     return NextResponse.json({
       success: true,

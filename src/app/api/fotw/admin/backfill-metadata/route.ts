@@ -76,41 +76,48 @@ export async function POST(req: Request) {
     let failed = 0;
     const errors: { title: string; reason: string }[] = [];
 
-    for (const film of films) {
-      const tmdbUrl = (film as any).tmdbUrl as string | undefined;
+    // Process in batches of 5 to speed up backfilling while respecting TMDB rate limits
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < films.length; i += BATCH_SIZE) {
+      const batch = films.slice(i, i + BATCH_SIZE);
+      
+      const promises = batch.map(async (film) => {
+        const tmdbUrl = (film as any).tmdbUrl as string | undefined;
 
-      if (!tmdbUrl) {
-        skipped++;
-        errors.push({ title: (film as any).title, reason: 'No tmdbUrl' });
-        continue;
-      }
+        if (!tmdbUrl) {
+          errors.push({ title: (film as any).title, reason: 'No tmdbUrl' });
+          return { status: 'skipped' };
+        }
 
-      const match = tmdbUrl.match(/\/movie\/(\d+)/);
-      if (!match) {
-        skipped++;
-        errors.push({ title: (film as any).title, reason: 'Invalid tmdbUrl format' });
-        continue;
-      }
+        const match = tmdbUrl.match(/\/movie\/(\d+)/);
+        if (!match) {
+          errors.push({ title: (film as any).title, reason: 'Invalid tmdbUrl format' });
+          return { status: 'skipped' };
+        }
 
-      const tmdbId = match[1];
-      const meta = await fetchTmdbMetadata(tmdbId, apiKey);
+        const tmdbId = match[1];
+        const meta = await fetchTmdbMetadata(tmdbId, apiKey);
 
-      if (!meta) {
-        failed++;
-        errors.push({ title: (film as any).title, reason: `TMDB fetch failed for id ${tmdbId}` });
-        // Still add a small delay before continuing
-        await sleep(300);
-        continue;
-      }
+        if (!meta) {
+          errors.push({ title: (film as any).title, reason: `TMDB fetch failed for id ${tmdbId}` });
+          return { status: 'failed' };
+        }
 
-      await FOTWFilm.findByIdAndUpdate((film as any)._id, {
-        $set: { language: meta.language, year: meta.year },
+        await FOTWFilm.findByIdAndUpdate((film as any)._id, {
+          $set: { language: meta.language, year: meta.year },
+        });
+
+        return { status: 'updated' };
       });
 
-      updated++;
+      const results = await Promise.all(promises);
+      for (const res of results) {
+        if (res.status === 'updated') updated++;
+        if (res.status === 'skipped') skipped++;
+        if (res.status === 'failed') failed++;
+      }
 
-      // ~150ms between calls → stays well under TMDB's 40 req/10s limit
-      await sleep(150);
+      await sleep(250); // Pause after each batch to respect limits
     }
 
     return NextResponse.json({

@@ -147,9 +147,9 @@ export async function GET(req: Request) {
 
     let currentFilm = currentFilmRaw as any;
 
-    // Auto-lock if the timer duration has passed and timer is not paused
+    // Treat as locked in-memory for this request if expired, but do NOT write to DB here.
+    // Let a background cron job actually update the 'lockedAt' field to prevent slow GETs.
     if (currentFilm && !currentFilm.timerPaused) {
-      // Ensure backwards compatibility by attaching a timerDuration explicitly
       const fallbackMs = currentFilm.timerDurationDays
         ? currentFilm.timerDurationDays * 86400000
         : 7 * 86400000;
@@ -157,7 +157,6 @@ export async function GET(req: Request) {
 
       const deadline = new Date(currentFilm.createdAt).getTime() + currentFilm.timerDuration;
       if (Date.now() > deadline) {
-        await FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: new Date() } });
         currentFilm = null;
       }
     }
@@ -213,18 +212,22 @@ export async function GET(req: Request) {
         ? currentFilm.watchedBy.some((w: any) => w.userEmail === session.user.email)
         : false;
 
-      // Extract unique emails from ratings to fetch user profiles efficiently
-      const userEmails = [...new Set((ratings as any[]).map((r: any) => r.userEmail))];
+      // Consolidate user fetching for raters, reviewers, and the chooser into one query
+      const userEmails = new Set([
+        ...(ratings as any[]).map((r: any) => r.userEmail),
+        ...(filmReviews ? (filmReviews as any[]).map((r: any) => r.userEmail) : []),
+        ...(currentFilm.chosenByEmail ? [currentFilm.chosenByEmail] : [])
+      ]);
 
-      const raters = await FOTWUser.find({ email: { $in: userEmails } })
+      const users = await FOTWUser.find({ email: { $in: Array.from(userEmails) } })
         .select('name username image email')
         .lean();
 
-      const ratersMap = new Map((raters as any[]).map((u) => [u.email, u]));
+      const userMap = new Map((users as any[]).map((u) => [u.email, u]));
 
       // Fetch user data for each rating
       allRatings = (ratings as any[]).map((rating: any) => {
-        const user = ratersMap.get(rating.userEmail);
+        const user = userMap.get(rating.userEmail);
         return {
           ...rating,
           userId: user
@@ -248,14 +251,8 @@ export async function GET(req: Request) {
 
       // Public reviews — join with user display info
       if (filmReviews && (filmReviews as any[]).length > 0) {
-        const reviewerEmails = [...new Set((filmReviews as any[]).map((r: any) => r.userEmail))];
-        const reviewers = await FOTWUser.find({ email: { $in: reviewerEmails } })
-          .select('email name username image')
-          .lean();
-        const reviewerMap = new Map((reviewers as any[]).map((u) => [u.email, u]));
-
         publicReviews = (filmReviews as any[]).map((r) => {
-          const u = reviewerMap.get(r.userEmail);
+          const u = userMap.get(r.userEmail);
           return {
             userEmail: r.userEmail,
             name: u ? formatDisplayName(u.name, u.username) : r.userEmail,
@@ -344,8 +341,6 @@ export async function POST(req: Request) {
       year: tmdbMeta?.year ?? 0,
     });
 
-    await syncTimesSuggestedFromFilms();
-
     return NextResponse.json({ success: true, film: newFilm });
   } catch (error) {
     console.error('Error creating film:', error);
@@ -398,8 +393,6 @@ export async function PATCH(req: Request) {
     if (!updatedFilm) {
       return NextResponse.json({ message: 'Film not found' }, { status: 404 });
     }
-
-    await syncTimesSuggestedFromFilms();
 
     return NextResponse.json({ success: true, film: updatedFilm });
   } catch (error) {
@@ -466,8 +459,6 @@ export async function DELETE(req: Request) {
 
     // 6. Delete the FOTWFilm document itself.
     await FOTWFilm.deleteOne({ _id: filmId });
-
-    await syncTimesSuggestedFromFilms();
 
     return NextResponse.json({
       deleted: true,

@@ -69,17 +69,36 @@ export async function GET(req: Request) {
 
     const filmIds = archiveFilms.map((f) => f._id);
 
-    // 2. Bulk-fetch ALL ratings, ALL users, and ALL likes in 4 parallel queries.
-    //    No per-film or per-rating sub-queries — everything resolved in memory.
-    const [allRatings, allUsers, allLikes, allReviews] = await Promise.all([
+    // 2. Bulk-fetch ALL ratings, ALL likes, and ALL reviews in parallel.
+    //    No per-film sub-queries — everything resolved in memory.
+    const [allRatingsRaw, allLikesRaw, allReviewsRaw] = await Promise.all([
       FOTWRating.find({ filmId: { $in: filmIds } }).lean(),
-      FOTWUser.find().select('email name username image').lean(),
       FOTWLike.find({ filmId: { $in: filmIds } }).lean(),
-      FOTWReview.find({ filmId: { $in: filmIds }, isPrivate: false }).lean(),
+      FOTWReview.find({ filmId: { $in: filmIds }, isPrivate: false }).sort({ createdAt: -1 }).lean(),
     ]);
+    
+    const allRatings = allRatingsRaw as any[];
+    const allLikes = allLikesRaw as any[];
+    const allReviews = allReviewsRaw as any[];
 
-    // 3. Build O(1) lookup map: email → user document
-    const userMap = Object.fromEntries((allUsers as any[]).map((u) => [u.email, u]));
+    // Extract unique emails from ratings, reviews, and watchedBy to only fetch needed users
+    const uniqueEmails = new Set<string>();
+    allRatings.forEach(r => uniqueEmails.add(r.userEmail));
+    allReviews.forEach(r => uniqueEmails.add(r.userEmail));
+    archiveFilms.forEach(f => {
+      if (Array.isArray(f.watchedBy)) {
+        f.watchedBy.forEach((w: any) => {
+          if (w && w.userEmail) uniqueEmails.add(w.userEmail);
+        });
+      }
+      if (f.chosenByEmail) uniqueEmails.add(f.chosenByEmail);
+    });
+
+    // 3. Fetch specific users and build O(1) lookup map: email → user document
+    const involvedUsers = await FOTWUser.find({ email: { $in: Array.from(uniqueEmails) } })
+      .select('email name username image')
+      .lean();
+    const userMap = Object.fromEntries((involvedUsers as any[]).map((u) => [u.email, u]));
 
     const formatName = (user: any, fallback: string) => {
       if (!user) return formatDisplayName(fallback);
@@ -90,9 +109,9 @@ export async function GET(req: Request) {
     const result = archiveFilms.map((film) => {
       const filmIdStr = film._id.toString();
 
-      const filmRatings = (allRatings as any[]).filter((r) => r.filmId.toString() === filmIdStr);
-      const filmLikes = (allLikes as any[]).filter((l) => l.filmId.toString() === filmIdStr);
-      const filmReviews = (allReviews as any[]).filter((r) => r.filmId.toString() === filmIdStr).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const filmRatings = allRatings.filter((r) => r.filmId.toString() === filmIdStr);
+      const filmLikes = allLikes.filter((l) => l.filmId.toString() === filmIdStr);
+      const filmReviews = allReviews.filter((r) => r.filmId.toString() === filmIdStr);
 
       const avg =
         filmRatings.length > 0

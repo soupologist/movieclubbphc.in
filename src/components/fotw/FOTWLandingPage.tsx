@@ -471,50 +471,86 @@ export default function FOTWLandingPage() {
   }, []);
 
   const fetchData = useCallback((seasonIdOverride?: string) => {
-    const query = seasonIdOverride ? `?seasonId=${seasonIdOverride}` : '';
-    Promise.all([
-      fetch(`/api/fotw/data${query}`).then((r) => r.json()),
-      fetch('/api/fotw/archive').then((r) => r.json()),
-    ])
-      .then(([d, archive]) => {
-        setData({
-          ...d,
-          leaderboard: d.leaderboard || [],
-          allRatings: d.allRatings || [],
-          averageRating: d.averageRating || 0,
-          watchedCount: d.watchedCount || 0,
-          hasWatched: d.hasWatched || false,
-          userLiked: d.userLiked || false,
-          likesCount: d.likesCount || 0,
-        });
-        setLiked(d.userLiked || false);
-        setLikesCount(d.likesCount || 0);
-        setHasWatchedLocal(d.hasWatched || false);
-        if (d.userRating) {
-          setPendingRating(d.userRating);
-        }
-        if (d.userReview) {
-          setReviewBody(d.userReview.body);
-          setReviewPrivate(d.userReview.isPrivate);
-          setHasReviewLocal(true);
-        } else {
-          setReviewBody('');
-          setReviewPrivate(false);
-          setHasReviewLocal(false);
-        }
-        // archive is now { films, seasonLetterboxdUrl }
-        setArchiveFilms(archive.films || []);
-        setArchiveLetterboxdUrl(archive.seasonLetterboxdUrl || '');
-      })
-      .catch((e) => console.error(e))
-      .finally(() => setLoading(false));
+    if (!seasonIdOverride) {
+      // Initial load uses the bootstrap endpoint
+      fetch(`/api/fotw/bootstrap`)
+        .then((r) => r.json())
+        .then((boot) => {
+          const d = boot.data || {};
+          const archive = boot.archive || {};
+          const seasonsList = boot.seasons || [];
+
+          setSeasons(seasonsList);
+
+          setData({
+            ...d,
+            leaderboard: d.leaderboard || [],
+            allRatings: d.allRatings || [],
+            averageRating: d.averageRating || 0,
+            watchedCount: d.watchedCount || 0,
+            hasWatched: d.hasWatched || false,
+            userLiked: d.userLiked || false,
+            likesCount: d.likesCount || 0,
+          });
+          setLiked(d.userLiked || false);
+          setLikesCount(d.likesCount || 0);
+          setHasWatchedLocal(d.hasWatched || false);
+          if (d.userRating) {
+            setPendingRating(d.userRating);
+          }
+          if (d.userReview) {
+            setReviewBody(d.userReview.body);
+            setReviewPrivate(d.userReview.isPrivate);
+            setHasReviewLocal(true);
+          } else {
+            setReviewBody('');
+            setReviewPrivate(false);
+            setHasReviewLocal(false);
+          }
+          setArchiveFilms(archive.films || []);
+          setArchiveLetterboxdUrl(archive.seasonLetterboxdUrl || '');
+        })
+        .catch((e) => console.error(e))
+        .finally(() => setLoading(false));
+    } else {
+      // Season switch re-fetches just data
+      fetch(`/api/fotw/data?seasonId=${seasonIdOverride}`)
+        .then((r) => r.json())
+        .then((d) => {
+          setData({
+            ...d,
+            leaderboard: d.leaderboard || [],
+            allRatings: d.allRatings || [],
+            averageRating: d.averageRating || 0,
+            watchedCount: d.watchedCount || 0,
+            hasWatched: d.hasWatched || false,
+            userLiked: d.userLiked || false,
+            likesCount: d.likesCount || 0,
+          });
+          setLiked(d.userLiked || false);
+          setLikesCount(d.likesCount || 0);
+          setHasWatchedLocal(d.hasWatched || false);
+          if (d.userRating) {
+            setPendingRating(d.userRating);
+          }
+          if (d.userReview) {
+            setReviewBody(d.userReview.body);
+            setReviewPrivate(d.userReview.isPrivate);
+            setHasReviewLocal(true);
+          } else {
+            setReviewBody('');
+            setReviewPrivate(false);
+            setHasReviewLocal(false);
+          }
+        })
+        .catch((e) => console.error(e))
+        .finally(() => setLoading(false));
+    }
   }, []);
 
   useEffect(() => {
     fetchData();
-    fetchSeasons();
-    fetchConfig();
-  }, [fetchData, fetchSeasons, fetchConfig]);
+  }, [fetchData]);
 
   const handleSeasonChange = async (id: string) => {
     setSelectedSeason(id);
