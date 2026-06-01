@@ -449,9 +449,10 @@ export default function FOTWLandingPage() {
     // no-op: letterboxdUrl is now returned directly by the archive API
   }, []);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback((seasonIdOverride?: string) => {
+    const query = seasonIdOverride ? `?seasonId=${seasonIdOverride}` : '';
     Promise.all([
-      fetch('/api/fotw/data').then((r) => r.json()),
+      fetch(`/api/fotw/data${query}`).then((r) => r.json()),
       fetch('/api/fotw/archive').then((r) => r.json()),
     ])
       .then(([d, archive]) => {
@@ -638,7 +639,7 @@ export default function FOTWLandingPage() {
         };
       });
 
-      fetchData();
+      fetchData(selectedSeason);
     } catch (e) {
       console.error('Watch failed', e);
     } finally {
@@ -656,7 +657,7 @@ export default function FOTWLandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filmId: data.currentFilm._id, rating: newRating }),
       });
-      fetchData();
+      fetchData(selectedSeason);
     } catch (e) {
       console.error('Rating failed', e);
     }
@@ -700,7 +701,7 @@ export default function FOTWLandingPage() {
       if (res.ok) {
         setHasReviewLocal(true);
         setReviewExpanded(false);
-        fetchData(); // refresh public reviews list
+        fetchData(selectedSeason); // refresh public reviews list
       }
     } catch (e) {
       console.error('Review save failed', e);
@@ -724,7 +725,7 @@ export default function FOTWLandingPage() {
         setReviewSpoiler(false);
         setHasReviewLocal(false);
         setReviewExpanded(false);
-        fetchData();
+        fetchData(selectedSeason);
       }
     } catch (e) {
       console.error('Review delete failed', e);

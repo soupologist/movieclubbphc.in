@@ -42,7 +42,9 @@ export const authOptions: NextAuthOptions = {
 
       const isAdmin = ADMIN_EMAILS.includes(email);
       const isClub = CLUB_EMAILS.includes(email);
-      const isCollege = email.endsWith('@hyderabad.bits-pilani.ac.in');
+      const isCollege =
+        email.endsWith('@hyderabad.bits-pilani.ac.in') ||
+        email.endsWith('@alumni.bits-pilani.ac.in');
 
       session.user.role = isAdmin ? 'admin' : isClub ? 'club' : isCollege ? 'college' : 'general';
 

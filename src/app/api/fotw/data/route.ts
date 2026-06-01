@@ -83,7 +83,6 @@ export async function GET(req: Request) {
               $gte: season.startDate,
               ...(season.endDate ? { $lte: season.endDate } : {}),
             },
-            lockedAt: { $ne: null }, // only past (locked) films
           },
           { watchedBy: 1 }  // projection: only watchedBy
         ).lean();
