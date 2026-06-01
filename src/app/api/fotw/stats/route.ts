@@ -5,7 +5,6 @@ import { FOTWFilm, FOTWSeason, FOTWUser } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import { formatDisplayName, normalizeLanguage } from '@/lib/fotw/utils';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {

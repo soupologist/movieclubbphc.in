@@ -59,6 +59,7 @@ Each week, one member of the club gets to choose a film for everyone to watch. H
 - You can see each film's poster, average rating, individual ratings, watch count, and who chose it.
 `;
 
+export const revalidate = 300; // Rules change rarely; cache for 5 minutes
 export async function GET() {
   try {
     await dbConnect();
