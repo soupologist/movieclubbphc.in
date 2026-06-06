@@ -147,8 +147,8 @@ export async function GET(req: Request) {
 
     let currentFilm = currentFilmRaw as any;
 
-    // Treat as locked in-memory for this request if expired, but do NOT write to DB here.
-    // Let a background cron job actually update the 'lockedAt' field to prevent slow GETs.
+    // If the current film's timer has expired, lock it in the DB so it appears in the archive.
+    // The DB write is fire-and-forget (non-blocking) to keep this GET fast.
     if (currentFilm && !currentFilm.timerPaused) {
       const fallbackMs = currentFilm.timerDurationDays
         ? currentFilm.timerDurationDays * 86400000
@@ -157,6 +157,11 @@ export async function GET(req: Request) {
 
       const deadline = new Date(currentFilm.createdAt).getTime() + currentFilm.timerDuration;
       if (Date.now() > deadline) {
+        // Persist the lock so the archive query (lockedAt: { $ne: null }) picks it up.
+        const lockedNow = new Date();
+        FOTWFilm.findByIdAndUpdate(currentFilm._id, { $set: { lockedAt: lockedNow } }).catch(
+          (err) => console.error('[FOTW] Failed to auto-lock expired film:', err)
+        );
         currentFilm = null;
       }
     }
