@@ -125,6 +125,8 @@ export async function GET(req: Request) {
         },
       },
       { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      // Exclude users who have opted out of the leaderboard (matches data route behaviour)
+      { $match: { 'user.excludeFromLeaderboard': { $ne: true } } },
       {
         $project: {
           _id: 0,
