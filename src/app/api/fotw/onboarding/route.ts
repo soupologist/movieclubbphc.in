@@ -86,13 +86,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check cooldown (7 days)
     if (user.lastUsernameChange) {
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const timeSinceChange = Date.now() - new Date(user.lastUsernameChange).getTime();
-      if (timeSinceChange < SEVEN_DAYS_MS) {
+      const nextAllowedChange = new Date(user.lastUsernameChange);
+
+      nextAllowedChange.setMonth(nextAllowedChange.getMonth() + 6);
+
+      if (new Date() < nextAllowedChange) {
         return NextResponse.json(
-          { error: 'You can only change your username once every 7 days' },
+          { error: 'You can only change your username once every 6 months' },
+
           { status: 429 }
         );
       }
