@@ -1426,17 +1426,53 @@ export default function FOTWLandingPage() {
                   />
                 ))}
               </div>
-              <h3
+              <div
                 style={{
-                  color: C.muted,
-                  fontSize: 14,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  margin: 0,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 10,
+                  marginTop: 4,
                 }}
               >
-                Streams
-              </h3>
+                <h3
+                  style={{
+                    color: C.muted,
+                    fontSize: 12,
+                    fontWeight: 400,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    margin: 0,
+                  }}
+                >
+                  Where to Watch
+                </h3>
+                <a
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                    af.title + ' trailer'
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    color: C.muted,
+                    fontSize: 12,
+                    fontWeight: 400,
+                    textDecoration: 'none',
+                    transition: 'color 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'white')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = C.muted)}
+                >
+                  <Play size={14} fill="currentColor" />
+                  Trailer
+                </a>
+              </div>
+              
+              {/* Horizontal line */}
+              <div style={{ height: 1, backgroundColor: C.border, width: '100%' }} />
 
               <div style={{ flex: 1, marginTop: -20, paddingBottom: 16 }}>
                 <JustWatchWidget title={af.title} scale="1.0" iconSize="36px" />
