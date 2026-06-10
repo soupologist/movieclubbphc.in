@@ -19,9 +19,9 @@ export default async function FOTWLayout({ children }: { children: React.ReactNo
   const isCollege =
     email.endsWith('@hyderabad.bits-pilani.ac.in') || email.endsWith('@alumni.bits-pilani.ac.in');
 
-  // Allow admins and club members without the college email
+  // Allow admins, club members, and guests without the college email
   const role = (session.user as any)?.role;
-  const isAuthorized = isCollege || role === 'admin' || role === 'club';
+  const isAuthorized = isCollege || role === 'admin' || role === 'club' || role === 'guest';
 
   if (!isAuthorized) {
     return (

@@ -12,6 +12,7 @@ const ADMIN_EMAILS = [
   'ronilborah@gmail.com',
 ];
 const CLUB_EMAILS = ['f20230177@hyderabad.bits-pilani.ac.in'];
+const GUEST_EMAILS = ['l.brahm@justwatch.com', 'ronilborah@gmail.com'];
 
 export const authOptions: NextAuthOptions = {
   debug: true,
@@ -42,11 +43,20 @@ export const authOptions: NextAuthOptions = {
 
       const isAdmin = ADMIN_EMAILS.includes(email);
       const isClub = CLUB_EMAILS.includes(email);
+      const isGuest = GUEST_EMAILS.includes(email);
       const isCollege =
         email.endsWith('@hyderabad.bits-pilani.ac.in') ||
         email.endsWith('@alumni.bits-pilani.ac.in');
 
-      session.user.role = isAdmin ? 'admin' : isClub ? 'club' : isCollege ? 'college' : 'general';
+      session.user.role = isAdmin
+        ? 'admin'
+        : isClub
+          ? 'club'
+          : isGuest
+            ? 'guest'
+            : isCollege
+              ? 'college'
+              : 'general';
 
       return session;
     },
