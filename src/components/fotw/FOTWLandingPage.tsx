@@ -378,6 +378,94 @@ function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
   );
 }
 
+/* ── JustWatch Widget ────────────────────────────────────── */
+function JustWatchWidget({ 
+  title, 
+  scale = "1.3", 
+  iconSize = "60px" 
+}: { 
+  title: string; 
+  scale?: string; 
+  iconSize?: string; 
+}) {
+  const match = title.match(/^(.*?)(?:\s*\(([\d]{4})\))?$/);
+  const jwTitle = match ? match[1].trim() : title;
+  const jwYear = match && match[2] ? match[2] : undefined;
+
+  useEffect(() => {
+    let script = document.getElementById('justwatch-widget-script') as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = 'justwatch-widget-script';
+      script.src = 'https://widget.justwatch.com/justwatch_widget.js';
+      script.async = true;
+      document.body.appendChild(script);
+    } else {
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).JustWatch?.reloadWidgets) {
+          (window as any).JustWatch.reloadWidgets();
+        }
+      }, 200);
+    }
+  }, [jwTitle]);
+
+  return (
+    <div style={{ marginTop: '32px' }} className="justwatch-wrapper">
+      <style>{`
+        .justwatch-wrapper * {
+          font-family: inherit !important;
+          color: #8a9bb0 !important;
+        }
+        .justwatch-wrapper img {
+          width: ${iconSize} !important;
+          height: ${iconSize} !important;
+          border-radius: 8px !important;
+          margin-bottom: 2px !important;
+        }
+      `}</style>
+      {/* 
+        --- JustWatch Customization Options ---
+        You can add the following data attributes to the div below to customize the widget:
+        
+        data-scale="1.0" (Size factor between 0.6 and 2)
+        data-offer-label="price" (Options: "price", "none" - omit to show Rent/Buy/Subs labels)
+        data-language="en" (Force a specific language, e.g., "en", "hi")
+        data-max-offers="5" (Limit the number of visible streaming services)
+        data-no-offers-message="Oopsy daisy, no offers for {{title}} at this time!"
+        data-title-not-found-message="Oopsy daisy, title not found at this time!"
+      */}
+      <div
+        key={`${jwTitle}-${jwYear}`}
+        data-jw-widget=""
+        data-append-iframe="true"
+        data-api-key={
+          process.env.NEXT_PUBLIC_JUSTWATCH_API_KEY || 'BXrc0oeyF7EpG5Zw45GTgiYwM7v3qWOT'
+        }
+        data-object-type="movie"
+        data-title={jwTitle}
+        {...(jwYear ? { 'data-year': jwYear } : {})}
+        data-theme="dark"
+        data-scale={scale}
+      />
+      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+        <a
+          style={{
+            display: 'flex',
+            fontSize: '11px',
+            color: '#8a9bb0',
+            textDecoration: 'none',
+            alignItems: 'center',
+          }}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-original="https://www.justwatch.com"
+          href="https://www.justwatch.com/in/"
+        ></a>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 export default function FOTWLandingPage() {
   const { data: session } = useSession();
@@ -1042,13 +1130,14 @@ export default function FOTWLandingPage() {
     const hasRatings = af.allRatings && af.allRatings.length > 0;
     const hasReviews = af.publicReviews && af.publicReviews.length > 0;
 
-    let PANELS = 3; // Poster, Info, WatchedBy (base)
+    let PANELS = 4; // Poster, Info, Streaming, WatchedBy (base)
     if (hasRatings) PANELS++;
     if (hasReviews) PANELS++;
 
     // Helper to determine panel indexes
     let currentPanelIdx = 1; // 0 is always poster
     const infoPanelIdx = currentPanelIdx++;
+    const streamingPanelIdx = currentPanelIdx++;
     const ratingPanelIdx = hasRatings ? currentPanelIdx++ : -1;
     const watchedByPanelIdx = currentPanelIdx++;
     const reviewPanelIdx = hasReviews ? currentPanelIdx++ : -1;
@@ -1309,6 +1398,66 @@ export default function FOTWLandingPage() {
                   fontSize: 14,
                   textAlign: 'center',
                   marginTop: 4,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                CLICK FOR STREAMS →
+              </div>
+            </div>
+
+            {/* ── Panel X: Streaming ── */}
+            <div
+              style={{
+                width: `${100 / PANELS}%`,
+                flexShrink: 0,
+                padding: isMobile ? '10px' : '14px 12px',
+                fontSize: isMobile ? '13px' : 'inherit',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                height: '100%',
+                maxHeight: '100%',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Step indicator */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+                {Array.from({ length: PANELS }, (_, idx) => idx).map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i === step - 1 ? 14 : 4,
+                      height: 3,
+                      borderRadius: 2,
+                      backgroundColor: i === step - 1 ? '#8a9bb0' : C.border,
+                      transition: 'all 0.3s',
+                    }}
+                  />
+                ))}
+              </div>
+              <h3
+                style={{
+                  color: C.muted,
+                  fontSize: 14,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  margin: 0,
+                }}
+              >
+                Streams
+              </h3>
+              
+              <div style={{ flex: 1, marginTop: -20, paddingBottom: 16 }}>
+                <JustWatchWidget title={af.title} scale="1.0" iconSize="36px" />
+              </div>
+
+              <div
+                style={{
+                  color: C.dim,
+                  fontSize: 14,
+                  textAlign: 'center',
+                  marginTop: 'auto',
                   letterSpacing: '0.08em',
                 }}
               >
@@ -2304,6 +2453,9 @@ export default function FOTWLandingPage() {
                   </div>
                 </div>
               </div>
+
+              {/* JustWatch Widget */}
+              <JustWatchWidget title={film.title} />
             </div>
           </div>
         </>
