@@ -17,6 +17,7 @@ import {
   FileText,
   Lock,
   Globe,
+  Play,
 } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreen';
 import { instrumentSerif } from '@/app/fonts';
@@ -379,14 +380,14 @@ function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
 }
 
 /* ── JustWatch Widget ────────────────────────────────────── */
-function JustWatchWidget({ 
-  title, 
-  scale = "1.3", 
-  iconSize = "60px" 
-}: { 
-  title: string; 
-  scale?: string; 
-  iconSize?: string; 
+function JustWatchWidget({
+  title,
+  scale = '1.',
+  iconSize = '60px',
+}: {
+  title: string;
+  scale?: string;
+  iconSize?: string;
 }) {
   const match = title.match(/^(.*?)(?:\s*\(([\d]{4})\))?$/);
   const jwTitle = match ? match[1].trim() : title;
@@ -411,18 +412,6 @@ function JustWatchWidget({
 
   return (
     <div style={{ marginTop: '32px' }} className="justwatch-wrapper">
-      <style>{`
-        .justwatch-wrapper * {
-          font-family: inherit !important;
-          color: #8a9bb0 !important;
-        }
-        .justwatch-wrapper img {
-          width: ${iconSize} !important;
-          height: ${iconSize} !important;
-          border-radius: 8px !important;
-          margin-bottom: 2px !important;
-        }
-      `}</style>
       {/* 
         --- JustWatch Customization Options ---
         You can add the following data attributes to the div below to customize the widget:
@@ -438,6 +427,7 @@ function JustWatchWidget({
         key={`${jwTitle}-${jwYear}`}
         data-jw-widget=""
         data-append-iframe="true"
+        data-offer-label="none"
         data-api-key={
           process.env.NEXT_PUBLIC_JUSTWATCH_API_KEY || 'BXrc0oeyF7EpG5Zw45GTgiYwM7v3qWOT'
         }
@@ -1447,7 +1437,7 @@ export default function FOTWLandingPage() {
               >
                 Streams
               </h3>
-              
+
               <div style={{ flex: 1, marginTop: -20, paddingBottom: 16 }}>
                 <JustWatchWidget title={af.title} scale="1.0" iconSize="36px" />
               </div>
@@ -2454,8 +2444,62 @@ export default function FOTWLandingPage() {
                 </div>
               </div>
 
-              {/* JustWatch Widget */}
-              <JustWatchWidget title={film.title} />
+              {/* Where to Watch & Trailer Header + JustWatch Widget */}
+              <div
+                style={{
+                  marginTop: 32,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 16,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: C.muted,
+                      fontSize: 14,
+                      fontWeight: 400,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Where to Watch
+                  </span>
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                      film.title + ' trailer'
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      color: C.muted,
+                      fontSize: 14,
+                      fontWeight: 400,
+                      textDecoration: 'none',
+                      transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'white')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = C.muted)}
+                  >
+                    <Play size={18} fill="currentColor" />
+                    Trailer
+                  </a>
+                </div>
+                
+                {/* Horizontal line */}
+                <div style={{ height: 1, backgroundColor: C.border, width: '100%' }} />
+
+                <div style={{ marginTop: -16 }}>
+                  <JustWatchWidget title={film.title} />
+                </div>
+              </div>
             </div>
           </div>
         </>
