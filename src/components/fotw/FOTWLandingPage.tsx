@@ -457,8 +457,9 @@ function JustWatchWidget({
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-export default function FOTWLandingPage() {
+export default function FOTWLandingPage({ initialData }: { initialData?: any } = {}) {
   const { data: session } = useSession();
+  const isFirstMount = useRef(true);
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);
@@ -478,34 +479,34 @@ export default function FOTWLandingPage() {
   }, []);
 
   // Core data
-  const [data, setData] = useState<FOTWData | null>(null);
-  const [archiveFilms, setArchiveFilms] = useState<ArchiveFilm[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<FOTWData | null>(initialData?.data || null);
+  const [archiveFilms, setArchiveFilms] = useState<ArchiveFilm[]>(initialData?.archive?.films || []);
+  const [loading, setLoading] = useState(!initialData);
 
   // Season state
-  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>(initialData?.seasons || []);
   const [selectedSeason, setSelectedSeason] = useState<string>('');
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [selectedArchiveSeason, setSelectedArchiveSeason] = useState<string>('');
   const [archiveLoading, setArchiveLoading] = useState(false);
 
   // All-time Letterboxd URL from site config
-  const [archiveLetterboxdUrl, setArchiveLetterboxdUrl] = useState<string>('');
+  const [archiveLetterboxdUrl, setArchiveLetterboxdUrl] = useState<string>(initialData?.archive?.seasonLetterboxdUrl || '');
 
   // Inline action state
-  const [pendingRating, setPendingRating] = useState(0);
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
-  const [hasWatchedLocal, setHasWatchedLocal] = useState(false);
+  const [pendingRating, setPendingRating] = useState<number>(initialData?.data?.userRating || 0);
+  const [liked, setLiked] = useState<boolean>(initialData?.data?.userLiked || false);
+  const [likesCount, setLikesCount] = useState<number>(initialData?.data?.likesCount || 0);
+  const [hasWatchedLocal, setHasWatchedLocal] = useState<boolean>(initialData?.data?.hasWatched || false);
   const [watchLoading, setWatchLoading] = useState(false);
 
   // Review state
-  const [reviewExpanded, setReviewExpanded] = useState(false);
-  const [reviewBody, setReviewBody] = useState('');
-  const [reviewPrivate, setReviewPrivate] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState<boolean>(false);
+  const [reviewBody, setReviewBody] = useState<string>(initialData?.data?.userReview?.body || '');
+  const [reviewPrivate, setReviewPrivate] = useState<boolean>(initialData?.data?.userReview?.isPrivate || false);
   const [reviewSpoiler, setReviewSpoiler] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [hasReviewLocal, setHasReviewLocal] = useState(false);
+  const [hasReviewLocal, setHasReviewLocal] = useState(!!initialData?.data?.userReview);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
   // Rating detail modal
@@ -614,8 +615,12 @@ export default function FOTWLandingPage() {
   }, []);
 
   useEffect(() => {
+    if (initialData && isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, initialData]);
 
   const handleSeasonChange = async (id: string) => {
     setSelectedSeason(id);
