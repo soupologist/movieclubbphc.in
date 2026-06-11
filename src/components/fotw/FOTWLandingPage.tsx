@@ -2003,7 +2003,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
           About →
         </Link>
         <Link
-          href="/club/filmoftheweek/admin/stats"
+          href="/club/filmoftheweek/stats"
           style={{
             color: '#4a5568',
             fontSize: '14px',

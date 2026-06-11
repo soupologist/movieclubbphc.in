@@ -448,52 +448,6 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
         </div>
 
       </section>
-
-      {/* Section 5: Controversial Films */}
-      <section className="mb-10">
-        <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 18, fontWeight: 600 }}>Most Polarizing Picks</h2>
-        <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-          <div className="overflow-x-auto">
-            <table style={{ width: '100%', color: C.muted, fontSize: 13, borderCollapse: 'collapse', minWidth: '600px' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Film Title</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Variance</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Lowest Rating</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Highest Rating</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Avg Rating</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Ratings Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td colSpan={6} style={{ padding: '12px 16px' }}><Skeleton className="h-4 w-full" /></td>
-                    </tr>
-                  ))
-                ) : !data?.controversialFilms || data.controversialFilms.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: C.dim }}>Not enough ratings to calculate variance.</td>
-                  </tr>
-                ) : (
-                  data.controversialFilms.map((f, i) => (
-                    <tr key={f.title} style={{ borderBottom: i === data.controversialFilms.length - 1 ? 'none' : `1px solid ${C.border}` }}>
-                      <td style={{ padding: '12px 16px', color: 'white' }}>{f.title.replace(/\s*\(\d{4}\)$/, '')}</td>
-                      <td style={{ padding: '12px 16px', color: '#ef4444', fontWeight: 600 }}>{f.variance.toFixed(1)}</td>
-                      <td style={{ padding: '12px 16px' }}>{f.minRating.toFixed(1)}</td>
-                      <td style={{ padding: '12px 16px' }}>{f.maxRating.toFixed(1)}</td>
-                      <td style={{ padding: '12px 16px' }}>{f.avgRating.toFixed(2)}</td>
-                      <td style={{ padding: '12px 16px' }}>{f.ratingCount}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 }
