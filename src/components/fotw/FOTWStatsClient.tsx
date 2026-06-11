@@ -59,6 +59,9 @@ interface StatsData {
   participationByFilm: { title: string; watchCount: number; dateSuggested: string | null }[];
   languageBreakdown: { language: string; count: number }[];
   chosenByBreakdown: { name: string; count: number }[];
+  decadesBreakdown: { decade: string; count: number }[];
+  controversialFilms: { title: string; ratingCount: number; avgRating: number; maxRating: number; minRating: number; variance: number }[];
+  topReviewers: { name: string; email: string; reviewCount: number }[];
 }
 
 export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Season[] }) {
@@ -387,6 +390,107 @@ export default function FOTWStatsClient({ initialSeasons }: { initialSeasons: Se
             )}
           </div>
 
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          
+          {/* Decades Breakdown */}
+          <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+            <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Decades Breakdown</h3>
+            {loading ? <Skeleton className="h-64 w-full" /> : 
+             !data?.decadesBreakdown || data.decadesBreakdown.length === 0 ? <div className="h-64 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
+              <div className="h-64 flex items-center justify-center">
+                <Doughnut 
+                  data={{
+                    labels: data.decadesBreakdown.map(d => d.decade),
+                    datasets: [{
+                      data: data.decadesBreakdown.map(d => d.count),
+                      backgroundColor: ['#f59e0b', '#ef4444', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#6366f1'],
+                      borderColor: C.card,
+                      borderWidth: 2,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { position: 'right', labels: { color: C.muted, font: { size: 12 } } }
+                    },
+                    cutout: '70%'
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Top Reviewers */}
+          <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+            <h3 style={{ color: C.muted, fontSize: 14, marginBottom: 16, fontWeight: 500 }}>Top Reviewers</h3>
+            {loading ? <Skeleton className="h-64 w-full" /> : 
+             !data?.topReviewers || data.topReviewers.length === 0 ? <div className="h-64 flex items-center justify-center" style={{ color: C.dim }}>No data</div> : (
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-2">
+                {data.topReviewers.map((reviewer, i) => (
+                  <div key={reviewer.email} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <span style={{ color: C.dim, fontSize: 13, minWidth: 20 }}>{i + 1}</span>
+                      <span style={{ color: 'white', fontSize: 14, fontWeight: 500 }}>{reviewer.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span style={{ color: C.green, fontSize: 14, fontWeight: 600 }}>{reviewer.reviewCount}</span>
+                      <span style={{ color: C.muted, fontSize: 11, marginLeft: 4 }}>reviews</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* Section 5: Controversial Films */}
+      <section className="mb-10">
+        <h2 style={{ color: 'white', margin: '0 0 12px 0', fontSize: 18, fontWeight: 600 }}>Most Polarizing Picks</h2>
+        <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', color: C.muted, fontSize: 13, borderCollapse: 'collapse', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Film Title</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Variance</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Lowest Rating</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Highest Rating</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Avg Rating</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 500 }}>Ratings Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td colSpan={6} style={{ padding: '12px 16px' }}><Skeleton className="h-4 w-full" /></td>
+                    </tr>
+                  ))
+                ) : !data?.controversialFilms || data.controversialFilms.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: C.dim }}>Not enough ratings to calculate variance.</td>
+                  </tr>
+                ) : (
+                  data.controversialFilms.map((f, i) => (
+                    <tr key={f.title} style={{ borderBottom: i === data.controversialFilms.length - 1 ? 'none' : `1px solid ${C.border}` }}>
+                      <td style={{ padding: '12px 16px', color: 'white' }}>{f.title.replace(/\s*\(\d{4}\)$/, '')}</td>
+                      <td style={{ padding: '12px 16px', color: '#ef4444', fontWeight: 600 }}>{f.variance.toFixed(1)}</td>
+                      <td style={{ padding: '12px 16px' }}>{f.minRating.toFixed(1)}</td>
+                      <td style={{ padding: '12px 16px' }}>{f.maxRating.toFixed(1)}</td>
+                      <td style={{ padding: '12px 16px' }}>{f.avgRating.toFixed(2)}</td>
+                      <td style={{ padding: '12px 16px' }}>{f.ratingCount}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

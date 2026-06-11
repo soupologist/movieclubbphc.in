@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
-import { FOTWFilm, FOTWSeason, FOTWUser } from '@/lib/fotw/schemas';
+import { FOTWFilm, FOTWSeason, FOTWUser, FOTWReview } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
 import { formatDisplayName, normalizeLanguage } from '@/lib/fotw/utils';
 
@@ -207,6 +207,55 @@ export async function GET(req: Request) {
       { $sort: { count: -1 } },
     ];
 
+    // 8. Decades breakdown pipeline
+    const decadesPipeline = [
+      { $match: dateFilter },
+      { $match: { year: { $gt: 1800 } } },
+      {
+        $group: {
+          _id: {
+            $concat: [
+              { $toString: { $subtract: ['$year', { $mod: ['$year', 10] }] } },
+              's'
+            ]
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $project: { decade: '$_id', count: 1, _id: 0 } },
+      { $sort: { decade: 1 as 1 } }
+    ];
+
+    // 9. Controversial films pipeline
+    const controversialPipeline = [
+      { $match: dateFilter },
+      {
+        $lookup: {
+          from: 'fotwratings',
+          localField: '_id',
+          foreignField: 'filmId',
+          as: 'ratings',
+        },
+      },
+      {
+        $project: {
+          title: 1,
+          ratingCount: { $size: '$ratings' },
+          maxRating: { $max: '$ratings.rating' },
+          minRating: { $min: '$ratings.rating' },
+          avgRating: { $avg: '$ratings.rating' },
+        }
+      },
+      { $match: { ratingCount: { $gte: 3 } } },
+      {
+        $addFields: {
+          variance: { $subtract: ['$maxRating', '$minRating'] }
+        }
+      },
+      { $sort: { variance: -1, ratingCount: -1 } },
+      { $limit: 10 }
+    ];
+
     const aggregatedResults = await FOTWFilm.aggregate([
       { $match: dateFilter },
       {
@@ -240,9 +289,32 @@ export async function GET(req: Request) {
           ratingDist: ratingDistributionPipeline.slice(1) as any[],
           participation: participationPipeline.slice(1) as any[],
           language: languagePipeline.slice(1) as any[],
-          chosenBy: chosenByPipeline.slice(1) as any[]
+          chosenBy: chosenByPipeline.slice(1) as any[],
+          decades: decadesPipeline.slice(1) as any[],
+          controversial: controversialPipeline.slice(1) as any[]
         }
       }
+    ]);
+
+    // Separate aggregate for Top Reviewers
+    let reviewDateMatch: any = {};
+    if (dateFilter.dateSuggested && dateFilter.dateSuggested.$ne !== undefined) {
+       reviewDateMatch = { 'film.dateSuggested': dateFilter.dateSuggested };
+    }
+    const topReviewersResult = await FOTWReview.aggregate([
+      {
+        $lookup: {
+          from: 'fotwfilms',
+          localField: 'filmId',
+          foreignField: '_id',
+          as: 'film',
+        },
+      },
+      { $unwind: '$film' },
+      { $match: reviewDateMatch },
+      { $group: { _id: '$userEmail', reviewCount: { $sum: 1 } } },
+      { $sort: { reviewCount: -1 } },
+      { $limit: 10 }
     ]);
 
     const resultBlock = aggregatedResults[0] || {};
@@ -254,6 +326,8 @@ export async function GET(req: Request) {
     const participationResult = resultBlock.participation || [];
     const languageResult = resultBlock.language || [];
     const chosenByResult = resultBlock.chosenBy || [];
+    const decadesResult = resultBlock.decades || [];
+    const controversialResult = resultBlock.controversial || [];
 
     // Format Overview
     const stats = overviewStatsResult[0] || {
@@ -293,6 +367,9 @@ export async function GET(req: Request) {
     });
     chosenByResult.forEach((c: any) => {
       if (c.name && c.name.includes('@')) uniqueEmails.add(c.name);
+    });
+    topReviewersResult.forEach((r: any) => {
+      if (r._id) uniqueEmails.add(r._id);
     });
 
     // Fetch only required users for formatting names efficiently
@@ -348,6 +425,12 @@ export async function GET(req: Request) {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    const topReviewers = topReviewersResult.map((r: any) => {
+      const u = userMap[r._id];
+      const displayName = u ? formatDisplayName(u.name, u.username) : formatDisplayName(r._id);
+      return { name: displayName, email: r._id, reviewCount: r.reviewCount };
+    });
+
     return NextResponse.json({
       season,
       overview,
@@ -357,6 +440,9 @@ export async function GET(req: Request) {
       participationByFilm: participationResult,
       languageBreakdown,
       chosenByBreakdown: finalChosenByBreakdown,
+      decadesBreakdown: decadesResult,
+      controversialFilms: controversialResult,
+      topReviewers,
     });
   } catch (error) {
     console.error('Stats API Error:', error);
