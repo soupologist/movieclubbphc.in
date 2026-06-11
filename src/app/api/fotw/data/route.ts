@@ -120,45 +120,25 @@ export async function GET(req: Request) {
       })();
     } else {
       // Path A ---------------------------------------------------------------
-      // All-time: compute from watchedBy arrays — same source-of-truth as the season path.
-      // Using FOTWUser.watchedCount was unreliable; the embedded array is always authoritative.
-      leaderboardPromise = (async () => {
-        const allFilms = await FOTWFilm.find({}, { watchedBy: 1 }).lean();
-
-        const watchCountMap = new Map<string, number>();
-        for (const film of allFilms) {
-          const watchedBy = Array.isArray((film as any).watchedBy)
-            ? (film as any).watchedBy
-            : [];
-          for (const entry of watchedBy) {
-            const email: string = entry?.userEmail;
-            if (email) {
-              watchCountMap.set(email, (watchCountMap.get(email) ?? 0) + 1);
-            }
-          }
-        }
-
-        if (watchCountMap.size === 0) return [];
-
-        const emails = [...watchCountMap.keys()];
-        const users = await FOTWUser.find({
-          email: { $in: emails },
-          excludeFromLeaderboard: { $ne: true },
-        })
-          .select('email username name image watchedCount currentStreak longestStreak _id')
-          .lean();
-
-        return (users as any[])
-          .map((u) => ({
+      // All-time: query FOTWUser sorted by the indexed watchedCount field.
+      // This is O(log N) on the index vs the previous O(M*N) scan of all watchedBy arrays.
+      leaderboardPromise = FOTWUser.find({
+        watchedCount: { $gt: 0 },
+        excludeFromLeaderboard: { $ne: true },
+      })
+        .sort({ watchedCount: -1, createdAt: 1 })
+        .select('email username name image watchedCount currentStreak longestStreak _id')
+        .lean()
+        .then((users) =>
+          (users as any[]).map((u) => ({
             _id: u._id,
             name: formatDisplayName(u.name, u.username),
             image: u.image ?? null,
-            watchedCount: watchCountMap.get(u.email) ?? 0,
+            watchedCount: u.watchedCount,
             currentStreak: u.currentStreak || 0,
             longestStreak: u.longestStreak || 0,
           }))
-          .sort((a, b) => b.watchedCount - a.watchedCount);
-      })();
+        );
     }
 
     const [currentFilmRaw, leaderboard] = await Promise.all([

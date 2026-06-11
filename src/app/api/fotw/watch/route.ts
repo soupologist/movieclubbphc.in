@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       },
       {
         $push: { watchedBy: { userEmail: session.user.email, watchedAt: new Date() } },
+        // Keep denormalized count in sync atomically
+        $inc: { watchedCount: 1 },
       },
       { new: true }
     );
@@ -133,6 +135,8 @@ export async function DELETE(req: Request) {
       },
       {
         $pull: { watchedBy: { userEmail: session.user.email } },
+        // Keep denormalized count in sync atomically
+        $inc: { watchedCount: -1 },
       },
       { new: true }
     );

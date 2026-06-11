@@ -27,24 +27,17 @@ export async function GET(req: Request) {
     const useSeasonFilter =
       !!seasonId && seasonId !== 'all' && mongoose.Types.ObjectId.isValid(seasonId);
 
-    // ── 2. Kick off all top-level DB queries in parallel ──────────────────────
-    const [
-      currentFilmRaw,
-      archiveFilmsRaw,
-      seasonsRaw,
-    ] = await Promise.all([
+    // ── 2. Kick off top-level DB queries in parallel ──────────────────────────
+    const [currentFilmRaw, seasonsRaw] = await Promise.all([
       // Current unlocked film
       FOTWFilm.findOne({ lockedAt: null }).sort({ createdAt: -1 }).lean(),
-      // All locked films for archive
-      FOTWFilm.find({ lockedAt: { $ne: null } }).sort({ createdAt: -1 }).lean(),
       // Season list
       FOTWSeason.find({}).select('name startDate endDate isActive letterboxdUrl').sort({ startDate: -1 }).lean(),
     ]);
 
     const currentFilm = currentFilmRaw as any;
-    const archiveFilms = archiveFilmsRaw as any[];
 
-    // ── 3. Determine season date window for leaderboard (if needed) ───────────
+    // ── 3. Determine season date window and letterboxd URL ───────────────────
     let seasonWindow: { startDate: Date; endDate?: Date } | null = null;
     let seasonLetterboxdUrl = '';
 
@@ -60,67 +53,161 @@ export async function GET(req: Request) {
       seasonLetterboxdUrl = siteConfig?.letterboxdAllTimeUrl || '';
     }
 
-    // ── 4. Collect all film IDs and unique emails for bulk fetching ───────────
-    const archiveFilmIds = archiveFilms.map((f: any) => f._id);
     const currentFilmId = currentFilm?._id;
 
-    // Gather every email we might need for user display
-    const uniqueEmails = new Set<string>();
-    if (currentFilm?.chosenByEmail) uniqueEmails.add(currentFilm.chosenByEmail);
-    archiveFilms.forEach((f: any) => {
-      if (f.chosenByEmail) uniqueEmails.add(f.chosenByEmail);
-      if (Array.isArray(f.watchedBy)) {
-        f.watchedBy.forEach((w: any) => { if (w?.userEmail) uniqueEmails.add(w.userEmail); });
-      }
-    });
+    // ── 4. Archive: single $lookup aggregation (replaces 3 parallel finds + in-memory filter) ──
+    const archiveAggregation = FOTWFilm.aggregate([
+      { $match: { lockedAt: { $ne: null } } },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'fotwratings',
+          localField: '_id',
+          foreignField: 'filmId',
+          as: 'allRatings',
+        },
+      },
+      {
+        $lookup: {
+          from: 'fotwreviews',
+          let: { filmId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [{ $eq: ['$filmId', '$$filmId'] }, { $eq: ['$isPrivate', false] }] } } },
+            { $sort: { createdAt: -1 } },
+          ],
+          as: 'publicReviews',
+        },
+      },
+      {
+        $lookup: {
+          from: 'fotwlikes',
+          localField: '_id',
+          foreignField: 'filmId',
+          as: 'allLikes',
+        },
+      },
+      {
+        $addFields: {
+          ratingsCount: { $size: '$allRatings' },
+          likesCount: { $size: '$allLikes' },
+          averageRating: {
+            $cond: {
+              if: { $gt: [{ $size: '$allRatings' }, 0] },
+              then: { $round: [{ $divide: [{ $sum: '$allRatings.rating' }, { $size: '$allRatings' }] }, 1] },
+              else: 0,
+            },
+          },
+          watchedCount: {
+            $cond: {
+              if: { $gt: [{ $ifNull: ['$watchedCount', -1] }, -1] },
+              then: '$watchedCount',
+              else: { $size: '$watchedBy' },
+            },
+          },
+          timerDuration: {
+            $ifNull: ['$timerDuration', { $multiply: [{ $ifNull: ['$timerDurationDays', 7] }, 86400000] }],
+          },
+        },
+      },
+    ]);
 
-    // ── 5. Bulk-fetch all interaction data in parallel ────────────────────────
-    const [
-      archiveRatings,
-      archiveLikes,
-      archiveReviews,
-      currentRating,
-      currentAllRatings,
-      currentLikeDoc,
-      currentLikesCount,
-      currentMyReview,
-      currentPublicReviews,
-      leaderboardUsers,
-      seasonFilmsForLeaderboard,
-    ] = await Promise.all([
-      FOTWRating.find({ filmId: { $in: archiveFilmIds } }).lean(),
-      FOTWLike.find({ filmId: { $in: archiveFilmIds } }).lean(),
-      FOTWReview.find({ filmId: { $in: archiveFilmIds }, isPrivate: false }).sort({ createdAt: -1 }).lean(),
-      // Current film — user-specific
-      currentFilmId ? FOTWRating.findOne({ userEmail: userEmail, filmId: currentFilmId }).lean() : Promise.resolve(null),
-      currentFilmId ? FOTWRating.find({ filmId: currentFilmId }).sort({ createdAt: -1 }).lean() : Promise.resolve([]),
-      currentFilmId ? FOTWLike.findOne({ userEmail: userEmail, filmId: currentFilmId }).lean() : Promise.resolve(null),
-      currentFilmId ? FOTWLike.countDocuments({ filmId: currentFilmId }) : Promise.resolve(0),
-      currentFilmId ? FOTWReview.findOne({ userEmail: userEmail, filmId: currentFilmId }).lean() : Promise.resolve(null),
-      currentFilmId ? FOTWReview.find({ filmId: currentFilmId, isPrivate: false }).sort({ createdAt: -1 }).lean() : Promise.resolve([]),
-      // Leaderboard
-      useSeasonFilter
-        ? Promise.resolve(null) // will be built from season films
-        : FOTWUser.find({ watchedCount: { $gt: 0 }, excludeFromLeaderboard: { $ne: true } })
-            .sort({ watchedCount: -1, createdAt: 1 })
-            .select('email username name watchedCount currentStreak longestStreak image')
-            .lean(),
-      // Season leaderboard: need film watchedBy data for the season window
-      useSeasonFilter && seasonWindow
-        ? FOTWFilm.find({
+    // ── 5. Leaderboard: use indexed FOTWUser.watchedCount (all-time) or aggregate by season ──
+    let leaderboardPromise: Promise<any[]>;
+
+    if (useSeasonFilter && seasonWindow) {
+      // Season leaderboard: aggregate watchedBy entries for films in the date window
+      leaderboardPromise = FOTWFilm.aggregate([
+        {
+          $match: {
             dateSuggested: {
               $gte: seasonWindow.startDate,
               ...(seasonWindow.endDate ? { $lte: seasonWindow.endDate } : {}),
             },
-          }, { watchedBy: 1 }).lean()
-        : Promise.resolve(null),
+          },
+        },
+        { $unwind: { path: '$watchedBy', preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: '$watchedBy.userEmail',
+            seasonWatchCount: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: 'fotwusers',
+            localField: '_id',
+            foreignField: 'email',
+            as: 'userDoc',
+          },
+        },
+        { $unwind: { path: '$userDoc', preserveNullAndEmptyArrays: true } },
+        { $match: { 'userDoc.excludeFromLeaderboard': { $ne: true } } },
+        { $sort: { seasonWatchCount: -1 } },
+      ]).then((rows) =>
+        rows.map((r) => ({
+          _id: r.userDoc?._id,
+          name: formatDisplayName(r.userDoc?.name, r.userDoc?.username),
+          image: r.userDoc?.image ?? null,
+          watchedCount: r.userDoc?.watchedCount ?? 0,
+          seasonWatchCount: r.seasonWatchCount,
+          currentStreak: r.userDoc?.currentStreak || 0,
+          longestStreak: r.userDoc?.longestStreak || 0,
+        }))
+      );
+    } else {
+      // All-time leaderboard: simple indexed sort on FOTWUser.watchedCount
+      leaderboardPromise = FOTWUser.find({
+        watchedCount: { $gt: 0 },
+        excludeFromLeaderboard: { $ne: true },
+      })
+        .sort({ watchedCount: -1, createdAt: 1 })
+        .select('email username name watchedCount currentStreak longestStreak image')
+        .lean()
+        .then((users) =>
+          (users as any[]).map((u) => ({
+            _id: u._id,
+            name: formatDisplayName(u.name, u.username),
+            image: u.image ?? null,
+            watchedCount: u.watchedCount,
+            currentStreak: u.currentStreak || 0,
+            longestStreak: u.longestStreak || 0,
+          }))
+        );
+    }
+
+    // ── 6. Current film: fetch interaction data in parallel ──────────────────
+    const currentFilmDataPromise = currentFilmId
+      ? Promise.all([
+          FOTWRating.findOne({ userEmail, filmId: currentFilmId }).lean(),
+          FOTWRating.find({ filmId: currentFilmId }).sort({ createdAt: -1 }).lean(),
+          FOTWLike.findOne({ userEmail, filmId: currentFilmId }).lean(),
+          FOTWLike.countDocuments({ filmId: currentFilmId }),
+          FOTWReview.findOne({ userEmail, filmId: currentFilmId }).lean(),
+          FOTWReview.find({ filmId: currentFilmId, isPrivate: false }).sort({ createdAt: -1 }).lean(),
+        ])
+      : Promise.resolve([null, [], null, 0, null, []] as const);
+
+    // ── 7. Wait for all parallel work to complete ────────────────────────────
+    const [archiveFilms, leaderboard, currentFilmInteractions] = await Promise.all([
+      archiveAggregation,
+      leaderboardPromise,
+      currentFilmDataPromise,
     ]);
 
-    // ── 6. Add rater/reviewer emails to uniqueEmails, then bulk-fetch users ───
-    (archiveRatings as any[]).forEach((r: any) => uniqueEmails.add(r.userEmail));
-    (archiveReviews as any[]).forEach((r: any) => uniqueEmails.add(r.userEmail));
-    (currentAllRatings as any[]).forEach((r: any) => uniqueEmails.add(r.userEmail));
-    (currentPublicReviews as any[]).forEach((r: any) => uniqueEmails.add(r.userEmail));
+    const [currentRating, currentAllRatings, currentLikeDoc, currentLikesCount, currentMyReview, currentPublicReviews] =
+      currentFilmInteractions as any[];
+
+    // ── 8. Build user lookup map for display names/images ────────────────────
+    const uniqueEmails = new Set<string>();
+    if (currentFilm?.chosenByEmail) uniqueEmails.add(currentFilm.chosenByEmail);
+    for (const r of (currentAllRatings as any[]) ?? []) uniqueEmails.add(r.userEmail);
+    for (const r of (currentPublicReviews as any[]) ?? []) uniqueEmails.add(r.userEmail);
+    for (const film of archiveFilms) {
+      if (film.chosenByEmail) uniqueEmails.add(film.chosenByEmail);
+      for (const r of film.allRatings ?? []) uniqueEmails.add(r.userEmail);
+      for (const r of film.publicReviews ?? []) uniqueEmails.add(r.userEmail);
+      for (const w of film.watchedBy ?? []) if (w?.userEmail) uniqueEmails.add(w.userEmail);
+    }
 
     const allUsers = await FOTWUser.find({ email: { $in: Array.from(uniqueEmails) } })
       .select('email name username image watchedCount currentStreak longestStreak excludeFromLeaderboard')
@@ -131,42 +218,9 @@ export async function GET(req: Request) {
       const u = userMap.get(email) as any;
       return u ? formatDisplayName(u.name, u.username) : formatDisplayName(fallback);
     };
+    const img = (email: string) => (userMap.get(email) as any)?.image ?? null;
 
-    // ── 7. Build leaderboard ──────────────────────────────────────────────────
-    let leaderboard: any[];
-    if (useSeasonFilter && seasonFilmsForLeaderboard) {
-      const watchCountMap = new Map<string, number>();
-      for (const film of seasonFilmsForLeaderboard as any[]) {
-        for (const entry of (film.watchedBy || [])) {
-          if (entry?.userEmail) {
-            watchCountMap.set(entry.userEmail, (watchCountMap.get(entry.userEmail) ?? 0) + 1);
-          }
-        }
-      }
-      leaderboard = (allUsers as any[])
-        .filter((u: any) => !u.excludeFromLeaderboard && watchCountMap.has(u.email))
-        .map((u: any) => ({
-          _id: u._id,
-          name: formatDisplayName(u.name, u.username),
-          image: u.image ?? null,
-          watchedCount: u.watchedCount,
-          seasonWatchCount: watchCountMap.get(u.email) ?? 0,
-          currentStreak: u.currentStreak || 0,
-          longestStreak: u.longestStreak || 0,
-        }))
-        .sort((a, b) => b.seasonWatchCount - a.seasonWatchCount);
-    } else {
-      leaderboard = (leaderboardUsers as any[] || []).map((u: any) => ({
-        _id: u._id,
-        name: formatDisplayName(u.name, u.username),
-        image: u.image,
-        watchedCount: u.watchedCount,
-        currentStreak: u.currentStreak || 0,
-        longestStreak: u.longestStreak || 0,
-      }));
-    }
-
-    // ── 8. Build current film payload ─────────────────────────────────────────
+    // ── 9. Build current film payload ─────────────────────────────────────────
     let activatedFilm = currentFilm;
     if (activatedFilm && !activatedFilm.timerPaused) {
       const fallbackMs = activatedFilm.timerDurationDays
@@ -194,7 +248,8 @@ export async function GET(req: Request) {
       }
       if (currentRating) userRating = (currentRating as any).rating;
 
-      watchedCount = Array.isArray(activatedFilm.watchedBy) ? activatedFilm.watchedBy.length : 0;
+      // Use denormalized watchedCount; fall back to array length for older docs
+      watchedCount = activatedFilm.watchedCount ?? (Array.isArray(activatedFilm.watchedBy) ? activatedFilm.watchedBy.length : 0);
       hasWatched = Array.isArray(activatedFilm.watchedBy)
         ? activatedFilm.watchedBy.some((w: any) => w.userEmail === userEmail) : false;
 
@@ -219,65 +274,52 @@ export async function GET(req: Request) {
       if (currentMyReview) {
         userReview = { body: (currentMyReview as any).body, isPrivate: (currentMyReview as any).isPrivate };
       }
-      publicReviews = (currentPublicReviews as any[]).map((r: any) => {
-        const u = userMap.get(r.userEmail) as any;
-        return {
-          userEmail: r.userEmail,
-          name: u ? formatDisplayName(u.name, u.username) : r.userEmail,
-          image: u?.image ?? null,
-          body: r.body,
-          hasSpoiler: r.hasSpoiler ?? false,
-          createdAt: r.createdAt,
-        };
-      });
+      publicReviews = (currentPublicReviews as any[]).map((r: any) => ({
+        userEmail: r.userEmail,
+        name: fmt(r.userEmail, r.userEmail),
+        image: img(r.userEmail),
+        body: r.body,
+        hasSpoiler: r.hasSpoiler ?? false,
+        createdAt: r.createdAt,
+      }));
     }
 
-    // ── 9. Build archive payload ───────────────────────────────────────────────
-    const archiveResult = archiveFilms.map((film: any) => {
-      const filmIdStr = film._id.toString();
-      const filmRatings = (archiveRatings as any[]).filter((r: any) => r.filmId.toString() === filmIdStr);
-      const filmLikes = (archiveLikes as any[]).filter((l: any) => l.filmId.toString() === filmIdStr);
-      const filmReviews = (archiveReviews as any[]).filter((r: any) => r.filmId.toString() === filmIdStr);
-      const avg = filmRatings.length > 0
-        ? Math.round((filmRatings.reduce((s: number, r: any) => s + r.rating, 0) / filmRatings.length) * 10) / 10
-        : 0;
-      const watchedBy = Array.isArray(film.watchedBy) ? film.watchedBy : [];
-      return {
-        ...film,
-        timerDuration: film.timerDuration ?? ((film.timerDurationDays ? film.timerDurationDays * 86400000 : 7 * 86400000)),
-        averageRating: avg,
-        ratingsCount: filmRatings.length,
-        watchedCount: watchedBy.length,
-        likesCount: filmLikes.length,
-        allRatings: filmRatings.map((r: any) => ({
-          userEmail: r.userEmail,
-          name: fmt(r.userEmail, r.userEmail),
-          image: (userMap.get(r.userEmail) as any)?.image ?? null,
-          rating: r.rating,
-          createdAt: r.createdAt,
-        })),
-        watchedBy: watchedBy.map((w: any) => ({
-          userEmail: w.userEmail,
-          watchedAt: w.watchedAt,
-          name: fmt(w.userEmail, w.userEmail),
-          image: (userMap.get(w.userEmail) as any)?.image ?? null,
-        })),
-        publicReviews: filmReviews.map((r: any) => ({
-          userEmail: r.userEmail,
-          name: fmt(r.userEmail, r.userEmail),
-          image: (userMap.get(r.userEmail) as any)?.image ?? null,
-          body: r.body,
-          hasSpoiler: r.hasSpoiler ?? false,
-          createdAt: r.createdAt,
-        })),
-        chosenBy: film.chosenByEmail ? fmt(film.chosenByEmail, film.chosenBy || '') : film.chosenBy || '',
-      };
-    });
+    // ── 10. Build archive payload ──────────────────────────────────────────────
+    const archiveResult = archiveFilms.map((film: any) => ({
+      ...film,
+      allRatings: (film.allRatings ?? []).map((r: any) => ({
+        userEmail: r.userEmail,
+        name: fmt(r.userEmail, r.userEmail),
+        image: img(r.userEmail),
+        rating: r.rating,
+        createdAt: r.createdAt,
+      })),
+      watchedBy: (film.watchedBy ?? []).map((w: any) => ({
+        userEmail: w.userEmail,
+        watchedAt: w.watchedAt,
+        name: fmt(w.userEmail, w.userEmail),
+        image: img(w.userEmail),
+      })),
+      publicReviews: (film.publicReviews ?? []).map((r: any) => ({
+        userEmail: r.userEmail,
+        name: fmt(r.userEmail, r.userEmail),
+        image: img(r.userEmail),
+        body: r.body,
+        hasSpoiler: r.hasSpoiler ?? false,
+        createdAt: r.createdAt,
+      })),
+      chosenBy: film.chosenByEmail ? fmt(film.chosenByEmail, film.chosenBy || '') : film.chosenBy || '',
+      allLikes: undefined, // strip raw join array
+    }));
 
-    // ── 10. Compose final response ─────────────────────────────────────────────
+    // ── 11. Compose final response ─────────────────────────────────────────────
     return NextResponse.json({
       data: {
-        currentFilm: activatedFilm,
+        // Strip watchedBy — hasWatched is already computed as a boolean above.
+        // Sending the raw array would waste bandwidth for every page load.
+        currentFilm: activatedFilm
+          ? { ...activatedFilm, watchedBy: undefined }
+          : null,
         leaderboard,
         userRating,
         isAdmin: FOTW_ADMINS.includes(userEmail),

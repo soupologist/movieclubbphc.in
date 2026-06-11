@@ -16,7 +16,14 @@ export default async function dbConnect(): Promise<void> {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    const opts = { bufferCommands: false };
+    const opts = {
+      bufferCommands: false,
+      // Keep the pool small for serverless — each Vercel instance shares one connection.
+      maxPoolSize: 10,
+      // Fail fast if the Atlas cluster is unreachable (avoids Vercel 60s timeout)
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    };
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
       console.log('MongoDB connected');
       return mongoose;

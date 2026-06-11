@@ -534,19 +534,6 @@ export default function FOTWLandingPage() {
   };
 
   /* ── Data fetching ───────────────────────────────────────── */
-  const fetchSeasons = useCallback(async () => {
-    try {
-      const res = await fetch('/api/fotw/seasons');
-      const d = await res.json();
-      setSeasons(d.seasons || []);
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-
-  const fetchConfig = useCallback(async () => {
-    // no-op: letterboxdUrl is now returned directly by the archive API
-  }, []);
 
   const fetchData = useCallback((seasonIdOverride?: string) => {
     if (!seasonIdOverride) {
@@ -784,7 +771,18 @@ export default function FOTWLandingPage() {
         };
       });
 
-      fetchData(selectedSeason);
+      // Lightweight leaderboard-only refresh — much cheaper than a full bootstrap.
+      // All other state (watchedCount, hasWatched, userRating, likesCount) was already
+      // updated optimistically above.
+      const seasonParam = selectedSeason ? `?seasonId=${selectedSeason}` : '';
+      fetch(`/api/fotw/data${seasonParam}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.leaderboard) {
+            setData((prev) => (prev ? { ...prev, leaderboard: d.leaderboard } : prev));
+          }
+        })
+        .catch(() => {}); // non-critical
     } catch (e) {
       console.error('Watch failed', e);
     } finally {
@@ -802,7 +800,35 @@ export default function FOTWLandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filmId: data.currentFilm._id, rating: newRating }),
       });
-      fetchData(selectedSeason);
+      // Optimistic update: reflect the new rating in allRatings + recompute average.
+      // No network re-fetch needed — the star UI already shows the new value.
+      setData((prev) => {
+        if (!prev) return prev;
+        const userEmail = session?.user?.email || '';
+        // Preserve the user's existing display name/image if already in the list
+        const existing = prev.allRatings.find((r) => r.userEmail === userEmail);
+        const updatedEntry = {
+          _id: existing?._id || `temp-${Date.now()}`,
+          userEmail,
+          userId: existing?.userId || {
+            name: session?.user?.name || '',
+            image: session?.user?.image ?? undefined,
+          },
+          rating: newRating,
+          createdAt: existing?.createdAt || new Date().toISOString(),
+        };
+        const newRatings = [
+          ...prev.allRatings.filter((r) => r.userEmail !== userEmail),
+          updatedEntry,
+        ];
+        const avg =
+          newRatings.length > 0
+            ? Math.round(
+                (newRatings.reduce((s, r) => s + r.rating, 0) / newRatings.length) * 10
+              ) / 10
+            : 0;
+        return { ...prev, allRatings: newRatings, averageRating: avg, userRating: newRating };
+      });
     } catch (e) {
       console.error('Rating failed', e);
     }
@@ -846,7 +872,37 @@ export default function FOTWLandingPage() {
       if (res.ok) {
         setHasReviewLocal(true);
         setReviewExpanded(false);
-        fetchData(selectedSeason); // refresh public reviews list
+        // Optimistic update: add/replace the review in publicReviews without a re-fetch.
+        setData((prev) => {
+          if (!prev) return prev;
+          const userEmail = session?.user?.email || '';
+          // Try to find the user's formatted display name from an existing entry
+          const existingReview = prev.publicReviews?.find((r) => r.userEmail === userEmail);
+          const displayName = existingReview?.name || session?.user?.name || '';
+          const displayImage = existingReview?.image ?? session?.user?.image ?? null;
+          if (reviewPrivate) {
+            // Private review — remove from public list if it was there
+            return {
+              ...prev,
+              publicReviews: (prev.publicReviews || []).filter((r) => r.userEmail !== userEmail),
+            };
+          }
+          const newReview = {
+            userEmail,
+            name: displayName,
+            image: displayImage,
+            body: reviewBody.trim(),
+            hasSpoiler: reviewSpoiler,
+            createdAt: new Date().toISOString(),
+          };
+          return {
+            ...prev,
+            publicReviews: [
+              newReview,
+              ...(prev.publicReviews || []).filter((r) => r.userEmail !== userEmail),
+            ],
+          };
+        });
       }
     } catch (e) {
       console.error('Review save failed', e);
@@ -870,7 +926,15 @@ export default function FOTWLandingPage() {
         setReviewSpoiler(false);
         setHasReviewLocal(false);
         setReviewExpanded(false);
-        fetchData(selectedSeason);
+        // Optimistic update: remove from publicReviews without a re-fetch.
+        setData((prev) => {
+          if (!prev) return prev;
+          const userEmail = session?.user?.email || '';
+          return {
+            ...prev,
+            publicReviews: (prev.publicReviews || []).filter((r) => r.userEmail !== userEmail),
+          };
+        });
       }
     } catch (e) {
       console.error('Review delete failed', e);
@@ -1177,7 +1241,7 @@ export default function FOTWLandingPage() {
                   alt={af.title}
                   fill
                   className="object-cover"
-                  unoptimized
+                  sizes="(max-width: 640px) 120px, 160px"
                 />
                 {/* Hover overlay on poster: rating + watch count */}
                 <div
@@ -2018,7 +2082,8 @@ export default function FOTWLandingPage() {
                     alt={film.title}
                     fill
                     style={{ objectFit: 'cover' }}
-                    unoptimized
+                    priority
+                    sizes="(max-width: 640px) 90vw, (max-width: 1024px) 40vw, 320px"
                   />
                 </div>
               </div>

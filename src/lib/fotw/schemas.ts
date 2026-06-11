@@ -10,6 +10,8 @@ export interface IFOTWFilm extends Document {
   chosenByEmail: string;
   dateSuggested: Date | null;
   watchedBy: { userEmail: string; watchedAt: Date }[];
+  /** Denormalized count of watchedBy entries. Kept in sync by watch/unwatch routes. */
+  watchedCount: number;
   createdAt: Date;
   lockedAt: Date | null;
   timerPaused: boolean;
@@ -38,6 +40,9 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
       ],
       default: [],
     },
+    // Denormalized count kept in sync by watch/unwatch routes. Avoids scanning
+    // the watchedBy array on every archive/bootstrap read.
+    watchedCount: { type: Number, default: 0 },
     lockedAt: { type: Date, default: null },
     timerPaused: { type: Boolean, default: false },
     timerDuration: { type: Number, default: 604800000 },
@@ -47,7 +52,12 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
   { timestamps: true }
 );
 
+// lockedAt used for archive query ( lockedAt: { $ne: null } )
 FOTWFilmSchema.index({ lockedAt: 1 });
+// dateSuggested used for season-window filtering and archive sort
+FOTWFilmSchema.index({ dateSuggested: -1 });
+// chosenByEmail used in leaderboard chooser lookups
+FOTWFilmSchema.index({ chosenByEmail: 1 });
 
 
 // --- FOTWLike ---
@@ -141,6 +151,8 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
 );
 
 FOTWUserSchema.index({ seasonWatchedCount: -1 });
+// Leaderboard all-time sort — avoids collection scan when building leaderboard
+FOTWUserSchema.index({ watchedCount: -1 });
 
 
 // --- FOTWSeason ---
