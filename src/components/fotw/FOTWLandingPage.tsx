@@ -2034,6 +2034,20 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         >
           Activity →
         </button>
+        <Link
+          href="/club/filmoftheweek/members"
+          style={{
+            color: '#4a5568',
+            fontSize: '14px',
+            textDecoration: 'none',
+            display: 'inline-block',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Members →
+        </Link>
       </div>
 
       {/* ══════════════════════════════════════════════════════

@@ -5,27 +5,24 @@ export function toTitleCase(str: string): string {
   });
 }
 
+/** Normalizes a raw name string to title case. */
+export function normalizeName(name?: string): string {
+  if (!name || !name.trim()) return '';
+  return name.trim().replace(/\w\S*/g, (txt) =>
+    txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+  );
+}
+
+/**
+ * Returns the best display name for a user across the whole site.
+ * Priority: username > title-cased name > 'Anonymous'
+ */
 export function formatDisplayName(name?: string, username?: string): string {
   if (username && username.trim().length > 0) {
     return username.trim();
   }
-
-  if (!name) return 'Anonymous';
-
-  let words = name.trim().split(/[\s]+/);
-
-  const meaningfulWords = words.filter((w) => {
-    const clean = w.replace(/[^a-zA-Z0-9]/g, '');
-    return clean.length > 1;
-  });
-
-  // If filtering removes everything, just use the original words
-  if (meaningfulWords.length > 0) {
-    words = meaningfulWords;
-  }
-
-  const cleanedName = words.join(' ');
-  return toTitleCase(cleanedName);
+  const normalized = normalizeName(name);
+  return normalized || 'Anonymous';
 }
 
 /**
