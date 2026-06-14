@@ -59,7 +59,7 @@ export default function UserProfile({ profile }: UserProfileProps) {
   ];
 
   return (
-    <div style={{ backgroundColor: C.bg, minHeight: '100vh', padding: '24px', paddingBottom: 96, maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', padding: 'clamp(16px, 4vw, 24px)', paddingBottom: 96, maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -77,20 +77,20 @@ export default function UserProfile({ profile }: UserProfileProps) {
           <img
             src={profile.image}
             alt={profile.name}
-            style={{ width: 128, height: 128, borderRadius: '50%', objectFit: 'cover' }}
+            style={{ width: 'clamp(72px, 20vw, 128px)', height: 'clamp(72px, 20vw, 128px)', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
           />
         ) : (
           <div style={{
-            width: 128, height: 128, borderRadius: '50%', backgroundColor: C.border,
-            color: 'white', fontSize: 48, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700
+            width: 'clamp(72px, 20vw, 128px)', height: 'clamp(72px, 20vw, 128px)', borderRadius: '50%', backgroundColor: C.border,
+            color: 'white', fontSize: 'clamp(28px, 8vw, 48px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 700, flexShrink: 0,
           }}>
             {profile.name.charAt(0).toUpperCase()}
           </div>
         )}
         
-        <div style={{ flex: 1, minWidth: '280px' }}>
-          <h1 className={instrumentSerif.className} style={{ fontSize: '3rem', color: 'white', margin: 0, lineHeight: 1 }}>{profile.name}</h1>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className={instrumentSerif.className} style={{ fontSize: 'clamp(1.6rem, 6vw, 3rem)', color: 'white', margin: 0, lineHeight: 1 }}>{profile.name}</h1>
           
           <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', marginTop: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -165,10 +165,10 @@ export default function UserProfile({ profile }: UserProfileProps) {
         {activeTab === 'reviews' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {profile.reviews.map((item) => (
-              <div key={item._id} style={{ display: 'flex', gap: '24px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '24px', flexWrap: 'wrap' }}>
+              <div key={item._id} style={{ display: 'flex', gap: '16px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: 'clamp(16px, 4vw, 24px)', flexWrap: 'wrap' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.film.posterUrl} alt={item.film.title} style={{ width: 120, borderRadius: '8px', objectFit: 'cover' }} />
-                <div style={{ flex: 1, minWidth: '240px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ color: 'white', fontSize: '1.25rem', margin: 0, fontWeight: 600 }}>{item.film.title} <span style={{ color: C.dim, fontSize: '0.875rem', fontWeight: 'normal' }}>({item.film.year})</span></h3>
                   <p style={{ color: C.dim, fontSize: '0.875rem', marginTop: '4px', marginBottom: '16px' }}>{formatDate(item.createdAt)}</p>
                   <div style={{ color: '#ccc', fontSize: '15px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>

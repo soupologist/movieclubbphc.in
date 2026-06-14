@@ -411,7 +411,7 @@ function JustWatchWidget({
   }, [jwTitle]);
 
   return (
-    <div style={{ marginTop: '32px' }} className="justwatch-wrapper">
+    <div style={{ marginTop: '32px', overflow: 'hidden', maxWidth: '100%' }} className="justwatch-wrapper">
       {/* 
         --- JustWatch Customization Options ---
         You can add the following data attributes to the div below to customize the widget:
@@ -950,6 +950,9 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
 
   /* ── Derived values ──────────────────────────────────────── */
   const starValues = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+  // True on any screen narrower than 1024px — used so the 3-column hero
+  // stacks vertically on tablets as well as phones.
+  const isNarrow = isMobile || isTablet;
 
   if (loading) return <LoadingScreen />;
 
@@ -1180,7 +1183,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
   };
 
   /* ── Archive multi-flip card ─────────────────────────────── */
-  // Panels: 0 = poster, 1 = info, 2 = histogram+ratings, 3 = watched-by, 4 = reviews
+  // Panels: 0 = poster, 1 = info, 2 = histogram, 3 = watched-by, 4 = reviews
   const renderFlipCard = (af: ArchiveFilm) => {
     const step = flipStates[af._id] ?? 0;
     const afCounts = starValues.map((v) => af.allRatings.filter((r) => r.rating === v).length);
@@ -1950,9 +1953,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         backgroundColor: C.bg,
         minHeight: '100vh',
         paddingBottom: 96,
-        padding: isMobile ? '16px' : '24px',
+        padding: isNarrow ? '16px' : '24px',
         maxWidth: '1400px',
         margin: '0 auto',
+        overflowX: 'hidden',
       }}
     >
       {/* ── Page Header ──────────────────────────────────────── */}
@@ -1969,7 +1973,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         <div>
           <h1
             className={`text-white m-0 ${instrumentSerif.className}`}
-            style={{ fontSize: isMobile ? '5.5rem' : '7.5rem', lineHeight: 1 }}
+            style={{ fontSize: isMobile ? '3.5rem' : '7.5rem', lineHeight: 1 }}
           >
             Film of the Week
           </h1>
@@ -1987,7 +1991,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         </div>
       </div>
 
-      <div className="flex items-center gap-4" style={{ marginBottom: '24px' }}>
+      <div className="flex items-center gap-4 flex-wrap" style={{ marginBottom: '24px' }}>
         <Link
           href="/club/filmoftheweek/rules"
           style={{
@@ -2063,19 +2067,19 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               width: '100%',
               boxSizing: 'border-box',
               display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? '16px' : '32px',
-              alignItems: isMobile ? 'center' : 'flex-start',
-              padding: isMobile ? '16px' : '32px',
+              flexDirection: isNarrow ? 'column' : 'row',
+              gap: isNarrow ? '16px' : '32px',
+              alignItems: isNarrow ? 'center' : 'flex-start',
+              padding: isNarrow ? '16px' : '32px',
             }}
           >
             {/* ── Column A: Poster ── */}
             <div
               style={{
-                width: isMobile ? '280px' : isTablet ? '180px' : '220px',
+                width: isNarrow ? '280px' : '220px',
                 flexShrink: 0,
                 position: 'relative',
-                margin: isMobile ? '0 auto' : '0',
+                margin: isNarrow ? '0 auto' : '0',
               }}
             >
               <div
@@ -2116,10 +2120,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 10,
-                width: isMobile ? '100%' : 'auto',
-                paddingLeft: isMobile ? '0' : '0',
-                alignItems: isMobile ? 'center' : 'flex-start',
-                textAlign: isMobile ? 'center' : 'left',
+                width: isNarrow ? '100%' : 'auto',
+                paddingLeft: '0',
+                alignItems: isNarrow ? 'center' : 'flex-start',
+                textAlign: isNarrow ? 'center' : 'left',
               }}
             >
               {/* Badge */}
@@ -2147,7 +2151,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                 style={{
                   margin: 0,
                   color: 'white',
-                  fontSize: isMobile ? '1.6rem' : 'clamp(1.6rem, 3vw, 2.4rem)',
+                  fontSize: isNarrow ? '1.6rem' : 'clamp(1.6rem, 3vw, 2.4rem)',
                   lineHeight: 1.1,
                 }}
               >
@@ -2178,7 +2182,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  justifyContent: isNarrow ? 'center' : 'flex-start',
                 }}
               >
                 <CountdownDisplay
@@ -2195,7 +2199,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                   display: 'flex',
                   gap: 12,
                   flexWrap: 'wrap',
-                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  justifyContent: isNarrow ? 'center' : 'flex-start',
                 }}
               >
                 <button
@@ -2275,7 +2279,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                 id="rating-section"
                 style={{
                   display: 'flex',
-                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  justifyContent: isNarrow ? 'center' : 'flex-start',
                   width: '100%',
                 }}
               >
@@ -2286,7 +2290,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      alignItems: isMobile ? 'center' : 'flex-start',
+                      alignItems: isNarrow ? 'center' : 'flex-start',
                       gap: 4,
                     }}
                   >
@@ -2329,8 +2333,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                       marginBottom: 12,
                     }}
                   />
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2" style={{ rowGap: isNarrow ? 8 : 4 }}>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => setReviewPrivate(!reviewPrivate)}
                         style={{
@@ -2424,7 +2428,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                   color: '#4a5568',
                   fontSize: 14,
                   flexWrap: 'wrap',
-                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  justifyContent: isNarrow ? 'center' : 'flex-start',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -2451,7 +2455,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                   border: 'none',
                   padding: 0,
                   cursor: 'pointer',
-                  textAlign: isMobile ? 'center' : 'left',
+                  textAlign: isNarrow ? 'center' : 'left',
                   textDecoration: 'none',
                   width: '100%',
                   marginTop: 24,
@@ -2466,11 +2470,12 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             {/* ── Column C: Histogram ── */}
             <div
               style={{
-                width: isMobile ? '100%' : '450px',
-                flexShrink: 0,
-                paddingLeft: isMobile ? '0' : '32px',
-                borderTop: isMobile ? '1px solid #1e1e1e' : 'none',
-                paddingTop: isMobile ? '24px' : '0',
+                width: isNarrow ? '100%' : '450px',
+                flexShrink: isNarrow ? 1 : 0,
+                minWidth: 0,
+                paddingLeft: isNarrow ? '0' : '32px',
+                borderTop: isNarrow ? '1px solid #1e1e1e' : 'none',
+                paddingTop: isNarrow ? '24px' : '0',
               }}
             >
               {/* Top row: label + fan count */}
@@ -2499,10 +2504,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
 
               <div
                 style={{
-                  display: isMobile ? 'flex' : 'block',
-                  flexDirection: isMobile ? 'row' : 'column',
-                  alignItems: isMobile ? 'flex-end' : 'stretch',
-                  gap: isMobile ? '12px' : '0',
+                  display: isNarrow ? 'flex' : 'block',
+                  flexDirection: isNarrow ? 'row' : 'column',
+                  alignItems: isNarrow ? 'flex-end' : 'stretch',
+                  gap: isNarrow ? '12px' : '0',
                 }}
               >
                 {/* Average rating number */}
@@ -2512,10 +2517,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                     fontWeight: 700,
                     color: '#8a9bb0',
                     lineHeight: 1,
-                    marginBottom: isMobile ? 0 : 14,
-                    width: isMobile ? '60px' : 'auto',
+                    marginBottom: isNarrow ? 0 : 14,
+                    width: isNarrow ? '60px' : 'auto',
                     flexShrink: 0,
-                    textAlign: isMobile ? 'center' : 'left',
+                    textAlign: isNarrow ? 'center' : 'left',
                   }}
                 >
                   {data.allRatings && data.allRatings.length > 4
@@ -2529,7 +2534,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                     style={{
                       display: 'flex',
                       alignItems: 'flex-end',
-                      height: isMobile ? 60 : 100,
+                      height: isNarrow ? 60 : 100,
                       width: '100%',
                       gap: 3,
                     }}
@@ -2544,7 +2549,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                           onClick={() => count > 0 && setSelectedRating(v)}
                           style={{
                             flex: 1,
-                            height: isMobile ? `${hpx}%` : `${hpx}%`,
+                            height: isNarrow ? `${hpx}%` : `${hpx}%`,
                             backgroundColor: isPeak ? '#5f5f5f' : '#1e1e1e',
                             borderRadius: '2px 2px 0 0',
                             minHeight: 3,
@@ -2675,7 +2680,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               backgroundColor: barColors,
               borderRadius: 4,
               borderSkipped: false,
-              barThickness: isMobile ? 20 : 28,
+              barThickness: isNarrow ? 20 : 28,
             },
           ],
         };
@@ -2704,7 +2709,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               border: { display: false },
               ticks: {
                 color: '#8a9bb0',
-                font: { size: isMobile ? 11 : 13 },
+                font: { size: isNarrow ? 11 : 13 },
                 maxRotation: 45,
                 minRotation: 45,
                 autoSkip: false,
@@ -2719,7 +2724,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               border: { display: false, dash: [4, 4] },
               ticks: {
                 color: '#4a5568',
-                font: { size: isMobile ? 11 : 12 },
+                font: { size: isNarrow ? 11 : 12 },
                 stepSize: Math.ceil(lbMax / 4),
               },
             },
@@ -2743,8 +2748,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             <div
               className="flex items-start justify-between"
               style={{
-                marginTop: isMobile ? 24 : 48,
-                paddingTop: isMobile ? 20 : 32,
+                marginTop: isNarrow ? 24 : 48,
+                paddingTop: isNarrow ? 20 : 32,
                 paddingBottom: 16,
               }}
             >
@@ -2781,7 +2786,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                   background: '#0f0f0f',
                   border: `1px solid ${C.border}`,
                   borderRadius: '16px',
-                  padding: isMobile ? '16px' : '24px',
+                  padding: isNarrow ? '16px' : '24px',
                   marginTop: 16,
                   position: 'relative',
                 }}
@@ -2797,8 +2802,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                       alignItems: 'flex-end',
                       justifyContent: 'space-around',
                       borderRadius: '16px',
-                      padding: isMobile ? '16px' : '24px',
-                      paddingBottom: isMobile ? '40px' : '60px',
+                      padding: isNarrow ? '16px' : '24px',
+                      paddingBottom: isNarrow ? '40px' : '60px',
                       backdropFilter: 'blur(2px)',
                     }}
                   >
@@ -2807,7 +2812,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                         key={i}
                         className="animate-pulse"
                         style={{
-                          width: isMobile ? 20 : 28,
+                          width: isNarrow ? 20 : 28,
                           height: `${30 + Math.random() * 70}%`,
                           backgroundColor: '#40bcf4',
                           opacity: 0.3,
@@ -2826,8 +2831,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                 >
                   <div
                     style={{
-                      height: isMobile ? '240px' : '360px',
-                      minWidth: `max(100%, ${lb.length * (isMobile ? 32 : 40)}px)`,
+                      height: isNarrow ? '240px' : '360px',
+                      minWidth: `max(100%, ${lb.length * (isNarrow ? 32 : 40)}px)`,
                     }}
                   >
                     <Bar data={chartData} options={options as any} />
@@ -2875,8 +2880,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         <div
           className="flex items-center justify-between"
           style={{
-            marginTop: isMobile ? 24 : 48,
-            paddingTop: isMobile ? 20 : 32,
+            marginTop: isNarrow ? 24 : 48,
+            paddingTop: isNarrow ? 20 : 32,
             paddingBottom: 16,
           }}
         >
@@ -2922,12 +2927,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             className="mt-4"
             style={{
               display: 'grid',
-              gridTemplateColumns: isMobile
+              gridTemplateColumns: isNarrow
                 ? 'repeat(2, 1fr)'
-                : isTablet
-                  ? 'repeat(3, 1fr)'
-                  : 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: isMobile ? '12px' : '20px',
+                : 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: isNarrow ? '12px' : '20px',
             }}
           >
             {Array.from({ length: 6 }).map((_, i) => (
@@ -2949,12 +2952,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             className="mt-4"
             style={{
               display: 'grid',
-              gridTemplateColumns: isMobile
+              gridTemplateColumns: isNarrow
                 ? 'repeat(2, 1fr)'
-                : isTablet
-                  ? 'repeat(3, 1fr)'
-                  : 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: isMobile ? '12px' : '20px',
+                : 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: isNarrow ? '12px' : '20px',
             }}
           >
             {previousFilms.map((af) => renderFlipCard(af))}
@@ -3000,8 +3001,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             backgroundColor: 'rgba(0,0,0,0.85)',
             zIndex: 50,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isNarrow ? 'flex-end' : 'center',
             justifyContent: 'center',
+            padding: isNarrow ? '0' : '16px',
+            overflowY: 'auto',
           }}
           onClick={() => setSelectedRating(null)}
         >
@@ -3009,12 +3012,12 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             style={{
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: 20,
-              maxWidth: isMobile ? 'none' : '520px',
-              width: isMobile ? '95vw' : '90vw',
-              maxHeight: '85vh',
+              borderRadius: isNarrow ? '20px 20px 0 0' : 20,
+              maxWidth: isNarrow ? 'none' : '520px',
+              width: isNarrow ? '100%' : '90vw',
+              maxHeight: isNarrow ? '90vh' : '85vh',
               overflowY: 'auto',
-              margin: isMobile ? '0' : 'auto',
+              marginTop: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3101,8 +3104,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             backgroundColor: 'rgba(0,0,0,0.85)',
             zIndex: 50,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isNarrow ? 'flex-end' : 'center',
             justifyContent: 'center',
+            padding: isNarrow ? '0' : '16px',
+            overflowY: 'auto',
           }}
           onClick={() => setShowMyActivity(false)}
         >
@@ -3110,12 +3115,12 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             style={{
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: 20,
-              maxWidth: isMobile ? 'none' : '480px',
-              width: isMobile ? '95vw' : '90vw',
-              maxHeight: '85vh',
+              borderRadius: isNarrow ? '20px 20px 0 0' : 20,
+              maxWidth: isNarrow ? 'none' : '480px',
+              width: isNarrow ? '100%' : '90vw',
+              maxHeight: isNarrow ? '90vh' : '85vh',
               overflowY: 'auto',
-              margin: isMobile ? '0' : 'auto',
+              marginTop: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3215,8 +3220,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             backgroundColor: 'rgba(0,0,0,0.85)',
             zIndex: 50,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isNarrow ? 'flex-end' : 'center',
             justifyContent: 'center',
+            padding: isNarrow ? '0' : '16px',
+            overflowY: 'auto',
           }}
           onClick={() => setViewingUser(null)}
         >
@@ -3224,12 +3231,12 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             style={{
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: 20,
-              maxWidth: isMobile ? 'none' : '480px',
-              width: isMobile ? '95vw' : '90vw',
-              maxHeight: '85vh',
+              borderRadius: isNarrow ? '20px 20px 0 0' : 20,
+              maxWidth: isNarrow ? 'none' : '480px',
+              width: isNarrow ? '100%' : '90vw',
+              maxHeight: isNarrow ? '90vh' : '85vh',
               overflowY: 'auto',
-              margin: isMobile ? '0' : 'auto',
+              marginTop: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3322,8 +3329,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             backgroundColor: 'rgba(0,0,0,0.85)',
             zIndex: 50,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isMobile ? 'flex-end' : 'center',
             justifyContent: 'center',
+            padding: isMobile ? '0' : '16px',
+            overflowY: 'auto',
           }}
           onClick={() => setShowAllReviews(false)}
         >
@@ -3331,12 +3340,12 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             style={{
               backgroundColor: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: 20,
+              borderRadius: isMobile ? '20px 20px 0 0' : 20,
               maxWidth: isMobile ? 'none' : '800px',
-              width: isMobile ? '95vw' : '90vw',
-              maxHeight: '92vh',
+              width: isMobile ? '100%' : '90vw',
+              maxHeight: isMobile ? '90vh' : '92vh',
               overflowY: 'auto',
-              margin: isMobile ? '0' : 'auto',
+              marginTop: 'auto',
               display: 'flex',
               flexDirection: 'column',
             }}

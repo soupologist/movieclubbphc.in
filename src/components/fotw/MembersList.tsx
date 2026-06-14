@@ -168,7 +168,7 @@ export default function MembersList({ members }: { members: Member[] }) {
   };
 
   return (
-    <div style={{ backgroundColor: C.bg, minHeight: '100vh', padding: '32px 24px', paddingBottom: 96, maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', padding: 'clamp(16px, 4vw, 32px) clamp(16px, 4vw, 24px)', paddingBottom: 96, maxWidth: '1400px', margin: '0 auto' }}>
       {/* Back link */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px' }}>
         <Link href="/club/filmoftheweek" style={{ color: C.muted, fontSize: 14, textDecoration: 'none' }}
@@ -277,8 +277,8 @@ export default function MembersList({ members }: { members: Member[] }) {
             {/* Modal Header */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '20px',
-              padding: '24px 28px', borderBottom: `1px solid ${C.border}`,
-              flexWrap: 'wrap', flexShrink: 0,
+              padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 28px)', borderBottom: `1px solid ${C.border}`,
+              flexWrap: 'wrap', rowGap: '12px', flexShrink: 0,
             }}>
               {selectedMember.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -339,7 +339,7 @@ export default function MembersList({ members }: { members: Member[] }) {
                 gap: '8px', padding: '12px 28px', borderBottom: `1px solid ${C.border}`,
                 flexWrap: 'wrap', flexShrink: 0,
               }}>
-                <div style={{ display: 'flex', gap: '4px', overflowX: 'auto' }}>
+                <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
                   {tabs.map((tab) => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} style={{
                       background: activeTab === tab.id ? C.card : 'transparent',
@@ -370,7 +370,7 @@ export default function MembersList({ members }: { members: Member[] }) {
             )}
 
             {/* Content */}
-            <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 28px)', overflowY: 'auto', flex: 1 }}>
               {loadingProfile && (
                 <div style={{ color: C.dim, textAlign: 'center', paddingTop: '60px', fontSize: '14px' }}>Loading…</div>
               )}
