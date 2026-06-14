@@ -67,17 +67,8 @@ export async function getBootstrapData(userEmail: string, seasonId?: string | nu
     {
       $lookup: {
         from: 'fotwreviews',
-        let: { filmId: '$_id' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [{ $eq: ['$filmId', '$$filmId'] }, { $eq: ['$isPrivate', false] }],
-              },
-            },
-          },
-          { $sort: { createdAt: -1 } },
-        ],
+        localField: '_id',
+        foreignField: 'filmId',
         as: 'publicReviews',
       },
     },
@@ -221,7 +212,9 @@ export async function getBootstrapData(userEmail: string, seasonId?: string | nu
   for (const film of archiveFilms) {
     if (film.chosenByEmail) uniqueEmails.add(film.chosenByEmail);
     for (const r of film.allRatings ?? []) uniqueEmails.add(r.userEmail);
-    for (const r of film.publicReviews ?? []) uniqueEmails.add(r.userEmail);
+    for (const r of film.publicReviews ?? []) {
+      if (!r.isPrivate) uniqueEmails.add(r.userEmail);
+    }
     for (const w of film.watchedBy ?? []) if (w?.userEmail) uniqueEmails.add(w.userEmail);
   }
 
@@ -329,7 +322,10 @@ export async function getBootstrapData(userEmail: string, seasonId?: string | nu
       name: fmt(w.userEmail, w.userEmail),
       image: img(w.userEmail),
     })),
-    publicReviews: (film.publicReviews ?? []).map((r: any) => ({
+    publicReviews: (film.publicReviews ?? [])
+      .filter((r: any) => !r.isPrivate)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((r: any) => ({
       userEmail: r.userEmail,
       name: fmt(r.userEmail, r.userEmail),
       image: img(r.userEmail),
