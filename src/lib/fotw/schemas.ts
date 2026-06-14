@@ -58,6 +58,8 @@ FOTWFilmSchema.index({ lockedAt: 1 });
 FOTWFilmSchema.index({ dateSuggested: -1 });
 // chosenByEmail used in leaderboard chooser lookups
 FOTWFilmSchema.index({ chosenByEmail: 1 });
+// watchedBy.userEmail used in user profile fetching
+FOTWFilmSchema.index({ 'watchedBy.userEmail': 1 });
 
 
 // --- FOTWLike ---
@@ -75,6 +77,8 @@ const FOTWLikeSchema = new Schema<IFOTWLike>({
 
 FOTWLikeSchema.index({ userEmail: 1, filmId: 1 }, { unique: true });
 FOTWLikeSchema.index({ filmId: 1 });
+// Index for fetching user likes sorted by createdAt
+FOTWLikeSchema.index({ userEmail: 1, createdAt: -1 });
 
 
 // --- FOTWRating ---
@@ -94,7 +98,8 @@ const FOTWRatingSchema: Schema<IFOTWRating> = new Schema(
 );
 
 FOTWRatingSchema.index({ filmId: 1, userEmail: 1 }, { unique: true });
-FOTWRatingSchema.index({ userEmail: 1 });
+// Index for fetching user ratings sorted by createdAt
+FOTWRatingSchema.index({ userEmail: 1, createdAt: -1 });
 
 
 // --- FOTWRules ---
@@ -151,8 +156,8 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
 );
 
 FOTWUserSchema.index({ seasonWatchedCount: -1 });
-// Leaderboard all-time sort — avoids collection scan when building leaderboard
-FOTWUserSchema.index({ watchedCount: -1 });
+// Leaderboard all-time sort and members list sort
+FOTWUserSchema.index({ watchedCount: -1, createdAt: 1 });
 
 
 // --- FOTWSeason ---
@@ -235,7 +240,8 @@ const FOTWReviewSchema: Schema<IFOTWReview> = new Schema(
 // One review per user per film
 FOTWReviewSchema.index({ userEmail: 1, filmId: 1 }, { unique: true });
 FOTWReviewSchema.index({ filmId: 1, isPrivate: 1 });
-FOTWReviewSchema.index({ userEmail: 1 });
+// Index for fetching user reviews sorted by createdAt
+FOTWReviewSchema.index({ userEmail: 1, isPrivate: 1, createdAt: -1 });
 
 // --- Export Models ---
 export const FOTWFilm =

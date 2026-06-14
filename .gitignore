@@ -42,3 +42,6 @@ next-env.d.ts
 src/scripts/
 audit.txt
 scripts/perf-audit.cjs
+test-api-2.js
+test-api.js
+test-fetch.js
