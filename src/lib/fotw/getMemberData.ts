@@ -87,24 +87,30 @@ export async function getMemberProfile(username: string) {
         };
       })
       .sort((a, b) => new Date(b.watchedAt || 0).getTime() - new Date(a.watchedAt || 0).getTime()),
-    ratingHistory: (ratings as any[]).map(r => ({
-      _id: r._id.toString(),
-      film: r.filmId ? formatFilm(r.filmId) : null,
-      rating: r.rating,
-      createdAt: r.createdAt,
-    })).filter(r => r.film),
-    likeHistory: (likes as any[]).map(l => ({
-      _id: l._id.toString(),
-      film: l.filmId ? formatFilm(l.filmId) : null,
-      createdAt: l.createdAt,
-    })).filter(l => l.film),
-    reviews: (reviews as any[]).map(r => ({
-      _id: r._id.toString(),
-      film: r.filmId ? formatFilm(r.filmId) : null,
-      body: r.body,
-      isPrivate: r.isPrivate,
-      hasSpoiler: r.hasSpoiler,
-      createdAt: r.createdAt,
-    })).filter(r => r.film),
+    ratingHistory: (ratings as any[])
+      .filter(r => r.filmId)
+      .map(r => ({
+        _id: r._id.toString(),
+        film: formatFilm(r.filmId),
+        rating: r.rating,
+        createdAt: r.createdAt,
+      })),
+    likeHistory: (likes as any[])
+      .filter(l => l.filmId)
+      .map(l => ({
+        _id: l._id.toString(),
+        film: formatFilm(l.filmId),
+        createdAt: l.createdAt,
+      })),
+    reviews: (reviews as any[])
+      .filter(r => r.filmId)
+      .map(r => ({
+        _id: r._id.toString(),
+        film: formatFilm(r.filmId),
+        body: r.body,
+        isPrivate: r.isPrivate,
+        hasSpoiler: r.hasSpoiler,
+        createdAt: r.createdAt,
+      })),
   };
 }

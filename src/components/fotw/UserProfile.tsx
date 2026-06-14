@@ -12,6 +12,7 @@ const C = {
   blue: '#40bcf4',
   green: '#00e054',
   orange: '#ff9500',
+  red: '#ff453a',
 };
 
 function formatDate(dateStr: string) {
