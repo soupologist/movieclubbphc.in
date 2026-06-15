@@ -3017,7 +3017,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               width: isNarrow ? '100%' : '90vw',
               maxHeight: isNarrow ? '90vh' : '85vh',
               overflowY: 'auto',
-              marginTop: 'auto',
+              marginTop: isNarrow ? 'auto' : undefined,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3120,7 +3120,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               width: isNarrow ? '100%' : '90vw',
               maxHeight: isNarrow ? '90vh' : '85vh',
               overflowY: 'auto',
-              marginTop: 'auto',
+              marginTop: isNarrow ? 'auto' : undefined,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3236,7 +3236,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               width: isNarrow ? '100%' : '90vw',
               maxHeight: isNarrow ? '90vh' : '85vh',
               overflowY: 'auto',
-              marginTop: 'auto',
+              marginTop: isNarrow ? 'auto' : undefined,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3345,7 +3345,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
               width: isMobile ? '100%' : '90vw',
               maxHeight: isMobile ? '90vh' : '92vh',
               overflowY: 'auto',
-              marginTop: 'auto',
+              marginTop: isMobile ? 'auto' : undefined,
               display: 'flex',
               flexDirection: 'column',
             }}
