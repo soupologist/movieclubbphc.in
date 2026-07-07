@@ -295,7 +295,19 @@ interface UserActivityData {
 
 function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = review.body.length > 120;
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) {
+      if (!expanded) {
+        setCanExpand(el.scrollHeight > el.clientHeight);
+      }
+    }
+  }, [review.body, expanded]);
+
+  const isLong = review.body.length > 120 || review.body.split('\n').length > 3 || canExpand;
 
   return (
     <div
@@ -344,6 +356,7 @@ function ArchiveReviewItem({ review, C }: { review: any; C: any }) {
         </span>
       </div>
       <p
+        ref={textRef}
         style={{
           color: C.dim,
           fontSize: 12,
