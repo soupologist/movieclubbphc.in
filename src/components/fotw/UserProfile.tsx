@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { instrumentSerif } from '@/app/fonts';
+import BadgesGrid from '@/components/fotw/BadgesGrid';
+import { UserBadgeResult } from '@/lib/badges';
 
 const C = {
   bg: '#000000',
@@ -35,12 +37,15 @@ type UserProfileProps = {
     username: string;
     name: string;
     image: string | null;
+    spottedBug?: boolean;
     stats: {
       watchedCount: number;
       currentStreak: number;
       longestStreak: number;
       timesSuggested: number;
     };
+    badges?: UserBadgeResult[];
+    earnedBadges?: UserBadgeResult[];
     watchHistory: { film: Film; watchedAt: string | null }[];
     ratingHistory: { _id: string; film: Film; rating: number; createdAt: string }[];
     likeHistory: { _id: string; film: Film; createdAt: string }[];
@@ -49,13 +54,16 @@ type UserProfileProps = {
 };
 
 export default function UserProfile({ profile }: UserProfileProps) {
-  const [activeTab, setActiveTab] = useState<'watches' | 'ratings' | 'likes' | 'reviews'>('watches');
+  const [activeTab, setActiveTab] = useState<'watches' | 'ratings' | 'likes' | 'reviews' | 'badges'>('watches');
+
+  const earnedBadgesCount = profile.earnedBadges?.length ?? profile.badges?.filter(b => b.earned).length ?? 0;
 
   const tabs = [
     { id: 'watches', label: `Watches (${profile.watchHistory.length})` },
     { id: 'ratings', label: `Ratings (${profile.ratingHistory.length})` },
     { id: 'likes', label: `Likes (${profile.likeHistory.length})` },
     { id: 'reviews', label: `Reviews (${profile.reviews.length})` },
+    { id: 'badges', label: `Badges (${earnedBadgesCount})` },
   ];
 
   return (
@@ -96,6 +104,10 @@ export default function UserProfile({ profile }: UserProfileProps) {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Watches</span>
               <span style={{ color: C.blue, fontSize: '24px', fontWeight: 600 }}>{profile.stats.watchedCount}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Badges Unlocked</span>
+              <span style={{ color: C.green, fontSize: '24px', fontWeight: 600 }}>{earnedBadgesCount} <span style={{ fontSize: '14px', color: C.dim, fontWeight: 'normal' }}>/ {profile.badges?.length || 12}</span></span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Streak</span>
@@ -186,6 +198,10 @@ export default function UserProfile({ profile }: UserProfileProps) {
             ))}
             {profile.reviews.length === 0 && <EmptyState message="No reviews yet." />}
           </div>
+        )}
+
+        {activeTab === 'badges' && (
+          <BadgesGrid badges={profile.badges || []} />
         )}
       </div>
     </div>

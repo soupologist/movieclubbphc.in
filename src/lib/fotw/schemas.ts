@@ -132,6 +132,7 @@ export interface IFOTWUser extends Document {
   currentStreak: number;
   longestStreak: number;
   lastWatchedWeek?: Date;
+  spottedBug?: boolean;
 }
 
 const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
@@ -151,6 +152,7 @@ const FOTWUserSchema: Schema<IFOTWUser> = new Schema(
     currentStreak: { type: Number, default: 0 },
     longestStreak: { type: Number, default: 0 },
     lastWatchedWeek: { type: Date },
+    spottedBug: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

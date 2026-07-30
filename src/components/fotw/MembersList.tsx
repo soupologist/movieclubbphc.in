@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { instrumentSerif } from '@/app/fonts';
+import BadgesGrid from '@/components/fotw/BadgesGrid';
+import { UserBadgeResult } from '@/lib/badges';
 
 const C = {
   bg: '#000000',
@@ -39,6 +41,8 @@ interface Member {
   currentStreak: number;
   longestStreak: number;
   timesSuggested: number;
+  badges?: UserBadgeResult[];
+  earnedBadges?: UserBadgeResult[];
 }
 
 interface Season {
@@ -71,6 +75,8 @@ type MemberProfile = {
     longestStreak: number;
     timesSuggested: number;
   };
+  badges?: UserBadgeResult[];
+  earnedBadges?: UserBadgeResult[];
   watchHistory: { film: Film; watchedAt: string | null }[];
   ratingHistory: { _id: string; film: Film; rating: number; createdAt: string }[];
   likeHistory: { _id: string; film: Film; createdAt: string }[];
@@ -94,7 +100,7 @@ export default function MembersList({ members }: { members: Member[] }) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [activeTab, setActiveTab] = useState<'watches' | 'ratings' | 'likes' | 'reviews'>('watches');
+  const [activeTab, setActiveTab] = useState<'watches' | 'ratings' | 'likes' | 'reviews' | 'badges'>('watches');
 
   // Seasons
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -149,11 +155,14 @@ export default function MembersList({ members }: { members: Member[] }) {
     return () => window.removeEventListener('keydown', handler);
   }, [closeModal]);
 
+  const earnedBadgesCount = profile?.earnedBadges?.length ?? profile?.badges?.filter(b => b.earned).length ?? 0;
+
   const tabs = profile ? [
     { id: 'watches', label: `Watches (${filteredWatches.length})` },
     { id: 'ratings', label: `Ratings (${filteredRatings.length})` },
     { id: 'likes', label: `Likes (${filteredLikes.length})` },
     { id: 'reviews', label: `Reviews (${filteredReviews.length})` },
+    { id: 'badges', label: `Badges (${earnedBadgesCount})` },
   ] : [];
 
   const selectStyle = {
@@ -241,15 +250,46 @@ export default function MembersList({ members }: { members: Member[] }) {
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '24px' }}>
-              <div>
-                <div style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Films Watched</div>
-                <div style={{ color: C.blue, fontSize: '14px', fontWeight: 600 }}>{member.watchedCount}</div>
+            <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '24px' }}>
+                <div>
+                  <div style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Films Watched</div>
+                  <div style={{ color: C.blue, fontSize: '14px', fontWeight: 600 }}>{member.watchedCount}</div>
+                </div>
+                <div>
+                  <div style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Longest Streak</div>
+                  <div style={{ color: C.green, fontSize: '14px', fontWeight: 600 }}>{member.longestStreak} wks</div>
+                </div>
               </div>
-              <div>
-                <div style={{ color: C.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Longest Streak</div>
-                <div style={{ color: C.green, fontSize: '14px', fontWeight: 600 }}>{member.longestStreak} wks</div>
-              </div>
+
+              {/* Earned Badges Row Preview */}
+              {member.earnedBadges && member.earnedBadges.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', paddingTop: '4px' }}>
+                  {member.earnedBadges.slice(0, 5).map((badge) => (
+                    <span
+                      key={badge.id}
+                      title={`${badge.name}: ${badge.description}`}
+                      style={{
+                        fontSize: '13px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {badge.symbol}
+                    </span>
+                  ))}
+                  {member.earnedBadges.length > 5 && (
+                    <span style={{ fontSize: '11px', color: C.muted, fontWeight: 500 }}>
+                      +{member.earnedBadges.length - 5}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </button>
         ))}
@@ -308,6 +348,12 @@ export default function MembersList({ members }: { members: Member[] }) {
                       {/* Use filtered count if a season is selected, otherwise total */}
                       <div style={{ color: C.blue, fontSize: '16px', fontWeight: 700 }}>
                         {selectedSeasonId === 'all' ? filteredWatches.length : filteredWatches.length}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: C.muted, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Badges</div>
+                      <div style={{ color: C.green, fontSize: '16px', fontWeight: 700 }}>
+                        {earnedBadgesCount} / {profile.badges?.length || 12}
                       </div>
                     </div>
                     <div>
@@ -434,6 +480,10 @@ export default function MembersList({ members }: { members: Member[] }) {
                       </div>
                     ))}
                   </div>
+              )}
+
+              {!loadingProfile && profile && activeTab === 'badges' && (
+                <BadgesGrid badges={profile.badges || []} />
               )}
             </div>
           </div>
