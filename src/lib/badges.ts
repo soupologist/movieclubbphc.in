@@ -23,6 +23,39 @@ export interface UserBadgeResult extends BadgeDefinition {
   progress?: BadgeProgress;
 }
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  hi: 'Hindi',
+  ja: 'Japanese',
+  ko: 'Korean',
+  fr: 'French',
+  es: 'Spanish',
+  de: 'German',
+  it: 'Italian',
+  ru: 'Russian',
+  zh: 'Chinese',
+  cn: 'Chinese',
+  ml: 'Malayalam',
+  ta: 'Tamil',
+  te: 'Telugu',
+  mr: 'Marathi',
+  bn: 'Bengali',
+  kn: 'Kannada',
+  pa: 'Punjabi',
+  pt: 'Portuguese',
+  da: 'Danish',
+  sv: 'Swedish',
+  no: 'Norwegian',
+  pl: 'Polish',
+};
+
+export function formatLanguageName(lang: string): string {
+  if (!lang) return '';
+  const code = lang.toLowerCase().trim();
+  if (LANGUAGE_NAMES[code]) return LANGUAGE_NAMES[code];
+  return lang.charAt(0).toUpperCase() + lang.slice(1);
+}
+
 // Karri is a club member who perpetually promises to watch a film each season but never does.
 
 /** Full list of predefined badges on the platform */
@@ -143,6 +176,7 @@ export interface ComputeBadgesInput {
   }>;
   allFilms?: Array<{
     _id: string;
+    title?: string;
     chosenByEmail?: string;
     addedBy?: string;
     language?: string;
@@ -211,22 +245,26 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
   );
 
   const seenLanguages = new Set<string>();
-  let isLanguagePioneer = false;
+  const pioneerMatches: Array<{ filmTitle: string; language: string }> = [];
 
   for (const film of allFilmsSorted) {
-    const lang = (film.language || '').toLowerCase().trim();
+    const langRaw = (film.language || '').trim();
+    const langLower = langRaw.toLowerCase();
 
     // Skip blank, English, and Hindi
-    if (!lang || EXCLUDED_PIONEER_LANGUAGES.has(lang)) continue;
+    if (!langLower || EXCLUDED_PIONEER_LANGUAGES.has(langLower)) continue;
 
-    if (!seenLanguages.has(lang)) {
+    if (!seenLanguages.has(langLower)) {
       // First time this foreign language appears — only the recommender of THIS film earns it
-      seenLanguages.add(lang);
+      seenLanguages.add(langLower);
       const isRecommender =
         (film.chosenByEmail && film.chosenByEmail.toLowerCase() === userEmail) ||
         (film.addedBy && film.addedBy.toLowerCase() === userEmail);
       if (isRecommender) {
-        isLanguagePioneer = true;
+        pioneerMatches.push({
+          filmTitle: film.title || 'Untitled',
+          language: formatLanguageName(langRaw),
+        });
       }
     }
     // Subsequent films in the same language → no badge for anyone
@@ -299,7 +337,7 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
         break;
 
       case 'polyglot-pioneer':
-        earned = isLanguagePioneer;
+        earned = pioneerMatches.length > 0;
         break;
 
       case 'bug-hunter':
@@ -311,8 +349,17 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
         break;
     }
 
+    let customDescription: string | undefined;
+    if (badge.id === 'polyglot-pioneer' && earned && pioneerMatches.length > 0) {
+      const details = pioneerMatches
+        .map((m) => `${m.language} with "${m.filmTitle}"`)
+        .join(', ');
+      customDescription = `Pioneered ${details}`;
+    }
+
     return {
       ...badge,
+      description: customDescription || badge.description,
       earned,
       progress,
     };
