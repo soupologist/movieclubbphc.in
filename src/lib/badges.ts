@@ -200,6 +200,10 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
   }
 
   // Language Pioneer check (chronological order across all films)
+  // - English and Hindi are excluded (common languages of the club, not considered "foreign")
+  // - Only the FIRST person to suggest a film in a new foreign language earns this badge
+  const EXCLUDED_PIONEER_LANGUAGES = new Set(['english', 'hindi']);
+
   const allFilmsSorted = [...(input.allFilms || [])].sort(
     (a, b) =>
       new Date(a.dateSuggested || a.createdAt || 0).getTime() -
@@ -211,17 +215,21 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
 
   for (const film of allFilmsSorted) {
     const lang = (film.language || '').toLowerCase().trim();
-    if (lang) {
-      if (!seenLanguages.has(lang)) {
-        seenLanguages.add(lang);
-        const isRecommender =
-          (film.chosenByEmail && film.chosenByEmail.toLowerCase() === userEmail) ||
-          (film.addedBy && film.addedBy.toLowerCase() === userEmail);
-        if (isRecommender) {
-          isLanguagePioneer = true;
-        }
+
+    // Skip blank, English, and Hindi
+    if (!lang || EXCLUDED_PIONEER_LANGUAGES.has(lang)) continue;
+
+    if (!seenLanguages.has(lang)) {
+      // First time this foreign language appears — only the recommender of THIS film earns it
+      seenLanguages.add(lang);
+      const isRecommender =
+        (film.chosenByEmail && film.chosenByEmail.toLowerCase() === userEmail) ||
+        (film.addedBy && film.addedBy.toLowerCase() === userEmail);
+      if (isRecommender) {
+        isLanguagePioneer = true;
       }
     }
+    // Subsequent films in the same language → no badge for anyone
   }
 
   // Crowd Pleaser check (user recommended a film watched by > 20 people)

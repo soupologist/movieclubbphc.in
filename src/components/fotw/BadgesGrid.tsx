@@ -44,7 +44,7 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
         style={{
           display: 'flex',
           alignItems: 'center',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '12px',
         }}
@@ -108,7 +108,7 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
                 padding: '16px',
                 display: 'flex',
                 flexDirection: 'column',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 opacity: badge.earned ? 1 : 0.65,
                 transition: 'transform 0.2s, border-color 0.2s',
                 position: 'relative',

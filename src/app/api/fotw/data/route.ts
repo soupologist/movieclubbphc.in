@@ -9,6 +9,7 @@ import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { authOptions } from '@/lib/auth';
 import { syncTimesSuggestedFromFilms } from '@/lib/fotwTimesSuggested';
 import { formatDisplayName } from '@/lib/fotw/utils';
+import { calculateUserStreak } from '@/lib/fotw/streaks';
 import mongoose from 'mongoose';
 
 const parseAdminDate = (value: unknown): Date | null => {
@@ -98,47 +99,63 @@ export async function GET(req: Request) {
 
         // Fetch FOTWUser display fields — only for users who appear in the tally
         const emails = [...watchCountMap.keys()];
-        const users = await FOTWUser.find({
-          email: { $in: emails },
-          excludeFromLeaderboard: { $ne: true },
-        })
-          .select('email username name image watchedCount currentStreak longestStreak _id')
-          .lean();
+        const [users, allFilms] = await Promise.all([
+          FOTWUser.find({
+            email: { $in: emails },
+            excludeFromLeaderboard: { $ne: true },
+          })
+            .select('email username name image watchedCount currentStreak longestStreak _id')
+            .lean(),
+          FOTWFilm.find({})
+            .select('_id dateSuggested createdAt lockedAt watchedBy')
+            .lean(),
+        ]);
 
         // Build response, sorted by season watch count descending
         return (users as any[])
-          .map((u) => ({
-            _id: u._id,
-            name: formatDisplayName(u.name, u.username),
-            image: u.image ?? null,
-            watchedCount: u.watchedCount,
-            seasonWatchCount: watchCountMap.get(u.email) ?? 0,
-            currentStreak: u.currentStreak || 0,
-            longestStreak: u.longestStreak || 0,
-          }))
+          .map((u) => {
+            const streak = calculateUserStreak(allFilms as any[], u.email, u.longestStreak || 0);
+            return {
+              _id: u._id,
+              name: formatDisplayName(u.name, u.username),
+              image: u.image ?? null,
+              watchedCount: u.watchedCount,
+              seasonWatchCount: watchCountMap.get(u.email) ?? 0,
+              currentStreak: streak.currentStreak,
+              longestStreak: streak.longestStreak,
+            };
+          })
           .sort((a, b) => b.seasonWatchCount - a.seasonWatchCount);
       })();
     } else {
       // Path A ---------------------------------------------------------------
       // All-time: query FOTWUser sorted by the indexed watchedCount field.
-      // This is O(log N) on the index vs the previous O(M*N) scan of all watchedBy arrays.
-      leaderboardPromise = FOTWUser.find({
-        watchedCount: { $gt: 0 },
-        excludeFromLeaderboard: { $ne: true },
-      })
-        .sort({ watchedCount: -1, createdAt: 1 })
-        .select('email username name image watchedCount currentStreak longestStreak _id')
-        .lean()
-        .then((users) =>
-          (users as any[]).map((u) => ({
+      const [users, allFilms] = await Promise.all([
+        FOTWUser.find({
+          watchedCount: { $gt: 0 },
+          excludeFromLeaderboard: { $ne: true },
+        })
+          .sort({ watchedCount: -1, createdAt: 1 })
+          .select('email username name image watchedCount currentStreak longestStreak _id')
+          .lean(),
+        FOTWFilm.find({})
+          .select('_id dateSuggested createdAt lockedAt watchedBy')
+          .lean(),
+      ]);
+
+      leaderboardPromise = Promise.resolve(
+        (users as any[]).map((u) => {
+          const streak = calculateUserStreak(allFilms as any[], u.email, u.longestStreak || 0);
+          return {
             _id: u._id,
             name: formatDisplayName(u.name, u.username),
             image: u.image ?? null,
             watchedCount: u.watchedCount,
-            currentStreak: u.currentStreak || 0,
-            longestStreak: u.longestStreak || 0,
-          }))
-        );
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak,
+          };
+        })
+      );
     }
 
     const [currentFilmRaw, leaderboard] = await Promise.all([

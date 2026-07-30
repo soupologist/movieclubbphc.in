@@ -2,6 +2,7 @@ import dbConnect from '@/lib/dbConnect';
 import { FOTWUser, FOTWFilm, FOTWLike, FOTWRating, FOTWReview, FOTWSeason } from '@/lib/fotw/schemas';
 import { formatDisplayName, normalizeName } from '@/lib/fotw/utils';
 import { computeUserBadges } from '@/lib/badges';
+import { calculateUserStreak } from '@/lib/fotw/streaks';
 
 export async function getAllMembers() {
   await dbConnect();
@@ -44,6 +45,8 @@ export async function getAllMembers() {
 
     const earnedBadges = badges.filter(b => b.earned);
 
+    const streaks = calculateUserStreak(allFilms as any[], userEmail, u.longestStreak || 0);
+
     return {
       _id: u._id.toString(),
       email: u.email,
@@ -52,8 +55,8 @@ export async function getAllMembers() {
       realName: normalizeName(u.name),               // title-cased actual name, for member cards
       image: u.image || null,
       watchedCount: u.watchedCount || 0,
-      currentStreak: u.currentStreak || 0,
-      longestStreak: u.longestStreak || 0,
+      currentStreak: streaks.currentStreak,
+      longestStreak: streaks.longestStreak,
       timesSuggested: u.timesSuggested || 0,
       spottedBug: Boolean(u.spottedBug),
       badges,
@@ -130,6 +133,8 @@ export async function getMemberProfile(username: string) {
 
   const earnedBadges = badges.filter(b => b.earned);
 
+  const streaks = calculateUserStreak(allFilms as any[], userEmail, user.longestStreak || 0);
+
   return {
     _id: user._id.toString(),
     email: user.email,
@@ -140,8 +145,8 @@ export async function getMemberProfile(username: string) {
     spottedBug: Boolean(user.spottedBug),
     stats: {
       watchedCount: user.watchedCount || 0,
-      currentStreak: user.currentStreak || 0,
-      longestStreak: user.longestStreak || 0,
+      currentStreak: streaks.currentStreak,
+      longestStreak: streaks.longestStreak,
       timesSuggested: user.timesSuggested || 0,
     },
     badges,
