@@ -4,14 +4,14 @@ import { FOTWUser, FOTWFilm } from '@/lib/fotw/schemas';
 /**
  * Streak Calculation for Film of the Week (FOTW)
  * 
- * A "streak" represents consecutive weekly film editions watched without missing an edition.
- * 
- * Rules:
- * 1. Films are ordered chronologically by date (dateSuggested or createdAt).
- * 2. Walking through films from oldest to newest:
- *    - If the user HAS watched the film -> currentRun += 1, maxRun = max(maxRun, currentRun)
- *    - If the user HAS NOT watched an archived film (lockedAt != null) -> currentRun = 0 (streak breaks!)
- *    - If the user HAS NOT watched the active film (lockedAt == null) -> currentRun stays intact (active week grace period)
+ * Rule:
+ * - Films are ordered chronologically by release date (dateSuggested or createdAt).
+ * - A member's streak is the count of consecutive weekly film editions watched without skipping.
+ * - Example: If there are 8 films in sequence and a member watches films 1, 2, 3, misses 4, and watches 5, 6, 7, 8:
+ *   - Skipping film 4 resets the current run to 0.
+ *   - Watching 5, 6, 7, 8 gives a current streak of 4.
+ * - For the latest film (most recent in the sequence), if the member has not watched it yet,
+ *   their streak does not reset to 0 immediately to allow time during the active week.
  */
 export function calculateUserStreak(
   allFilms: Array<{
@@ -33,15 +33,21 @@ export function calculateUserStreak(
   const sortedFilms = [...(allFilms || [])]
     .filter((f) => f && (f.dateSuggested || f.createdAt))
     .sort((a, b) => {
-      const dA = new Date(a.dateSuggested || a.createdAt!).getTime();
-      const dB = new Date(b.dateSuggested || b.createdAt!).getTime();
-      return dA - dB;
+      const timeA = new Date(a.dateSuggested || a.createdAt!).getTime();
+      const timeB = new Date(b.dateSuggested || b.createdAt!).getTime();
+      return timeA - timeB;
     });
+
+  if (sortedFilms.length === 0) {
+    return { currentStreak: 0, longestStreak: storedLongestStreak };
+  }
 
   let currentRun = 0;
   let maxRun = 0;
+  const lastIndex = sortedFilms.length - 1;
 
-  for (const film of sortedFilms) {
+  for (let i = 0; i < sortedFilms.length; i++) {
+    const film = sortedFilms[i];
     const isWatched =
       Array.isArray(film.watchedBy) &&
       film.watchedBy.some(
@@ -54,11 +60,11 @@ export function calculateUserStreak(
         maxRun = currentRun;
       }
     } else {
-      // If film is locked/archived, missing it breaks the streak.
-      // If film is unlocked (lockedAt == null), it is the active week so don't break streak yet.
-      if (film.lockedAt !== null && film.lockedAt !== undefined) {
+      // If this is a past film (not the latest ongoing film), skipping it breaks the streak!
+      if (i < lastIndex) {
         currentRun = 0;
       }
+      // If i === lastIndex (the latest film), missing it does NOT reset currentRun yet.
     }
   }
 
