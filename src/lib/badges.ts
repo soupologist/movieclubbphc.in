@@ -196,7 +196,7 @@ export interface ComputeBadgesInput {
 }
 
 export function isFilmSuggestedByUser(
-  film: { chosenBy?: string; chosenByEmail?: string; addedBy?: string },
+  film: { chosenBy?: string; chosenByEmail?: string },
   userEmail: string,
   userName?: string,
   userUsername?: string
@@ -209,11 +209,9 @@ export function isFilmSuggestedByUser(
 
   const chosenByEmail = (film.chosenByEmail || '').toLowerCase().trim();
   const chosenBy = (film.chosenBy || '').toLowerCase().trim();
-  const addedBy = (film.addedBy || '').toLowerCase().trim();
 
   if (chosenByEmail && identifiers.has(chosenByEmail)) return true;
   if (chosenBy && identifiers.has(chosenBy)) return true;
-  if (addedBy && identifiers.has(addedBy)) return true;
 
   return false;
 }
