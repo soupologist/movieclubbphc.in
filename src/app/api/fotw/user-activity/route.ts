@@ -70,7 +70,7 @@ export async function GET(req: Request) {
       FOTWReview.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWFilm.find(dateFilter).select('_id title posterUrl watchedBy').lean(),
       FOTWFilm.find({ dateSuggested: { $ne: null } })
-        .select('_id title posterUrl language dateSuggested createdAt chosenByEmail addedBy watchedCount watchedBy')
+        .select('_id title posterUrl language dateSuggested createdAt chosenBy chosenByEmail addedBy watchedCount watchedBy')
         .lean(),
       FOTWSeason.findOne({ endDate: null }).select('_id startDate endDate').lean(),
     ]);
@@ -129,6 +129,8 @@ export async function GET(req: Request) {
 
     const allBadges = computeUserBadges({
       userEmail: targetEmail!,
+      userName: (userDoc as any)?.name,
+      userUsername: (userDoc as any)?.username,
       spottedBug: (userDoc as any)?.spottedBug ?? false,
       watchedCount: (userDoc as any)?.watchedCount ?? userWatchesForBadges.length,
       userWatches: userWatchesForBadges,

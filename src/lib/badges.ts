@@ -163,6 +163,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
 export interface ComputeBadgesInput {
   userEmail: string;
+  userName?: string;
+  userUsername?: string;
   spottedBug?: boolean;
   watchedCount?: number;
   userWatches?: Array<{
@@ -177,6 +179,7 @@ export interface ComputeBadgesInput {
   allFilms?: Array<{
     _id: string;
     title?: string;
+    chosenBy?: string;
     chosenByEmail?: string;
     addedBy?: string;
     language?: string;
@@ -190,6 +193,29 @@ export interface ComputeBadgesInput {
     startDate: Date | string;
     endDate: Date | string | null;
   } | null;
+}
+
+export function isFilmSuggestedByUser(
+  film: { chosenBy?: string; chosenByEmail?: string; addedBy?: string },
+  userEmail: string,
+  userName?: string,
+  userUsername?: string
+): boolean {
+  const emailLower = (userEmail || '').toLowerCase().trim();
+  const nameLower = (userName || '').toLowerCase().trim();
+  const usernameLower = (userUsername || '').toLowerCase().trim();
+
+  const identifiers = new Set([emailLower, nameLower, usernameLower].filter(Boolean));
+
+  const chosenByEmail = (film.chosenByEmail || '').toLowerCase().trim();
+  const chosenBy = (film.chosenBy || '').toLowerCase().trim();
+  const addedBy = (film.addedBy || '').toLowerCase().trim();
+
+  if (chosenByEmail && identifiers.has(chosenByEmail)) return true;
+  if (chosenBy && identifiers.has(chosenBy)) return true;
+  if (addedBy && identifiers.has(addedBy)) return true;
+
+  return false;
 }
 
 /**
@@ -257,10 +283,7 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
     if (!seenLanguages.has(langLower)) {
       // First time this foreign language appears — only the recommender of THIS film earns it
       seenLanguages.add(langLower);
-      const isRecommender =
-        (film.chosenByEmail && film.chosenByEmail.toLowerCase() === userEmail) ||
-        (film.addedBy && film.addedBy.toLowerCase() === userEmail);
-      if (isRecommender) {
+      if (isFilmSuggestedByUser(film, userEmail, input.userName, input.userUsername)) {
         pioneerMatches.push({
           filmTitle: film.title || 'Untitled',
           language: formatLanguageName(langRaw),
@@ -271,14 +294,10 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
   }
 
   // Crowd Pleaser check (user recommended a film watched by > 20 people)
-  const userRecommendedFilms = (input.allFilms || []).filter(
+  const isCrowdPleaser = (input.allFilms || []).some(
     (f) =>
-      (f.chosenByEmail && f.chosenByEmail.toLowerCase() === userEmail) ||
-      (f.addedBy && f.addedBy.toLowerCase() === userEmail)
-  );
-
-  const isCrowdPleaser = userRecommendedFilms.some(
-    (f) => (f.watchedCount ?? f.watchedBy?.length ?? 0) > 20
+      isFilmSuggestedByUser(f, userEmail, input.userName, input.userUsername) &&
+      (f.watchedCount ?? f.watchedBy?.length ?? 0) > 20
   );
 
   // Evaluate each badge

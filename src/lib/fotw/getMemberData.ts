@@ -13,7 +13,7 @@ export async function getAllMembers() {
       .sort({ watchedCount: -1, createdAt: 1 })
       .lean(),
     FOTWFilm.find({})
-      .select('_id title chosenByEmail addedBy language dateSuggested createdAt watchedCount watchedBy')
+      .select('_id title chosenBy chosenByEmail addedBy language dateSuggested createdAt watchedCount watchedBy')
       .lean(),
     FOTWSeason.findOne({ isActive: true }).lean(),
     FOTWReview.find({})
@@ -35,6 +35,8 @@ export async function getAllMembers() {
 
     const badges = computeUserBadges({
       userEmail,
+      userName: u.name,
+      userUsername: u.username,
       spottedBug: Boolean(u.spottedBug),
       watchedCount: u.watchedCount || 0,
       userWatches,
@@ -96,7 +98,7 @@ export async function getMemberProfile(username: string) {
       .sort({ createdAt: -1 })
       .lean(),
     FOTWFilm.find({})
-      .select('_id title chosenByEmail addedBy language dateSuggested createdAt watchedCount watchedBy')
+      .select('_id title chosenBy chosenByEmail addedBy language dateSuggested createdAt watchedCount watchedBy')
       .lean(),
     FOTWSeason.findOne({ isActive: true }).lean(),
   ]);
@@ -123,6 +125,8 @@ export async function getMemberProfile(username: string) {
 
   const badges = computeUserBadges({
     userEmail,
+    userName: user.name,
+    userUsername: user.username,
     spottedBug: Boolean(user.spottedBug),
     watchedCount: user.watchedCount || 0,
     userWatches,
