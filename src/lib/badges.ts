@@ -56,107 +56,161 @@ export function formatLanguageName(lang: string): string {
   return lang.charAt(0).toUpperCase() + lang.slice(1);
 }
 
-// Karri is a club member who perpetually promises to watch a film each season but never does.
+// ISO Country Codes & Language Codes for Region-based Badges
+const AFRICAN_COUNTRY_CODES = new Set([
+  'AO', 'BF', 'BI', 'BJ', 'BW', 'CD', 'CF', 'CG', 'CI', 'CM', 'CV', 'DJ', 'DZ',
+  'EG', 'ER', 'ET', 'GA', 'GH', 'GM', 'GN', 'GQ', 'GW', 'KE', 'KM', 'LR', 'LS',
+  'LY', 'MA', 'MG', 'ML', 'MR', 'MU', 'MW', 'MZ', 'NA', 'NE', 'NG', 'RW', 'SC',
+  'SD', 'SL', 'SN', 'SO', 'SS', 'ST', 'SZ', 'TD', 'TG', 'TN', 'TZ', 'UG', 'ZA',
+  'ZM', 'ZW'
+]);
+
+const AFRICAN_LANGUAGE_CODES = new Set([
+  'af', 'am', 'bm', 'ee', 'ff', 'ha', 'ig', 'ki', 'lg', 'ln', 'lu', 'mg', 'ny',
+  'om', 'rn', 'rw', 'sn', 'so', 'st', 'sw', 'ti', 'ts', 'tw', 'wo', 'xh', 'yo', 'zu'
+]);
+
+const SOUTH_AMERICAN_COUNTRY_CODES = new Set([
+  'AR', 'BO', 'BR', 'CL', 'CO', 'EC', 'FK', 'GF', 'GY', 'PE', 'PY', 'SR', 'UY', 'VE'
+]);
 
 /** Full list of predefined badges on the platform */
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
-  // 1. Watched Movies Badges (5 / 10 / 15)
+  // 1. Watched Movies Badges (1 / 7 / 11 / 18)
   {
-    id: 'watched-5',
-    name: 'Film Novice',
+    id: 'watched-1',
+    name: 'Pilot',
     symbol: '🎬',
-    description: 'Watched at least 5 movies on Film of the Week',
+    description: 'Watched a Film of The Week',
     category: 'watch',
   },
   {
-    id: 'watched-10',
-    name: 'Film Enthusiast',
-    symbol: '🍿',
-    description: 'Watched at least 10 movies on Film of the Week',
+    id: 'watched-7',
+    name: 'Se7en',
+    symbol: '👁️',
+    description: 'Watched 7 Films of the Week',
     category: 'watch',
   },
   {
-    id: 'watched-15',
-    name: 'Film Buff',
-    symbol: '📽️',
-    description: 'Watched at least 15 movies on Film of the Week',
+    id: 'watched-11',
+    name: "Ocean's Eleven",
+    symbol: '🎲',
+    description: 'Watched 11 Films of the Week',
+    category: 'watch',
+  },
+  {
+    id: 'watched-18',
+    name: 'The Eighteenth',
+    symbol: '🏆',
+    description: 'Watched 18 Films of the Week',
     category: 'watch',
   },
 
-  // 2. Reviews Badges (5 / 10 / 15)
+  // 2. Watch Streaks Badges (4 / 12)
+  {
+    id: 'streak-4',
+    name: 'On a Roll',
+    symbol: '🔥',
+    description: 'Watch streak of 4 films',
+    category: 'watch',
+  },
+  {
+    id: 'streak-12',
+    name: 'Unstoppable',
+    symbol: '⚡',
+    description: 'Watch streak of 12 films',
+    category: 'watch',
+  },
+
+  // 3. Reviews Badges (5 / 9 / 13)
   {
     id: 'reviews-5',
-    name: 'Budding Critic',
+    name: 'The Film Critic',
     symbol: '✍️',
-    description: 'Wrote reviews for 5 movies',
+    description: 'Penned 5 reviews on the FoTW website',
     category: 'review',
   },
   {
-    id: 'reviews-10',
-    name: 'Passionate Reviewer',
-    symbol: '📝',
-    description: 'Wrote reviews for 10 movies',
+    id: 'reviews-9',
+    name: 'Revolution 9',
+    symbol: '🖊️',
+    description: 'Penned 9 reviews on the FoTW website',
     category: 'review',
   },
   {
-    id: 'reviews-15',
-    name: 'Master Critic',
+    id: 'reviews-13',
+    name: '13 Reasons Why',
     symbol: '📜',
-    description: 'Wrote reviews for 15 movies',
+    description: 'Penned 13 reviews on the FoTW website',
     category: 'review',
   },
 
-  // 3. Watched at least 1 movie in a season (made their debut, unlike Karri)
-  {
-    id: 'karri-debut-surpassed',
-    name: "Unlike Karri",
-    symbol: '🚀',
-    description: 'Watched at least 1 movie in the active season — actually made your debut, unlike Karri',
-    category: 'season',
-  },
-
-  // 4. Watched all movies in a season so far
-  {
-    id: 'season-completionist',
-    name: 'Season Completionist',
-    symbol: '💯',
-    description: 'Watched all movies in the active season so far',
-    category: 'season',
-  },
-
-  // 5. Covered all languages in a season so far
+  // 4. Seasonal Badges
   {
     id: 'polyglot-season',
-    name: 'Season Polyglot',
-    symbol: '🌐',
-    description: 'Watched films covering all languages featured in the active season so far',
+    name: 'The Tower of Babel',
+    symbol: '🦉',
+    description: 'Watched films in all languages that appeared this season',
+    category: 'season',
+  },
+  {
+    id: 'polyglot-pioneer-season',
+    name: 'Lost in Translation?',
+    symbol: '🗿',
+    description: 'Picked a film in a language new to the ongoing season',
+    category: 'season',
+  },
+  {
+    id: 'season-completionist',
+    name: 'One Film After Another',
+    symbol: '💯',
+    description: 'Watched all films of the ongoing season',
     category: 'season',
   },
 
-  // 6. Recommended a movie in a new language not covered so far (overall)
-  {
-    id: 'polyglot-pioneer',
-    name: 'Language Pioneer',
-    symbol: '🚩',
-    description: 'Recommended a movie in a language never before featured on Film of the Week',
-    category: 'recommendation',
-  },
-
-  // 7. Spotted a bug on the site
+  // 5. Community Badges
   {
     id: 'bug-hunter',
-    name: 'Bug Hunter',
-    symbol: '🐛',
-    description: 'Spotted and reported a bug on the site',
+    name: 'Eye of the Tiger',
+    symbol: '🕵️‍♂️',
+    description: 'Spotted and alerted the team of a bug on the website',
     category: 'community',
   },
 
-  // 8. Recommended a movie watched by over 20 people
+  // 6. Recommendation / Chooser Badges
   {
     id: 'crowd-pleaser',
-    name: 'Crowd Pleaser',
-    symbol: '🔥',
-    description: 'Recommended a movie watched by over 20 members',
+    name: 'Homelander?',
+    symbol: '🦸‍♂️',
+    description: '20 people watched a film picked by you',
+    category: 'recommendation',
+  },
+  {
+    id: 'silent-film',
+    name: 'The Mute Button',
+    symbol: '🔇',
+    description: 'Picked a silent film',
+    category: 'recommendation',
+  },
+  {
+    id: 'african-film',
+    name: 'Out of Africa',
+    symbol: '🌍',
+    description: 'Picked an African film',
+    category: 'recommendation',
+  },
+  {
+    id: 'south-american-film',
+    name: 'El Dorado',
+    symbol: '🏔️',
+    description: 'Picked a South American film',
+    category: 'recommendation',
+  },
+  {
+    id: 'high-rating',
+    name: 'Crowd Favorite',
+    symbol: '⭐',
+    description: 'Picked a film which garnered an average rating of 4.2 or more',
     category: 'recommendation',
   },
 ];
@@ -167,6 +221,8 @@ export interface ComputeBadgesInput {
   userUsername?: string;
   spottedBug?: boolean;
   watchedCount?: number;
+  longestStreak?: number;
+  currentStreak?: number;
   userWatches?: Array<{
     filmId: string;
     dateSuggested?: Date | string | null;
@@ -187,6 +243,18 @@ export interface ComputeBadgesInput {
     createdAt?: Date | string;
     watchedCount?: number;
     watchedBy?: Array<{ userEmail: string }>;
+    year?: number;
+    isSilent?: boolean;
+    isAfrican?: boolean;
+    isSouthAmerican?: boolean;
+    isFemaleDirector?: boolean;
+    directorGender?: number | string;
+    originCountry?: string | string[];
+    averageRating?: number;
+  }>;
+  allRatings?: Array<{
+    filmId: string | any;
+    rating: number;
   }>;
   activeSeason?: {
     _id: string;
@@ -226,11 +294,28 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
     (r) => r.body === undefined || r.body.trim().length > 0
   ).length;
 
-  // Active Season Film & Language processing
+  const effectiveLongestStreak = Math.max(input.longestStreak ?? 0, input.currentStreak ?? 0);
+
+  // Film Ratings Map (Average rating per film)
+  const filmRatingStats = new Map<string, { sum: number; count: number }>();
+  if (input.allRatings && input.allRatings.length > 0) {
+    for (const r of input.allRatings) {
+      const filmIdStr = r.filmId?.toString();
+      if (!filmIdStr || typeof r.rating !== 'number') continue;
+      const current = filmRatingStats.get(filmIdStr) || { sum: 0, count: 0 };
+      filmRatingStats.set(filmIdStr, {
+        sum: current.sum + r.rating,
+        count: current.count + 1,
+      });
+    }
+  }
+
+  // Active Season Processing
   let seasonFilms: Array<any> = [];
   let userSeasonWatches: Array<any> = [];
   let seasonLanguages = new Set<string>();
   let userSeasonLanguages = new Set<string>();
+  const seasonPioneerMatches: Array<{ filmTitle: string; language: string }> = [];
 
   if (input.activeSeason && input.allFilms && input.allFilms.length > 0) {
     const start = new Date(input.activeSeason.startDate).getTime();
@@ -255,68 +340,124 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
       const lang = (f.language || '').toLowerCase().trim();
       if (lang) userSeasonLanguages.add(lang);
     });
-  }
 
-  // Language Pioneer check (chronological order across all films)
-  // - English and Hindi are excluded (common languages of the club, not considered "foreign")
-  // - Only the FIRST person to suggest a film in a new foreign language earns this badge
-  const EXCLUDED_PIONEER_LANGUAGES = new Set(['english', 'hindi']);
+    // Language Pioneer in active season (first film in active season with a new language)
+    const sortedSeasonFilms = [...seasonFilms].sort(
+      (a, b) =>
+        new Date(a.dateSuggested || a.createdAt || 0).getTime() -
+        new Date(b.dateSuggested || b.createdAt || 0).getTime()
+    );
 
-  const allFilmsSorted = [...(input.allFilms || [])].sort(
-    (a, b) =>
-      new Date(a.dateSuggested || a.createdAt || 0).getTime() -
-      new Date(b.dateSuggested || b.createdAt || 0).getTime()
-  );
+    const seenSeasonLanguages = new Set<string>();
+    for (const film of sortedSeasonFilms) {
+      const langRaw = (film.language || '').trim();
+      const langLower = langRaw.toLowerCase();
 
-  const seenLanguages = new Set<string>();
-  const pioneerMatches: Array<{ filmTitle: string; language: string }> = [];
+      if (!langLower) continue;
 
-  for (const film of allFilmsSorted) {
-    const langRaw = (film.language || '').trim();
-    const langLower = langRaw.toLowerCase();
-
-    // Skip blank, English, and Hindi
-    if (!langLower || EXCLUDED_PIONEER_LANGUAGES.has(langLower)) continue;
-
-    if (!seenLanguages.has(langLower)) {
-      // First time this foreign language appears — only the recommender of THIS film earns it
-      seenLanguages.add(langLower);
-      if (isFilmSuggestedByUser(film, userEmail, input.userName, input.userUsername)) {
-        pioneerMatches.push({
-          filmTitle: film.title || 'Untitled',
-          language: formatLanguageName(langRaw),
-        });
+      if (!seenSeasonLanguages.has(langLower)) {
+        seenSeasonLanguages.add(langLower);
+        if (isFilmSuggestedByUser(film, userEmail, input.userName, input.userUsername)) {
+          seasonPioneerMatches.push({
+            filmTitle: film.title || 'Untitled',
+            language: formatLanguageName(langRaw),
+          });
+        }
       }
     }
-    // Subsequent films in the same language → no badge for anyone
   }
 
-  // Crowd Pleaser check (user recommended a film watched by > 20 people)
-  const isCrowdPleaser = (input.allFilms || []).some(
-    (f) =>
-      isFilmSuggestedByUser(f, userEmail, input.userName, input.userUsername) &&
-      (f.watchedCount ?? f.watchedBy?.length ?? 0) > 20
-  );
+  // Evaluate Chooser / Recommendation Special Badges across all films
+  let recommended20WatcherFilm = false;
+  let recommendedSilentFilm = false;
+  let recommendedAfricanFilm = false;
+  let recommendedSouthAmericanFilm = false;
+  let recommendedHighRatedFilm = false;
 
-  // Evaluate each badge
+  for (const film of input.allFilms || []) {
+    if (!isFilmSuggestedByUser(film, userEmail, input.userName, input.userUsername)) {
+      continue;
+    }
+
+    // 1. Crowd Pleaser (20+ watchers)
+    const watchers = film.watchedCount ?? film.watchedBy?.length ?? 0;
+    if (watchers >= 20) {
+      recommended20WatcherFilm = true;
+    }
+
+    // 2. Silent Film
+    const langLower = (film.language || '').toLowerCase().trim();
+    if (
+      film.isSilent ||
+      langLower === 'silent' ||
+      (film.year && film.year > 0 && film.year <= 1929)
+    ) {
+      recommendedSilentFilm = true;
+    }
+
+    // 3. African Film
+    const countries = Array.isArray(film.originCountry)
+      ? film.originCountry
+      : [film.originCountry].filter(Boolean) as string[];
+
+    const hasAfricanCountry = countries.some((c) => AFRICAN_COUNTRY_CODES.has(c.toUpperCase()));
+    if (film.isAfrican || hasAfricanCountry || AFRICAN_LANGUAGE_CODES.has(langLower)) {
+      recommendedAfricanFilm = true;
+    }
+
+    // 4. South American Film
+    const hasSACountry = countries.some((c) => SOUTH_AMERICAN_COUNTRY_CODES.has(c.toUpperCase()));
+    if (film.isSouthAmerican || hasSACountry) {
+      recommendedSouthAmericanFilm = true;
+    }
+
+    // 5. Average Rating 4.2+
+    let avg = film.averageRating;
+    if (avg === undefined) {
+      const stats = filmRatingStats.get(film._id.toString());
+      if (stats && stats.count > 0) {
+        avg = stats.sum / stats.count;
+      }
+    }
+    if (avg !== undefined && avg >= 4.2) {
+      recommendedHighRatedFilm = true;
+    }
+  }
+
+  // Evaluate each badge definition
   return BADGE_DEFINITIONS.map((badge) => {
     let earned = false;
     let progress: BadgeProgress | undefined;
 
     switch (badge.id) {
-      case 'watched-5':
-        earned = effectiveWatchedCount >= 5;
-        progress = { current: Math.min(effectiveWatchedCount, 5), target: 5 };
+      case 'watched-1':
+        earned = effectiveWatchedCount >= 1;
+        progress = { current: Math.min(effectiveWatchedCount, 1), target: 1 };
         break;
 
-      case 'watched-10':
-        earned = effectiveWatchedCount >= 10;
-        progress = { current: Math.min(effectiveWatchedCount, 10), target: 10 };
+      case 'watched-7':
+        earned = effectiveWatchedCount >= 7;
+        progress = { current: Math.min(effectiveWatchedCount, 7), target: 7 };
         break;
 
-      case 'watched-15':
-        earned = effectiveWatchedCount >= 15;
-        progress = { current: Math.min(effectiveWatchedCount, 15), target: 15 };
+      case 'watched-11':
+        earned = effectiveWatchedCount >= 11;
+        progress = { current: Math.min(effectiveWatchedCount, 11), target: 11 };
+        break;
+
+      case 'watched-18':
+        earned = effectiveWatchedCount >= 18;
+        progress = { current: Math.min(effectiveWatchedCount, 18), target: 18 };
+        break;
+
+      case 'streak-4':
+        earned = effectiveLongestStreak >= 4;
+        progress = { current: Math.min(effectiveLongestStreak, 4), target: 4 };
+        break;
+
+      case 'streak-12':
+        earned = effectiveLongestStreak >= 12;
+        progress = { current: Math.min(effectiveLongestStreak, 12), target: 12 };
         break;
 
       case 'reviews-5':
@@ -324,25 +465,14 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
         progress = { current: Math.min(effectiveReviewCount, 5), target: 5 };
         break;
 
-      case 'reviews-10':
-        earned = effectiveReviewCount >= 10;
-        progress = { current: Math.min(effectiveReviewCount, 10), target: 10 };
+      case 'reviews-9':
+        earned = effectiveReviewCount >= 9;
+        progress = { current: Math.min(effectiveReviewCount, 9), target: 9 };
         break;
 
-      case 'reviews-15':
-        earned = effectiveReviewCount >= 15;
-        progress = { current: Math.min(effectiveReviewCount, 15), target: 15 };
-        break;
-
-      case 'karri-debut-surpassed':
-        // Earned if the user has watched at least 1 film in the active season
-        earned = userSeasonWatches.length >= 1;
-        progress = { current: Math.min(userSeasonWatches.length, 1), target: 1 };
-        break;
-
-      case 'season-completionist':
-        earned = seasonFilms.length > 0 && userSeasonWatches.length === seasonFilms.length;
-        progress = { current: userSeasonWatches.length, target: Math.max(seasonFilms.length, 1) };
+      case 'reviews-13':
+        earned = effectiveReviewCount >= 13;
+        progress = { current: Math.min(effectiveReviewCount, 13), target: 13 };
         break;
 
       case 'polyglot-season':
@@ -353,8 +483,13 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
         progress = { current: userSeasonLanguages.size, target: Math.max(seasonLanguages.size, 1) };
         break;
 
-      case 'polyglot-pioneer':
-        earned = pioneerMatches.length > 0;
+      case 'polyglot-pioneer-season':
+        earned = seasonPioneerMatches.length > 0;
+        break;
+
+      case 'season-completionist':
+        earned = seasonFilms.length > 0 && userSeasonWatches.length === seasonFilms.length;
+        progress = { current: userSeasonWatches.length, target: Math.max(seasonFilms.length, 1) };
         break;
 
       case 'bug-hunter':
@@ -362,13 +497,29 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
         break;
 
       case 'crowd-pleaser':
-        earned = isCrowdPleaser;
+        earned = recommended20WatcherFilm;
+        break;
+
+      case 'silent-film':
+        earned = recommendedSilentFilm;
+        break;
+
+      case 'african-film':
+        earned = recommendedAfricanFilm;
+        break;
+
+      case 'south-american-film':
+        earned = recommendedSouthAmericanFilm;
+        break;
+
+      case 'high-rating':
+        earned = recommendedHighRatedFilm;
         break;
     }
 
     let customDescription: string | undefined;
-    if (badge.id === 'polyglot-pioneer' && earned && pioneerMatches.length > 0) {
-      const details = pioneerMatches
+    if (badge.id === 'polyglot-pioneer-season' && earned && seasonPioneerMatches.length > 0) {
+      const details = seasonPioneerMatches
         .map((m) => `${m.language} with "${m.filmTitle}"`)
         .join(', ');
       customDescription = `Pioneered ${details}`;

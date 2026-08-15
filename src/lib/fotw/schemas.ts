@@ -20,6 +20,12 @@ export interface IFOTWFilm extends Document {
   language: string;
   /** Release year as a 4-digit integer, e.g. 2023 */
   year: number;
+  isSilent?: boolean;
+  isAfrican?: boolean;
+  isSouthAmerican?: boolean;
+  isFemaleDirector?: boolean;
+  directorGender?: number;
+  originCountry?: string[];
 }
 
 const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
@@ -48,6 +54,12 @@ const FOTWFilmSchema: Schema<IFOTWFilm> = new Schema(
     timerDuration: { type: Number, default: 604800000 },
     language: { type: String, default: '' },
     year: { type: Number, default: 0 },
+    isSilent: { type: Boolean, default: false },
+    isAfrican: { type: Boolean, default: false },
+    isSouthAmerican: { type: Boolean, default: false },
+    isFemaleDirector: { type: Boolean, default: false },
+    directorGender: { type: Number },
+    originCountry: { type: [String], default: [] },
   },
   { timestamps: true }
 );

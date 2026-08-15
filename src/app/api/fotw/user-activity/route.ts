@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import { FOTWRating, FOTWLike, FOTWUser, FOTWFilm, FOTWSeason, FOTWReview } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
-import mongoose from 'mongoose';
 import { formatDisplayName } from '@/lib/fotw/utils';
 import { computeUserBadges } from '@/lib/badges';
 import { calculateUserStreak } from '@/lib/fotw/streaks';
@@ -64,15 +63,16 @@ export async function GET(req: Request) {
       };
     }
 
-    const [ratings, likes, reviews, seasonFilms, allFilmsForBadges, activeSeason] = await Promise.all([
+    const [ratings, likes, reviews, seasonFilms, allFilmsForBadges, activeSeason, allRatings] = await Promise.all([
       FOTWRating.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWLike.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWReview.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWFilm.find(dateFilter).select('_id title posterUrl watchedBy').lean(),
       FOTWFilm.find({ dateSuggested: { $ne: null } })
-        .select('_id title posterUrl language dateSuggested createdAt chosenBy chosenByEmail addedBy watchedCount watchedBy')
+        .select('_id title posterUrl language year isSilent isAfrican isSouthAmerican isFemaleDirector directorGender originCountry dateSuggested createdAt chosenBy chosenByEmail addedBy watchedCount watchedBy')
         .lean(),
       FOTWSeason.findOne({ endDate: null }).select('_id startDate endDate').lean(),
+      FOTWRating.find({}).select('filmId rating').lean(),
     ]);
 
     const filmMap = new Map(seasonFilms.map((f: any) => [f._id.toString(), f]));
@@ -122,6 +122,13 @@ export async function GET(req: Request) {
         posterUrl: f.posterUrl
       }));
 
+    // --- Compute streaks ---
+    const streaks = calculateUserStreak(
+      allFilmsForBadges as any[],
+      targetEmail!,
+      (userDoc as any)?.longestStreak || 0
+    );
+
     // --- Compute badges ---
     const userWatchesForBadges = (allFilmsForBadges as any[])
       .filter((f) => Array.isArray(f.watchedBy) && f.watchedBy.some((w: any) => w.userEmail === targetEmail))
@@ -133,9 +140,12 @@ export async function GET(req: Request) {
       userUsername: (userDoc as any)?.username,
       spottedBug: (userDoc as any)?.spottedBug ?? false,
       watchedCount: (userDoc as any)?.watchedCount ?? userWatchesForBadges.length,
+      longestStreak: streaks.longestStreak,
+      currentStreak: streaks.currentStreak,
       userWatches: userWatchesForBadges,
       userReviews: (reviews as any[]).map((r) => ({ filmId: r.filmId.toString(), body: r.body })),
       allFilms: allFilmsForBadges as any[],
+      allRatings: (allRatings as any[]).map((r: any) => ({ filmId: r.filmId.toString(), rating: r.rating })),
       activeSeason: activeSeason as any,
     });
 
@@ -146,13 +156,6 @@ export async function GET(req: Request) {
       description: b.description,
       imageUrl: b.imageUrl,
     }));
-
-    // --- Compute streaks ---
-    const streaks = calculateUserStreak(
-      allFilmsForBadges as any[],
-      targetEmail!,
-      (userDoc as any)?.longestStreak || 0
-    );
 
     return NextResponse.json({
       name: userDoc ? formatDisplayName(userDoc.name, userDoc.username) : targetEmail,

@@ -7,17 +7,20 @@ import { calculateUserStreak } from '@/lib/fotw/streaks';
 export async function getAllMembers() {
   await dbConnect();
   
-  const [users, allFilms, activeSeason, allReviews] = await Promise.all([
+  const [users, allFilms, activeSeason, allReviews, allRatings] = await Promise.all([
     FOTWUser.find({})
       .select('email username name image watchedCount currentStreak longestStreak timesSuggested spottedBug')
       .sort({ watchedCount: -1, createdAt: 1 })
       .lean(),
     FOTWFilm.find({})
-      .select('_id title chosenBy chosenByEmail addedBy language dateSuggested createdAt watchedCount watchedBy')
+      .select('_id title chosenBy chosenByEmail addedBy language year isSilent isAfrican isSouthAmerican isFemaleDirector directorGender originCountry dateSuggested createdAt watchedCount watchedBy')
       .lean(),
     FOTWSeason.findOne({ isActive: true }).lean(),
     FOTWReview.find({})
       .select('userEmail filmId body')
+      .lean(),
+    FOTWRating.find({})
+      .select('filmId rating')
       .lean(),
   ]);
     
@@ -32,6 +35,7 @@ export async function getAllMembers() {
     }));
 
     const userReviews = (allReviews as any[]).filter(r => r.userEmail === userEmail);
+    const streaks = calculateUserStreak(allFilms as any[], userEmail, u.longestStreak || 0);
 
     const badges = computeUserBadges({
       userEmail,
@@ -39,15 +43,16 @@ export async function getAllMembers() {
       userUsername: u.username,
       spottedBug: Boolean(u.spottedBug),
       watchedCount: u.watchedCount || 0,
+      longestStreak: streaks.longestStreak,
+      currentStreak: streaks.currentStreak,
       userWatches,
       userReviews,
       allFilms: allFilms as any[],
+      allRatings: (allRatings as any[]).map((r) => ({ filmId: r.filmId.toString(), rating: r.rating })),
       activeSeason: activeSeason as any,
     });
 
     const earnedBadges = badges.filter(b => b.earned);
-
-    const streaks = calculateUserStreak(allFilms as any[], userEmail, u.longestStreak || 0);
 
     return {
       _id: u._id.toString(),
@@ -81,9 +86,9 @@ export async function getMemberProfile(username: string) {
   const userEmail = user.email;
 
   // Fetch all related data in parallel
-  const [watchedFilms, ratings, likes, reviews, allFilms, activeSeason] = await Promise.all([
+  const [watchedFilms, ratings, likes, reviews, allFilms, activeSeason, allRatings] = await Promise.all([
     FOTWFilm.find({ 'watchedBy.userEmail': userEmail })
-      .select('title posterUrl tmdbUrl year language dateSuggested watchedBy')
+      .select('title posterUrl tmdbUrl year language isSilent isAfrican isSouthAmerican isFemaleDirector directorGender originCountry dateSuggested watchedBy')
       .lean(),
     FOTWRating.find({ userEmail })
       .populate('filmId', 'title posterUrl tmdbUrl year dateSuggested')
@@ -98,9 +103,12 @@ export async function getMemberProfile(username: string) {
       .sort({ createdAt: -1 })
       .lean(),
     FOTWFilm.find({})
-      .select('_id title chosenBy chosenByEmail addedBy language dateSuggested createdAt watchedCount watchedBy')
+      .select('_id title chosenBy chosenByEmail addedBy language year isSilent isAfrican isSouthAmerican isFemaleDirector directorGender originCountry dateSuggested createdAt watchedCount watchedBy')
       .lean(),
     FOTWSeason.findOne({ isActive: true }).lean(),
+    FOTWRating.find({})
+      .select('filmId rating')
+      .lean(),
   ]);
 
   const formatFilm = (f: any) => ({
@@ -123,21 +131,24 @@ export async function getMemberProfile(username: string) {
     body: r.body,
   }));
 
+  const streaks = calculateUserStreak(allFilms as any[], userEmail, user.longestStreak || 0);
+
   const badges = computeUserBadges({
     userEmail,
     userName: user.name,
     userUsername: user.username,
     spottedBug: Boolean(user.spottedBug),
     watchedCount: user.watchedCount || 0,
+    longestStreak: streaks.longestStreak,
+    currentStreak: streaks.currentStreak,
     userWatches,
     userReviews,
     allFilms: allFilms as any[],
+    allRatings: (allRatings as any[]).map((r) => ({ filmId: r.filmId.toString(), rating: r.rating })),
     activeSeason: activeSeason as any,
   });
 
   const earnedBadges = badges.filter(b => b.earned);
-
-  const streaks = calculateUserStreak(allFilms as any[], userEmail, user.longestStreak || 0);
 
   return {
     _id: user._id.toString(),
