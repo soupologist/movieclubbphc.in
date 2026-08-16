@@ -25,16 +25,18 @@ export async function getAllMembers() {
   ]);
     
   return (users as any[]).map(u => {
-    const userEmail = u.email;
+    const userEmail = (u.email || '').toLowerCase().trim();
     const userWatches = (allFilms as any[]).filter(f =>
-      f.watchedBy?.some((w: any) => w.userEmail === userEmail)
+      f.watchedBy?.some((w: any) => (w.userEmail || '').toLowerCase().trim() === userEmail)
     ).map(f => ({
       filmId: f._id.toString(),
       dateSuggested: f.dateSuggested,
       language: f.language,
     }));
 
-    const userReviews = (allReviews as any[]).filter(r => r.userEmail === userEmail);
+    const userReviews = (allReviews as any[]).filter(
+      r => (r.userEmail || '').toLowerCase().trim() === userEmail
+    );
     const streaks = calculateUserStreak(allFilms as any[], userEmail, u.longestStreak || 0);
 
     const badges = computeUserBadges({
@@ -83,22 +85,23 @@ export async function getMemberProfile(username: string) {
 
   if (!user) return null;
 
-  const userEmail = user.email;
+  const userEmail = (user.email || '').toLowerCase().trim();
+  const emailRegex = new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
   // Fetch all related data in parallel
-  const [watchedFilms, ratings, likes, reviews, allFilms, activeSeason, allRatings] = await Promise.all([
-    FOTWFilm.find({ 'watchedBy.userEmail': userEmail })
+  const [watchedFilms, ratings, likes, reviews, allFilms, activeSeason, allRatings, allUserReviews] = await Promise.all([
+    FOTWFilm.find({ 'watchedBy.userEmail': { $regex: emailRegex } })
       .select('title posterUrl tmdbUrl year language isSilent isAfrican isSouthAmerican isFemaleDirector directorGender originCountry dateSuggested watchedBy')
       .lean(),
-    FOTWRating.find({ userEmail })
+    FOTWRating.find({ userEmail: { $regex: emailRegex } })
       .populate('filmId', 'title posterUrl tmdbUrl year dateSuggested')
       .sort({ createdAt: -1 })
       .lean(),
-    FOTWLike.find({ userEmail })
+    FOTWLike.find({ userEmail: { $regex: emailRegex } })
       .populate('filmId', 'title posterUrl tmdbUrl year dateSuggested')
       .sort({ createdAt: -1 })
       .lean(),
-    FOTWReview.find({ userEmail, isPrivate: false })
+    FOTWReview.find({ userEmail: { $regex: emailRegex }, isPrivate: false })
       .populate('filmId', 'title posterUrl tmdbUrl year dateSuggested')
       .sort({ createdAt: -1 })
       .lean(),
@@ -108,6 +111,9 @@ export async function getMemberProfile(username: string) {
     FOTWSeason.findOne({ isActive: true }).lean(),
     FOTWRating.find({})
       .select('filmId rating')
+      .lean(),
+    FOTWReview.find({ userEmail: { $regex: emailRegex } })
+      .select('filmId body')
       .lean(),
   ]);
 
@@ -126,7 +132,7 @@ export async function getMemberProfile(username: string) {
     language: f.language,
   }));
 
-  const userReviews = (reviews as any[]).map(r => ({
+  const userReviews = (allUserReviews as any[]).map(r => ({
     filmId: r.filmId?._id?.toString() || r.filmId?.toString(),
     body: r.body,
   }));
@@ -168,7 +174,7 @@ export async function getMemberProfile(username: string) {
     earnedBadges,
     watchHistory: (watchedFilms as any[])
       .map(f => {
-        const watchedEntry = f.watchedBy.find((w: any) => w.userEmail === userEmail);
+        const watchedEntry = f.watchedBy.find((w: any) => (w.userEmail || '').toLowerCase().trim() === userEmail);
         return {
           film: formatFilm(f),
           watchedAt: watchedEntry?.watchedAt || f.dateSuggested,

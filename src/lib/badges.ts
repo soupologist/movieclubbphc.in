@@ -1,14 +1,15 @@
 /**
  * Badges System for Film of the Week (FOTW)
  * Single file containing badge definitions, data structures, and evaluation logic.
- * Symbols/emojis are used for testing, with image placeholders ready for future assets.
+ * Symbols/emojis are used as fallback, with image URLs for graphics assets.
  */
 
 export interface BadgeDefinition {
   id: string;
   name: string;
-  symbol: string;        // Symbol/emoji for testing
-  imageUrl?: string;     // Optional image URL for future graphics
+  symbol: string; // Symbol/emoji for fallback
+  imageUrl?: string; // Image URL for unlocked state
+  lockedImageUrl?: string; // Image URL for locked state
   description: string;
   category: 'watch' | 'review' | 'season' | 'recommendation' | 'community';
 }
@@ -56,7 +57,8 @@ export function formatLanguageName(lang: string): string {
   return lang.charAt(0).toUpperCase() + lang.slice(1);
 }
 
-// ISO Country Codes & Language Codes for Region-based Badges
+// ISO Country Codes & Language Codes for Region-based Badges (Reserved for future badges)
+/*
 const AFRICAN_COUNTRY_CODES = new Set([
   'AO', 'BF', 'BI', 'BJ', 'BW', 'CD', 'CF', 'CG', 'CI', 'CM', 'CV', 'DJ', 'DZ',
   'EG', 'ER', 'ET', 'GA', 'GH', 'GM', 'GN', 'GQ', 'GW', 'KE', 'KM', 'LR', 'LS',
@@ -73,14 +75,17 @@ const AFRICAN_LANGUAGE_CODES = new Set([
 const SOUTH_AMERICAN_COUNTRY_CODES = new Set([
   'AR', 'BO', 'BR', 'CL', 'CO', 'EC', 'FK', 'GF', 'GY', 'PE', 'PY', 'SR', 'UY', 'VE'
 ]);
+*/
 
-/** Full list of predefined badges on the platform */
+/** Full list of predefined active badges on the platform */
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   // 1. Watched Movies Badges (1 / 7 / 11 / 18)
   {
     id: 'watched-1',
     name: 'Pilot',
     symbol: '🎬',
+    imageUrl: '/images/badges/Pilot.png',
+    lockedImageUrl: '/images/badges/Pilot_locked.png',
     description: 'Watched a Film of The Week',
     category: 'watch',
   },
@@ -88,6 +93,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'watched-7',
     name: 'Se7en',
     symbol: '👁️',
+    imageUrl: '/images/badges/Se7en.png',
+    lockedImageUrl: '/images/badges/Se7en_locked.png',
     description: 'Watched 7 Films of the Week',
     category: 'watch',
   },
@@ -95,6 +102,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'watched-11',
     name: "Ocean's Eleven",
     symbol: '🎲',
+    imageUrl: "/images/badges/Ocean's_Eleven.png",
+    lockedImageUrl: "/images/badges/Ocean's_Eleven_locked.png",
     description: 'Watched 11 Films of the Week',
     category: 'watch',
   },
@@ -102,31 +111,19 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'watched-18',
     name: 'The Eighteenth',
     symbol: '🏆',
+    imageUrl: '/images/badges/The_Eighteenth.png',
+    lockedImageUrl: '/images/badges/The_Eighteenth_locked.png',
     description: 'Watched 18 Films of the Week',
     category: 'watch',
   },
 
-  // 2. Watch Streaks Badges (4 / 12)
-  {
-    id: 'streak-4',
-    name: 'On a Roll',
-    symbol: '🔥',
-    description: 'Watch streak of 4 films',
-    category: 'watch',
-  },
-  {
-    id: 'streak-12',
-    name: 'Unstoppable',
-    symbol: '⚡',
-    description: 'Watch streak of 12 films',
-    category: 'watch',
-  },
-
-  // 3. Reviews Badges (5 / 9 / 13)
+  // 2. Reviews Badges (5 / 9 / 13)
   {
     id: 'reviews-5',
     name: 'The Film Critic',
     symbol: '✍️',
+    imageUrl: '/images/badges/The_Film_Critic.png',
+    lockedImageUrl: '/images/badges/The_Film_Critic_locked.png',
     description: 'Penned 5 reviews on the FoTW website',
     category: 'review',
   },
@@ -134,6 +131,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'reviews-9',
     name: 'Revolution 9',
     symbol: '🖊️',
+    imageUrl: '/images/badges/Revolution_9.png',
+    lockedImageUrl: '/images/badges/Revolution_9_locked.png',
     description: 'Penned 9 reviews on the FoTW website',
     category: 'review',
   },
@@ -141,22 +140,28 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'reviews-13',
     name: '13 Reasons Why',
     symbol: '📜',
+    imageUrl: '/images/badges/13_Reasons_Why.png',
+    lockedImageUrl: '/images/badges/13_Reasons_Why_locked.png',
     description: 'Penned 13 reviews on the FoTW website',
     category: 'review',
   },
 
-  // 4. Seasonal Badges
+  // 3. Seasonal Badges
   {
     id: 'polyglot-season',
     name: 'The Tower of Babel',
     symbol: '🦉',
+    imageUrl: '/images/badges/Tower_of_Babel.png',
+    lockedImageUrl: '/images/badges/Tower_of_Babel_locked.png',
     description: 'Watched films in all languages that appeared this season',
     category: 'season',
   },
   {
     id: 'polyglot-pioneer-season',
-    name: 'Lost in Translation?',
+    name: 'Lost in Translation',
     symbol: '🗿',
+    imageUrl: '/images/badges/Lost_in_Translation.png',
+    lockedImageUrl: '/images/badges/Lost_in_Translation_locked.png',
     description: 'Picked a film in a language new to the ongoing season',
     category: 'season',
   },
@@ -164,26 +169,46 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'season-completionist',
     name: 'One Film After Another',
     symbol: '💯',
+    imageUrl: '/images/badges/Big_Brother_Is_Always_Watching.png',
+    lockedImageUrl: '/images/badges/Big_Brother_Is_Always_Watching_locked.png',
     description: 'Watched all films of the ongoing season',
     category: 'season',
   },
 
-  // 5. Community Badges
+  // 4. Community Badges
   {
     id: 'bug-hunter',
     name: 'Eye of the Tiger',
     symbol: '🕵️‍♂️',
+    imageUrl: '/images/badges/Eye_of_the_Tiger.png',
+    lockedImageUrl: '/images/badges/Eye_of_the_Tiger_locked.png',
     description: 'Spotted and alerted the team of a bug on the website',
     category: 'community',
   },
 
-  // 6. Recommendation / Chooser Badges
+  // 5. Recommendation / Chooser Badges
   {
     id: 'crowd-pleaser',
-    name: 'Homelander?',
+    name: 'Homelander',
     symbol: '🦸‍♂️',
     description: '20 people watched a film picked by you',
     category: 'recommendation',
+  },
+
+  /* --- Reserved / Future Badges (Commented out for later activation) ---
+  {
+    id: 'streak-3',
+    name: 'On a Roll',
+    symbol: '🔥',
+    description: 'Watch streak of 3 films',
+    category: 'watch',
+  },
+  {
+    id: 'streak-15',
+    name: 'Unstoppable',
+    symbol: '⚡',
+    description: 'Watch streak of 15 films',
+    category: 'watch',
   },
   {
     id: 'silent-film',
@@ -194,14 +219,14 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   },
   {
     id: 'african-film',
-    name: 'Out of Africa',
+    name: 'Madagascar',
     symbol: '🌍',
     description: 'Picked an African film',
     category: 'recommendation',
   },
   {
     id: 'south-american-film',
-    name: 'El Dorado',
+    name: 'Cidade de Deus',
     symbol: '🏔️',
     description: 'Picked a South American film',
     category: 'recommendation',
@@ -213,6 +238,14 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: 'Picked a film which garnered an average rating of 4.2 or more',
     category: 'recommendation',
   },
+  {
+    id: 'queen',
+    name: 'Queen',
+    symbol: '👑',
+    description: 'Picked a film by a female filmmaker',
+    category: 'recommendation',
+  },
+  */
 ];
 
 export interface ComputeBadgesInput {
@@ -289,26 +322,15 @@ export function isFilmSuggestedByUser(
  */
 export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] {
   const userEmail = (input.userEmail || '').toLowerCase();
+  // Prefer live userWatches count over potentially-stale watchedCount DB field
   const effectiveWatchedCount = Math.max(input.watchedCount ?? 0, input.userWatches?.length ?? 0);
-  const effectiveReviewCount = (input.userReviews || []).filter(
-    (r) => r.body === undefined || r.body.trim().length > 0
-  ).length;
-
-  const effectiveLongestStreak = Math.max(input.longestStreak ?? 0, input.currentStreak ?? 0);
-
-  // Film Ratings Map (Average rating per film)
-  const filmRatingStats = new Map<string, { sum: number; count: number }>();
-  if (input.allRatings && input.allRatings.length > 0) {
-    for (const r of input.allRatings) {
-      const filmIdStr = r.filmId?.toString();
-      if (!filmIdStr || typeof r.rating !== 'number') continue;
-      const current = filmRatingStats.get(filmIdStr) || { sum: 0, count: 0 };
-      filmRatingStats.set(filmIdStr, {
-        sum: current.sum + r.rating,
-        count: current.count + 1,
-      });
+  const uniqueReviewedFilmIds = new Set<string>();
+  for (const r of input.userReviews || []) {
+    if (r.filmId && (r.body === undefined || r.body.trim().length > 0)) {
+      uniqueReviewedFilmIds.add(r.filmId.toString());
     }
   }
+  const effectiveReviewCount = uniqueReviewedFilmIds.size;
 
   // Active Season Processing
   let seasonFilms: Array<any> = [];
@@ -324,7 +346,9 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
       : Date.now();
 
     seasonFilms = input.allFilms.filter((f) => {
-      const d = new Date(f.dateSuggested || f.createdAt || 0).getTime();
+      // Only count films with a real dateSuggested — createdAt is unreliable for season membership
+      if (!f.dateSuggested) return false;
+      const d = new Date(f.dateSuggested).getTime();
       return d >= start && d <= end;
     });
 
@@ -333,6 +357,7 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
 
     seasonFilms.forEach((f) => {
       const lang = (f.language || '').toLowerCase().trim();
+      // Tower of Babel: track all languages (including English) — user must watch every language
       if (lang) seasonLanguages.add(lang);
     });
 
@@ -353,7 +378,8 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
       const langRaw = (film.language || '').trim();
       const langLower = langRaw.toLowerCase();
 
-      if (!langLower) continue;
+      // Skip blank and English (English is default language, not foreign/new language pioneer)
+      if (!langLower || langLower === 'english' || langLower === 'en') continue;
 
       if (!seenSeasonLanguages.has(langLower)) {
         seenSeasonLanguages.add(langLower);
@@ -369,58 +395,18 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
 
   // Evaluate Chooser / Recommendation Special Badges across all films
   let recommended20WatcherFilm = false;
-  let recommendedSilentFilm = false;
-  let recommendedAfricanFilm = false;
-  let recommendedSouthAmericanFilm = false;
-  let recommendedHighRatedFilm = false;
 
   for (const film of input.allFilms || []) {
     if (!isFilmSuggestedByUser(film, userEmail, input.userName, input.userUsername)) {
       continue;
     }
 
-    // 1. Crowd Pleaser (20+ watchers)
-    const watchers = film.watchedCount ?? film.watchedBy?.length ?? 0;
+    // 1. Crowd Pleaser (Homelander?) — 20+ people watched a film the user picked
+    // Use watchedBy array length as the live source; fall back to watchedCount if stored
+    const watchers =
+      (film.watchedBy?.length ?? 0) > 0 ? film.watchedBy!.length : (film.watchedCount ?? 0);
     if (watchers >= 20) {
       recommended20WatcherFilm = true;
-    }
-
-    // 2. Silent Film
-    const langLower = (film.language || '').toLowerCase().trim();
-    if (
-      film.isSilent ||
-      langLower === 'silent' ||
-      (film.year && film.year > 0 && film.year <= 1929)
-    ) {
-      recommendedSilentFilm = true;
-    }
-
-    // 3. African Film
-    const countries = Array.isArray(film.originCountry)
-      ? film.originCountry
-      : [film.originCountry].filter(Boolean) as string[];
-
-    const hasAfricanCountry = countries.some((c) => AFRICAN_COUNTRY_CODES.has(c.toUpperCase()));
-    if (film.isAfrican || hasAfricanCountry || AFRICAN_LANGUAGE_CODES.has(langLower)) {
-      recommendedAfricanFilm = true;
-    }
-
-    // 4. South American Film
-    const hasSACountry = countries.some((c) => SOUTH_AMERICAN_COUNTRY_CODES.has(c.toUpperCase()));
-    if (film.isSouthAmerican || hasSACountry) {
-      recommendedSouthAmericanFilm = true;
-    }
-
-    // 5. Average Rating 4.2+
-    let avg = film.averageRating;
-    if (avg === undefined) {
-      const stats = filmRatingStats.get(film._id.toString());
-      if (stats && stats.count > 0) {
-        avg = stats.sum / stats.count;
-      }
-    }
-    if (avg !== undefined && avg >= 4.2) {
-      recommendedHighRatedFilm = true;
     }
   }
 
@@ -448,16 +434,6 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
       case 'watched-18':
         earned = effectiveWatchedCount >= 18;
         progress = { current: Math.min(effectiveWatchedCount, 18), target: 18 };
-        break;
-
-      case 'streak-4':
-        earned = effectiveLongestStreak >= 4;
-        progress = { current: Math.min(effectiveLongestStreak, 4), target: 4 };
-        break;
-
-      case 'streak-12':
-        earned = effectiveLongestStreak >= 12;
-        progress = { current: Math.min(effectiveLongestStreak, 12), target: 12 };
         break;
 
       case 'reviews-5':
@@ -499,22 +475,6 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
       case 'crowd-pleaser':
         earned = recommended20WatcherFilm;
         break;
-
-      case 'silent-film':
-        earned = recommendedSilentFilm;
-        break;
-
-      case 'african-film':
-        earned = recommendedAfricanFilm;
-        break;
-
-      case 'south-american-film':
-        earned = recommendedSouthAmericanFilm;
-        break;
-
-      case 'high-rating':
-        earned = recommendedHighRatedFilm;
-        break;
     }
 
     let customDescription: string | undefined;
@@ -525,8 +485,11 @@ export function computeUserBadges(input: ComputeBadgesInput): UserBadgeResult[] 
       customDescription = `Pioneered ${details}`;
     }
 
+    const activeImageUrl = earned ? badge.imageUrl : badge.lockedImageUrl || badge.imageUrl;
+
     return {
       ...badge,
+      imageUrl: activeImageUrl,
       description: customDescription || badge.description,
       earned,
       progress,

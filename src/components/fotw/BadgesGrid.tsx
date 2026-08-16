@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { UserBadgeResult } from '@/lib/badges';
 
 const C = {
@@ -16,30 +16,12 @@ const C = {
   gold: '#ffd700',
 };
 
-const categoryLabels: Record<string, string> = {
-  all: 'All',
-  earned: 'Earned',
-  watch: 'Watching',
-  review: 'Reviews',
-  season: 'Seasons',
-  recommendation: 'Recommendations',
-  community: 'Community',
-};
-
 export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
   const earnedCount = badges.filter((b) => b.earned).length;
-
-  const filteredBadges = badges.filter((badge) => {
-    if (selectedCategory === 'all') return true;
-    if (selectedCategory === 'earned') return badge.earned;
-    return badge.category === selectedCategory;
-  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Badges Summary & Filter Header */}
+      {/* Badges Summary Header */}
       <div
         style={{
           display: 'flex',
@@ -55,38 +37,6 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
             {earnedCount} / {badges.length} Unlocked
           </span>
         </div>
-
-        {/* Category Pills */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '6px',
-            flexWrap: 'wrap',
-          }}
-        >
-          {Object.entries(categoryLabels).map(([catKey, label]) => {
-            const active = selectedCategory === catKey;
-            return (
-              <button
-                key={catKey}
-                onClick={() => setSelectedCategory(catKey)}
-                style={{
-                  background: active ? '#1f293d' : C.card,
-                  border: `1px solid ${active ? C.blue : C.border}`,
-                  color: active ? C.blue : C.muted,
-                  borderRadius: '20px',
-                  padding: '4px 12px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* Grid of Badges */}
@@ -97,7 +47,7 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
           gap: '14px',
         }}
       >
-        {filteredBadges.map((badge) => {
+        {badges.map((badge) => {
           return (
             <div
               key={badge.id}
@@ -116,25 +66,39 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '10px',
+                  }}
+                >
                   {/* Symbol / Image */}
                   <div
                     style={{
-                      fontSize: '32px',
+                      fontSize: '38px',
                       lineHeight: 1,
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '12px',
-                      background: badge.earned ? 'rgba(0, 224, 84, 0.1)' : 'rgba(255,255,255,0.04)',
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '14px',
+                      background: badge.earned ? 'rgba(0, 224, 84, 0.08)' : 'rgba(255,255,255,0.03)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: `1px solid ${badge.earned ? 'rgba(0,224,84,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                      border: `1px solid ${
+                        badge.earned ? 'rgba(0,224,84,0.25)' : 'rgba(255,255,255,0.08)'
+                      }`,
+                      flexShrink: 0,
                     }}
                   >
                     {badge.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={badge.imageUrl} alt={badge.name} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                      <img
+                        src={badge.imageUrl}
+                        alt={badge.name}
+                        style={{ width: 48, height: 48, objectFit: 'contain' }}
+                      />
                     ) : (
                       badge.symbol
                     )}
@@ -147,16 +111,25 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
                       fontWeight: 600,
                       padding: '3px 8px',
                       borderRadius: '12px',
-                      background: badge.earned ? 'rgba(0, 224, 84, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      background: badge.earned
+                        ? 'rgba(0, 224, 84, 0.15)'
+                        : 'rgba(255, 255, 255, 0.05)',
                       color: badge.earned ? C.green : C.dim,
                       border: `1px solid ${badge.earned ? 'rgba(0, 224, 84, 0.3)' : C.border}`,
                     }}
                   >
-                    {badge.earned ? 'Unlocked ✓' : 'Locked 🔒'}
+                    {badge.earned ? 'Unlocked ✓' : 'Locked'}
                   </div>
                 </div>
 
-                <div style={{ color: 'white', fontSize: '15px', fontWeight: 600, marginBottom: '4px' }}>
+                <div
+                  style={{
+                    color: 'white',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    marginBottom: '4px',
+                  }}
+                >
                   {badge.name}
                 </div>
 
@@ -167,8 +140,22 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
 
               {/* Progress bar if not earned */}
               {!badge.earned && badge.progress && badge.progress.target > 1 && (
-                <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: `1px solid ${C.border}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: C.dim, marginBottom: '4px' }}>
+                <div
+                  style={{
+                    marginTop: '12px',
+                    paddingTop: '8px',
+                    borderTop: `1px solid ${C.border}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '11px',
+                      color: C.dim,
+                      marginBottom: '4px',
+                    }}
+                  >
                     <span>Progress</span>
                     <span>
                       {badge.progress.current} / {badge.progress.target}
@@ -186,7 +173,10 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
                     <div
                       style={{
                         height: '100%',
-                        width: `${Math.min(100, (badge.progress.current / badge.progress.target) * 100)}%`,
+                        width: `${Math.min(
+                          100,
+                          (badge.progress.current / badge.progress.target) * 100
+                        )}%`,
                         background: C.blue,
                         borderRadius: '2px',
                       }}
@@ -199,9 +189,9 @@ export default function BadgesGrid({ badges }: { badges: UserBadgeResult[] }) {
         })}
       </div>
 
-      {filteredBadges.length === 0 && (
+      {badges.length === 0 && (
         <div style={{ color: C.dim, textAlign: 'center', padding: '40px 0', fontSize: '14px' }}>
-          No badges match this category filter.
+          No badges found.
         </div>
       )}
     </div>

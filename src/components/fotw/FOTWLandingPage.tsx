@@ -1056,7 +1056,12 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                     userSelect: 'none',
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>{badge.symbol}</span>
+                  {badge.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={badge.imageUrl} alt={badge.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                  ) : (
+                    <span style={{ fontSize: 16 }}>{badge.symbol}</span>
+                  )}
                   <span style={{ fontWeight: 500 }}>{badge.name}</span>
                 </div>
               ))}
@@ -2157,6 +2162,20 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
           onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
         >
           Members →
+        </Link>
+        <Link
+          href="/badges"
+          style={{
+            color: '#4a5568',
+            fontSize: '14px',
+            textDecoration: 'none',
+            display: 'inline-block',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Badges →
         </Link>
       </div>
 
