@@ -148,7 +148,6 @@ export default function AdminDashboard() {
   const [formData, setFormData] = useState(defaultAddForm);
   const [addMsg, setAddMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-
   // TMDB Fetch State
   const [tmdbUrlInput, setTmdbUrlInput] = useState('');
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -192,8 +191,10 @@ export default function AdminDashboard() {
       email: string;
       timesSuggested?: number;
       excludeFromLeaderboard?: boolean;
+      spottedBug?: boolean;
     }[]
   >([]);
+  const [bugToggleLoading, setBugToggleLoading] = useState<string | null>(null); // email of in-progress toggle
   const [archiveFilms, setArchiveFilms] = useState<any[]>([]);
 
   const [winner, setWinner] = useState<{ name: string; email: string } | null>(null);
@@ -230,7 +231,6 @@ export default function AdminDashboard() {
     }
     return url.toString();
   };
-
 
   // Single Bulk CSV Import State
 
@@ -292,7 +292,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
       fetch('/api/fotw/archive').then((r) => r.json()),
     ]);
 
-    const archiveList = Array.isArray(archive) ? archive : (archive.films || []);
+    const archiveList = Array.isArray(archive) ? archive : archive.films || [];
     const nextCurrentFilm = d.currentFilm || null;
     setLeaderboard(adminData.leaderboard || []);
     setArchiveFilms(archiveList);
@@ -556,8 +556,6 @@ Bob,bob@example.com,0,0,,,,0,0,,
     }
   };
 
-
-
   const addFormDirty =
     JSON.stringify(formData) !== addBaselineRef.current ||
     tmdbUrlInput.trim() !== '' ||
@@ -621,7 +619,6 @@ Bob,bob@example.com,0,0,,,,0,0,,
     };
   }, []);
 
-
   const handleHistoryFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -643,17 +640,34 @@ Bob,bob@example.com,0,0,,,,0,0,,
       complete: (results) => {
         const rawData = results.data as string[][];
         if (rawData.length < 2 || (rawData[0] || []).length < 2) {
-          setHistoryMsg({ type: 'error', text: 'CSV must include headers and at least name/email or film columns.' });
+          setHistoryMsg({
+            type: 'error',
+            text: 'CSV must include headers and at least name/email or film columns.',
+          });
           return;
         }
 
         const topRow = rawData[0];
         const knownUserFields = [
-          'name', 'email', 'watchcount', 'timessuggested', 'filmsuggested',
-          'whensuggested', 'date', 'suggesteddate', 'currentstreak', 'longeststreak',
-          'lastwatchedweek', 'seasonwatchedcount', 'excludefromleaderboard',
-          'hascompletedonboarding', 'username', 'image', 'lastusernamechange',
-          'createdat', 'updatedat'
+          'name',
+          'email',
+          'watchcount',
+          'timessuggested',
+          'filmsuggested',
+          'whensuggested',
+          'date',
+          'suggesteddate',
+          'currentstreak',
+          'longeststreak',
+          'lastwatchedweek',
+          'seasonwatchedcount',
+          'excludefromleaderboard',
+          'hascompletedonboarding',
+          'username',
+          'image',
+          'lastusernamechange',
+          'createdat',
+          'updatedat',
         ];
 
         const colMapping: Record<string, number> = {};
@@ -690,7 +704,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
 
         for (let r = 1; r < rawData.length; r++) {
           const row = rawData[r] || [];
-          
+
           const getValue = (key: string) => {
             const i = colMapping[key];
             return i !== undefined ? (row[i] || '').trim() : '';
@@ -698,7 +712,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
 
           const email = getValue('email');
           if (!email) continue;
-          
+
           const name = getValue('name');
 
           let computedWatchCount = 0;
@@ -707,7 +721,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
             if (!cellVal) continue;
 
             computedWatchCount += 1;
-            
+
             let rating = null;
             if (cellVal !== '0') {
               const parsed = Number(cellVal);
@@ -727,8 +741,12 @@ Bob,bob@example.com,0,0,,,,0,0,,
             name: name || email.split('@')[0],
             username: getValue('username'),
             email,
-            watchedCount: getValue('watchcount') ? Number(getValue('watchcount')) : computedWatchCount,
-            seasonWatchedCount: getValue('seasonwatchedcount') ? Number(getValue('seasonwatchedcount')) : computedWatchCount,
+            watchedCount: getValue('watchcount')
+              ? Number(getValue('watchcount'))
+              : computedWatchCount,
+            seasonWatchedCount: getValue('seasonwatchedcount')
+              ? Number(getValue('seasonwatchedcount'))
+              : computedWatchCount,
             timesSuggested: Number(getValue('timessuggested')) || 0,
             filmSuggested: getValue('filmsuggested'),
             whenSuggested: getValue('whensuggested'),
@@ -1511,8 +1529,6 @@ Bob,bob@example.com,0,0,,,,0,0,,
         </section>
       )}
 
-
-
       {/* ── Bulk CSV Import ──────────────────────────────────────── */}
       <section
         className="mb-12"
@@ -1827,7 +1843,100 @@ Bob,bob@example.com,0,0,,,,0,0,,
         </div>
       </section>
 
-
+      {/* ── Eye of the Tiger Badge ──────────────────────────── */}
+      <section
+        className="mb-12"
+        style={{
+          backgroundColor: '#0d1a0f',
+          border: '1px solid rgba(0, 224, 84, 0.2)',
+          borderRadius: 16,
+          padding: 24,
+        }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: '#00e054', margin: '0 0 4px 0' }}>
+              Eye of the Tiger Badge
+            </h2>
+            <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
+              Manually assign or revoke the Eye of the Tiger badge for members who spotted a bug on
+              the website.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {leaderboard.map((u) => {
+            const hasBadge = Boolean(u.spottedBug);
+            const isLoading = bugToggleLoading === u.email;
+            const dName = u.username ? `${u.username} (${u.name})` : u.name;
+            return (
+              <div
+                key={u.email}
+                className="flex justify-between items-center p-3 rounded-lg"
+                style={{
+                  background: hasBadge ? 'rgba(0, 224, 84, 0.05)' : '#0f0f0f',
+                  border: `1px solid ${hasBadge ? 'rgba(0, 224, 84, 0.3)' : '#1e1e1e'}`,
+                }}
+              >
+                <div className="flex flex-col overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    {hasBadge && (
+                      <img
+                        src="/images/badges/Eye_of_the_Tiger.png"
+                        alt="Eye of the Tiger"
+                        style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }}
+                      />
+                    )}
+                    <span className="text-white text-sm truncate">{dName}</span>
+                  </div>
+                  <span className="text-xs text-[#8a9bb0] truncate">{u.email}</span>
+                </div>
+                <button
+                  disabled={isLoading}
+                  onClick={async () => {
+                    setBugToggleLoading(u.email);
+                    try {
+                      const res = await fetch('/api/fotw/admin/toggle-bug', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: u.email, spottedBug: !hasBadge }),
+                      });
+                      if (res.ok) {
+                        setLeaderboard(
+                          leaderboard.map((x) =>
+                            x.email === u.email ? { ...x, spottedBug: !hasBadge } : x
+                          )
+                        );
+                      } else {
+                        alert('Failed to update badge. Please try again.');
+                      }
+                    } catch (e) {
+                      alert('Error updating badge.');
+                    } finally {
+                      setBugToggleLoading(null);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: hasBadge ? '#00e054' : 'transparent',
+                    border: hasBadge ? 'none' : '1px solid #1e1e1e',
+                    color: hasBadge ? '#000' : '#8a9bb0',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    opacity: isLoading ? 0.5 : 1,
+                    minWidth: 72,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isLoading ? '...' : hasBadge ? 'Revoke' : 'Assign'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── Rules Editor ───────────────────────────────────── */}
       <section
@@ -1940,16 +2049,52 @@ Bob,bob@example.com,0,0,,,,0,0,,
         )}
       </section>
 
-
       {/* Export Modal */}
       {exportModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, width: '100%', maxWidth: 440, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              width: '100%',
+              maxWidth: 440,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: `1px solid ${C.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <h3 style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: 0 }}>
                 Export Data
               </h3>
-              <button onClick={() => setExportModalOpen(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', padding: 0 }} className="hover:text-white">
+              <button
+                onClick={() => setExportModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: C.muted,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+                className="hover:text-white"
+              >
                 ✕
               </button>
             </div>
@@ -1957,12 +2102,25 @@ Bob,bob@example.com,0,0,,,,0,0,,
               <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>
                 Select the seasons you want to include in the export.
               </p>
-              
+
               {exportLoadingSeasons ? (
-                <div style={{ color: C.dim, textAlign: 'center', padding: '20px 0' }}>Loading seasons...</div>
+                <div style={{ color: C.dim, textAlign: 'center', padding: '20px 0' }}>
+                  Loading seasons...
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, maxHeight: 200, overflowY: 'auto' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                    marginBottom: 24,
+                    maxHeight: 200,
+                    overflowY: 'auto',
+                  }}
+                >
+                  <label
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedExportSeasons.includes('all')}
@@ -1974,23 +2132,34 @@ Bob,bob@example.com,0,0,,,,0,0,,
                     />
                     <span style={{ color: 'white', fontSize: 14 }}>All Seasons</span>
                   </label>
-                  {exportSeasons.map(s => (
-                    <label key={s._id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  {exportSeasons.map((s) => (
+                    <label
+                      key={s._id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                    >
                       <input
                         type="checkbox"
-                        checked={selectedExportSeasons.includes(s._id) && !selectedExportSeasons.includes('all')}
+                        checked={
+                          selectedExportSeasons.includes(s._id) &&
+                          !selectedExportSeasons.includes('all')
+                        }
                         onChange={(e) => {
-                          let newSelected = selectedExportSeasons.filter(id => id !== 'all');
+                          let newSelected = selectedExportSeasons.filter((id) => id !== 'all');
                           if (e.target.checked) {
                             newSelected.push(s._id);
                           } else {
-                            newSelected = newSelected.filter(id => id !== s._id);
+                            newSelected = newSelected.filter((id) => id !== s._id);
                           }
                           setSelectedExportSeasons(newSelected);
                         }}
                         style={{ accentColor: C.green, width: 16, height: 16 }}
                       />
-                      <span style={{ color: selectedExportSeasons.includes('all') ? C.dim : 'white', fontSize: 14 }}>
+                      <span
+                        style={{
+                          color: selectedExportSeasons.includes('all') ? C.dim : 'white',
+                          fontSize: 14,
+                        }}
+                      >
                         {s.name}
                       </span>
                     </label>
@@ -2002,7 +2171,16 @@ Bob,bob@example.com,0,0,,,,0,0,,
                 <a
                   href={getExportUrl('csv')}
                   onClick={() => setExportModalOpen(false)}
-                  style={{ backgroundColor: C.input, border: `1px solid ${C.border}`, color: 'white', fontSize: 14, fontWeight: 500, padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}
+                  style={{
+                    backgroundColor: C.input,
+                    border: `1px solid ${C.border}`,
+                    color: 'white',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    padding: '8px 16px',
+                    borderRadius: 8,
+                    textDecoration: 'none',
+                  }}
                   className="hover:bg-[#1a1a1a]"
                 >
                   Export CSV
@@ -2012,7 +2190,15 @@ Bob,bob@example.com,0,0,,,,0,0,,
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setExportModalOpen(false)}
-                  style={{ backgroundColor: 'white', color: 'black', fontSize: 14, fontWeight: 600, padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}
+                  style={{
+                    backgroundColor: 'white',
+                    color: 'black',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    padding: '8px 16px',
+                    borderRadius: 8,
+                    textDecoration: 'none',
+                  }}
                 >
                   Export JSON
                 </a>
