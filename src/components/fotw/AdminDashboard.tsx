@@ -1882,7 +1882,7 @@ Bob,bob@example.com,0,0,,,,0,0,,
                   <div className="flex items-center gap-2">
                     {hasBadge && (
                       <img
-                        src="/images/badges/Eye_of_the_Tiger.png"
+                        src="/images/badges_final/Sheep.png"
                         alt="Eye of the Tiger"
                         style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }}
                       />

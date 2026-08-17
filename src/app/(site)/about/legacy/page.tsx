@@ -103,6 +103,15 @@ const legacyData = [
     clubRep: 'Sachin Siva Atluri',
     convener: 'Tarun Manick Murugesan',
   },
+
+  {
+    year: '2026-27',
+    secretary: 'Rahul Arjun KS',
+    jointSecretary: 'Arjan Singh',
+    treasurer: 'Arjun Seshadri',
+    clubRep: 'Sai Tarang Jampani',
+    convener: 'Ronil Borah',
+  },
 ];
 
 const columns: { key: keyof (typeof legacyData)[number]; label: string }[] = [

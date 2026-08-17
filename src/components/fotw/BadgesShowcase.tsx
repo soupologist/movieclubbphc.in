@@ -7,14 +7,11 @@ import { BADGE_DEFINITIONS, UserBadgeResult } from '@/lib/badges';
 
 const C = {
   bg: '#000000',
-  card: '#0f0f0f',
-  cardHover: '#141414',
-  border: '#1e1e1e',
   dim: '#4a5568',
   muted: '#8a9bb0',
   blue: '#40bcf4',
   green: '#00e054',
-  orange: '#ff9500',
+  border: '#1e1e1e',
 };
 
 interface BadgesShowcaseProps {
@@ -44,22 +41,23 @@ export default function BadgesShowcase({ userBadges }: BadgesShowcaseProps) {
       style={{
         backgroundColor: C.bg,
         minHeight: '100vh',
-        padding: 'clamp(16px, 4vw, 32px) clamp(16px, 4vw, 24px)',
-        paddingBottom: 96,
-        maxWidth: '1400px',
+        padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 32px)',
+        paddingBottom: 112,
+        maxWidth: '1440px',
         margin: '0 auto',
       }}
     >
       {/* Navigation Header */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '36px' }}>
         <Link
           href="/club/filmoftheweek"
-          style={{ color: C.muted, fontSize: 14, textDecoration: 'none' }}
+          style={{ color: C.muted, fontSize: 14, textDecoration: 'none', width: 'fit-content' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'white')}
           onMouseLeave={(e) => (e.currentTarget.style.color = C.muted)}
         >
           ← Back to Film of the Week
         </Link>
+
         <div
           style={{
             display: 'flex',
@@ -72,7 +70,7 @@ export default function BadgesShowcase({ userBadges }: BadgesShowcaseProps) {
           <div>
             <h1
               className={`text-white m-0 ${instrumentSerif.className}`}
-              style={{ fontSize: '3.5rem', lineHeight: 1 }}
+              style={{ fontSize: '3.8rem', lineHeight: 1 }}
             >
               Badges
             </h1>
@@ -124,7 +122,7 @@ export default function BadgesShowcase({ userBadges }: BadgesShowcaseProps) {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Header */}
       <div
         style={{
           display: 'flex',
@@ -132,152 +130,177 @@ export default function BadgesShowcase({ userBadges }: BadgesShowcaseProps) {
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '16px',
-          marginBottom: '32px',
-          background: C.card,
-          border: `1px solid ${C.border}`,
-          borderRadius: '16px',
-          padding: '16px 24px',
+          marginBottom: '48px',
+          paddingBottom: '16px',
+          borderBottom: `1px solid ${C.border}`,
         }}
       >
         <div style={{ color: 'white', fontSize: '16px', fontWeight: 600 }}>
           All Badges ({totalBadges})
         </div>
 
-        {/* Search input */}
         <input
           type="text"
           placeholder="Search badges..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{
-            background: 'rgba(255,255,255,0.04)',
+            background: 'rgba(255,255,255,0.05)',
             border: `1px solid ${C.border}`,
             borderRadius: '10px',
-            padding: '10px 18px',
+            padding: '8px 16px',
             color: 'white',
-            fontSize: '14px',
+            fontSize: '13px',
             outline: 'none',
-            minWidth: '260px',
+            minWidth: '240px',
           }}
         />
       </div>
 
-      {/* Badges Grid with Large Logos */}
+      {/* Badges Grid (Extra large 210px logos without boxes) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-          gap: '20px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: '56px 40px',
         }}
       >
         {filteredBadges.map((badge) => {
           const userResult = userBadgeMap.get(badge.id);
           const isEarned = userResult?.earned ?? false;
-          const displayImage = isEarned ? badge.imageUrl : badge.lockedImageUrl || badge.imageUrl;
+          const displayImage = isEarned
+            ? badge.imageUrl
+            : badge.lockedImageUrl || badge.imageUrl;
 
           return (
             <div
               key={badge.id}
               style={{
-                background: isEarned ? 'rgba(0, 224, 84, 0.03)' : C.card,
-                border: `1px solid ${isEarned ? 'rgba(0, 224, 84, 0.3)' : C.border}`,
-                borderRadius: '20px',
-                padding: '24px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.2s',
-                position: 'relative',
-                boxShadow: isEarned ? '0 0 24px rgba(0,224,84,0.06)' : 'none',
+                alignItems: 'center',
+                textAlign: 'center',
+                opacity: userBadges ? (isEarned ? 1 : 0.65) : 1,
+                transition: 'opacity 0.2s',
               }}
             >
-              <div>
-                {/* Header row: Large Badge Logo + Unlocked status */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    marginBottom: '20px',
-                  }}
-                >
-                  {/* Large Badge Logo Container */}
-                  <div
+              {/* Extra Large Badge Logo (210px x 210px, no bounding box) */}
+              <div
+                style={{
+                  width: '210px',
+                  height: '210px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '18px',
+                }}
+              >
+                {displayImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={displayImage}
+                    alt={badge.name}
                     style={{
-                      width: '100px',
-                      height: '100px',
-                      borderRadius: '20px',
-                      background: isEarned ? 'rgba(0, 224, 84, 0.08)' : 'rgba(255,255,255,0.03)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: `1px solid ${
-                        isEarned ? 'rgba(0,224,84,0.25)' : 'rgba(255,255,255,0.08)'
-                      }`,
-                      flexShrink: 0,
+                      width: 210,
+                      height: 210,
+                      objectFit: 'contain',
+                      filter: isEarned
+                        ? 'drop-shadow(0 10px 24px rgba(0,224,84,0.18))'
+                        : 'drop-shadow(0 10px 20px rgba(0,0,0,0.6))',
                     }}
-                  >
-                    {displayImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={displayImage}
-                        alt={badge.name}
-                        style={{ width: 84, height: 84, objectFit: 'contain' }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: '54px' }}>{badge.symbol}</span>
-                    )}
-                  </div>
-
-                  {/* Status Indicator Pill */}
-                  {userBadges && (
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        background: isEarned
-                          ? 'rgba(0, 224, 84, 0.15)'
-                          : 'rgba(255, 255, 255, 0.05)',
-                        color: isEarned ? C.green : C.dim,
-                        border: `1px solid ${isEarned ? 'rgba(0, 224, 84, 0.3)' : C.border}`,
-                      }}
-                    >
-                      {isEarned ? '✓ Unlocked' : 'Locked'}
-                    </span>
-                  )}
-                </div>
-
-                {/* Badge Title */}
-                <div
-                  style={{ color: 'white', fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}
-                >
-                  {badge.name}
-                </div>
-
-                {/* Description */}
-                <div style={{ color: C.muted, fontSize: '14px', lineHeight: 1.5 }}>
-                  {userResult?.description || badge.description}
-                </div>
+                  />
+                ) : (
+                  <span style={{ fontSize: '96px' }}>{badge.symbol}</span>
+                )}
               </div>
 
-              {/* Progress Footer if locked */}
-              {userBadges && !isEarned && userResult?.progress && userResult.progress.target > 1 && (
-                <div
-                  style={{
-                    marginTop: '20px',
-                    paddingTop: '14px',
-                    borderTop: `1px solid ${C.border}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: C.dim }}>Progress</span>
-                  <span style={{ fontSize: '13px', color: C.dim, fontWeight: 600 }}>
-                    {userResult.progress.current} / {userResult.progress.target}
+              {/* Status Pill if logged in */}
+              {userBadges && (
+                <div style={{ marginBottom: '10px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '3px 10px',
+                      borderRadius: '12px',
+                      background: isEarned
+                        ? 'rgba(0, 224, 84, 0.15)'
+                        : 'rgba(255, 255, 255, 0.05)',
+                      color: isEarned ? C.green : C.dim,
+                      border: `1px solid ${
+                        isEarned ? 'rgba(0, 224, 84, 0.3)' : 'rgba(255, 255, 255, 0.08)'
+                      }`,
+                    }}
+                  >
+                    {isEarned ? '✓ Unlocked' : 'Locked'}
                   </span>
+                </div>
+              )}
+
+              {/* Badge Title */}
+              <h2
+                className={`text-white m-0 ${instrumentSerif.className}`}
+                style={{
+                  fontSize: '1.9rem',
+                  fontWeight: 700,
+                  marginBottom: '6px',
+                  lineHeight: 1.2,
+                }}
+              >
+                {badge.name}
+              </h2>
+
+              {/* Description */}
+              <p
+                style={{
+                  color: C.muted,
+                  fontSize: '14px',
+                  lineHeight: 1.5,
+                  margin: 0,
+                  maxWidth: '260px',
+                }}
+              >
+                {userResult?.description || badge.description}
+              </p>
+
+              {/* Progress Bar for locked badge */}
+              {userBadges && !isEarned && userResult?.progress && userResult.progress.target > 1 && (
+                <div style={{ width: '100%', maxWidth: '200px', marginTop: '14px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '11px',
+                      color: C.dim,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <span>Progress</span>
+                    <span>
+                      {userResult.progress.current} / {userResult.progress.target}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: '4px',
+                      width: '100%',
+                      background: 'rgba(255,255,255,0.08)',
+                      borderRadius: '2px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${Math.min(
+                          100,
+                          (userResult.progress.current / userResult.progress.target) * 100
+                        )}%`,
+                        background: C.blue,
+                        borderRadius: '2px',
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </div>

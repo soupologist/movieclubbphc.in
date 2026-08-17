@@ -49,29 +49,33 @@ const cards = [
 
 const coreTeam = [
   {
-    name: 'Aswanth Ganesan',
+    name: 'Rahul Arjun',
     role: 'Secretary',
-    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746465844/aswanth_hcjgw0.jpg',
+    image:
+      'https://res.cloudinary.com/dlglodixp/image/upload/v1786968426/IMG_7143_-_Rahul_Arjun_K_S_pwpp2t.jpg',
   },
   {
-    name: 'Harshid S',
+    name: 'Arjan Singh',
     role: 'Joint Secretary',
-    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746465789/harshid-cool_bwaxbz.jpg',
+    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1749641486/arjan-square_qdcito.jpg',
   },
   {
-    name: 'Tarun Manick Murugesan',
+    name: 'Ronil Borah',
     role: 'Catharsis Convener',
-    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746358267/tarun_kqeltt.jpg',
+    image:
+      'https://res.cloudinary.com/dlglodixp/image/upload/v1786968427/88fd96cf-2c96-47c2-bdac-3d30e7760c8f_-_Ronil_Borah_czmd9a.jpg',
   },
   {
-    name: 'Shreya Meher',
+    name: 'Arjun Seshadri',
     role: 'Treasurer',
-    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746356834/shreya_esmyy1.jpg',
+    image:
+      'https://res.cloudinary.com/dlglodixp/image/upload/v1786968428/IMG-20260222-WA0017_-_V_Arjun_Seshadri_ts0n0h.jpg',
   },
   {
-    name: 'Sachin Siva Atluri',
+    name: 'Sai Tarang Jampani',
     role: 'Club Representative',
-    image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746539556/sachin-new_pgpnml.jpg',
+    image:
+      'https://res.cloudinary.com/dlglodixp/image/upload/v1786968428/Screenshot_20260620-175110_-_Jampani_Sai_Tarang_v6vjji.png',
   },
 ];
 
@@ -84,16 +88,18 @@ const teamLeads = [
       {
         name: 'Tejasvi Karri',
         role: 'Filmmaking Lead',
-        image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746362098/tejasvi_op1ukf.jpg',
+        image:
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1786968426/karr_-_Tejasvi_Karri_rlei6g.jpg',
       },
       {
-        name: 'Rishi Nair',
+        name: 'Avaneesh Pudipeddi',
         role: 'Filmmaking Lead',
-        image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746360205/rishi_zyy9s6.jpg',
+        image:
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1786968428/me_-_Avaneesh_Pudipeddi_cfuivc.jpg',
       },
     ],
   },
-  {
+  /*{
     team: 'Screenings Team',
     description: 'curate and organize film screenings on campus.',
     logo: 'https://res.cloudinary.com/dlglodixp/image/upload/v1745659626/screenings-team_igzv9f.png',
@@ -111,23 +117,17 @@ const teamLeads = [
           'https://res.cloudinary.com/dlglodixp/image/upload/v1749641486/arjan-square_qdcito.jpg',
       },
     ],
-  },
+  },*/
   {
     team: 'Editorial Team',
     description: 'run our review and editorial content on Instagram.',
     logo: 'https://res.cloudinary.com/dlglodixp/image/upload/v1745659075/editorial-team_htghud.png',
     members: [
       {
-        name: 'Mofasser Arafat Midda',
+        name: 'Sunandan Chatterjee',
         role: 'Editorial Lead',
         image:
-          'https://res.cloudinary.com/dlglodixp/image/upload/v1746362334/mofasser_1_kzkkpq.webp',
-      },
-      {
-        name: 'Sachin Siva Atluri',
-        role: 'Editorial Lead',
-        image:
-          'https://res.cloudinary.com/dlglodixp/image/upload/v1746539556/sachin-new_pgpnml.jpg',
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1786968427/IMG_20260620_001453_-_Sunandan_Chatterjee_dyok7w.jpg',
       },
     ],
   },
@@ -137,18 +137,20 @@ const teamLeads = [
     logo: 'https://res.cloudinary.com/dlglodixp/image/upload/v1745910032/design-transparent_ghudtp.png',
     members: [
       {
-        name: 'Kavya Dholaria',
+        name: 'Manisha Mathew',
         role: 'Design Lead',
-        image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746442789/kavya_alzo2g.jpg',
+        image:
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1786968430/IMG_5755_-_Manisha_Mathew_tckldt.heic',
       },
       {
         name: 'Anirudh Yendalur',
         role: 'Design Lead',
-        image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746442897/anirudh_tfpq4r.jpg',
+        image:
+          'https://res.cloudinary.com/dlglodixp/image/upload/v1786968429/IMG_20260623_200508139_1_1_nksb8o.jpg',
       },
     ],
   },
-  {
+  /*{
     team: 'Publicity & Sponsorship Team',
     description: 'handle outreach, collabs, and spreading the word about our work.',
     logo: 'https://res.cloudinary.com/dlglodixp/image/upload/v1745659895/publicity-sponsorship_yvtbbk.png',
@@ -159,7 +161,7 @@ const teamLeads = [
         image: 'https://res.cloudinary.com/dlglodixp/image/upload/v1746362072/shreyas_ezqxuf.jpg',
       },
     ],
-  },
+  },*/
 ];
 
 export default function AboutPage() {
