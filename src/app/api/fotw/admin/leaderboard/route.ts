@@ -25,11 +25,12 @@ export async function GET(req: Request) {
         { watchedCount: { $gt: 0 } },
         { seasonWatchedCount: { $gt: 0 } },
         { excludeFromLeaderboard: true },
+        { spottedBug: true },
       ],
     })
       .sort({ watchedCount: -1, createdAt: 1 })
       .select(
-        'name username image watchedCount seasonWatchedCount email timesSuggested excludeFromLeaderboard currentStreak longestStreak'
+        'name username image watchedCount seasonWatchedCount email timesSuggested excludeFromLeaderboard spottedBug currentStreak longestStreak'
       )
       .lean();
 

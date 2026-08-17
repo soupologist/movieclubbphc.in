@@ -275,6 +275,14 @@ interface UserActivityData {
   watchedCount: number;
   currentStreak?: number;
   longestStreak?: number;
+  watchedFilms?: { filmId: string; title: string; posterUrl: string }[];
+  earnedBadges?: {
+    id: string;
+    name: string;
+    symbol: string;
+    description: string;
+    imageUrl?: string;
+  }[];
   ratings: {
     filmId: string;
     filmTitle: string;
@@ -424,7 +432,10 @@ function JustWatchWidget({
   }, [jwTitle]);
 
   return (
-    <div style={{ marginTop: '32px', overflow: 'hidden', maxWidth: '100%' }} className="justwatch-wrapper">
+    <div
+      style={{ marginTop: '32px', overflow: 'hidden', maxWidth: '100%' }}
+      className="justwatch-wrapper"
+    >
       {/* 
         --- JustWatch Customization Options ---
         You can add the following data attributes to the div below to customize the widget:
@@ -493,7 +504,9 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
 
   // Core data
   const [data, setData] = useState<FOTWData | null>(initialData?.data || null);
-  const [archiveFilms, setArchiveFilms] = useState<ArchiveFilm[]>(initialData?.archive?.films || []);
+  const [archiveFilms, setArchiveFilms] = useState<ArchiveFilm[]>(
+    initialData?.archive?.films || []
+  );
   const [loading, setLoading] = useState(!initialData);
 
   // Season state
@@ -504,19 +517,25 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
   const [archiveLoading, setArchiveLoading] = useState(false);
 
   // All-time Letterboxd URL from site config
-  const [archiveLetterboxdUrl, setArchiveLetterboxdUrl] = useState<string>(initialData?.archive?.seasonLetterboxdUrl || '');
+  const [archiveLetterboxdUrl, setArchiveLetterboxdUrl] = useState<string>(
+    initialData?.archive?.seasonLetterboxdUrl || ''
+  );
 
   // Inline action state
   const [pendingRating, setPendingRating] = useState<number>(initialData?.data?.userRating || 0);
   const [liked, setLiked] = useState<boolean>(initialData?.data?.userLiked || false);
   const [likesCount, setLikesCount] = useState<number>(initialData?.data?.likesCount || 0);
-  const [hasWatchedLocal, setHasWatchedLocal] = useState<boolean>(initialData?.data?.hasWatched || false);
+  const [hasWatchedLocal, setHasWatchedLocal] = useState<boolean>(
+    initialData?.data?.hasWatched || false
+  );
   const [watchLoading, setWatchLoading] = useState(false);
 
   // Review state
   const [reviewExpanded, setReviewExpanded] = useState<boolean>(false);
   const [reviewBody, setReviewBody] = useState<string>(initialData?.data?.userReview?.body || '');
-  const [reviewPrivate, setReviewPrivate] = useState<boolean>(initialData?.data?.userReview?.isPrivate || false);
+  const [reviewPrivate, setReviewPrivate] = useState<boolean>(
+    initialData?.data?.userReview?.isPrivate || false
+  );
   const [reviewSpoiler, setReviewSpoiler] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [hasReviewLocal, setHasReviewLocal] = useState(!!initialData?.data?.userReview);
@@ -841,9 +860,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         ];
         const avg =
           newRatings.length > 0
-            ? Math.round(
-                (newRatings.reduce((s, r) => s + r.rating, 0) / newRatings.length) * 10
-              ) / 10
+            ? Math.round((newRatings.reduce((s, r) => s + r.rating, 0) / newRatings.length) * 10) /
+              10
             : 0;
         return { ...prev, allRatings: newRatings, averageRating: avg, userRating: newRating };
       });
@@ -1012,6 +1030,85 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
     if (!act) return null;
     return (
       <>
+        {act.earnedBadges && act.earnedBadges.length > 0 && (
+          <div className="mb-6">
+            <h3
+              style={{ fontSize: 14, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
+            >
+              Badges ({act.earnedBadges.length})
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {act.earnedBadges.map((badge) => (
+                <div
+                  key={badge.id}
+                  title={`${badge.name}: ${badge.description}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: C.nested,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 20,
+                    padding: '4px 10px',
+                    fontSize: 13,
+                    color: 'white',
+                    cursor: 'default',
+                    userSelect: 'none',
+                  }}
+                >
+                  {badge.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={badge.imageUrl} alt={badge.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                  ) : (
+                    <span style={{ fontSize: 16 }}>{badge.symbol}</span>
+                  )}
+                  <span style={{ fontWeight: 500 }}>{badge.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {act.watchedFilms && act.watchedFilms.length > 0 && (
+          <div className="mb-6">
+            <h3
+              style={{ fontSize: 14, textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}
+            >
+              Watches ({act.watchedFilms.length})
+            </h3>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(56px, 1fr))',
+                gap: 8,
+              }}
+            >
+              {act.watchedFilms.map((f, i) => (
+                <div
+                  key={i}
+                  title={f.title}
+                  style={{
+                    position: 'relative',
+                    aspectRatio: '2/3',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    backgroundColor: C.nested,
+                    border: `1px solid ${C.border}`,
+                  }}
+                >
+                  {f.posterUrl && (
+                    <Image
+                      src={f.posterUrl}
+                      alt={f.title}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {act.ratings.length > 0 && (
           <div className="mb-6">
             <h3
@@ -1184,7 +1281,8 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
             </div>
           </div>
         )}
-        {act.ratings.length === 0 &&
+        {(!act.watchedFilms || act.watchedFilms.length === 0) &&
+          act.ratings.length === 0 &&
           act.likes.length === 0 &&
           (!act.reviews || act.reviews.length === 0) && (
             <div style={{ color: C.dim, fontSize: 14, textAlign: 'center', padding: '32px 0' }}>
@@ -1555,7 +1653,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                   Trailer
                 </a>
               </div>
-              
+
               {/* Horizontal line */}
               <div style={{ height: 1, backgroundColor: C.border, width: '100%' }} />
 
@@ -2065,6 +2163,20 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
         >
           Members →
         </Link>
+        <Link
+          href="/badges"
+          style={{
+            color: '#4a5568',
+            fontSize: '14px',
+            textDecoration: 'none',
+            display: 'inline-block',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#8a9bb0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+        >
+          Badges →
+        </Link>
       </div>
 
       {/* ══════════════════════════════════════════════════════
@@ -2346,7 +2458,10 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                       marginBottom: 12,
                     }}
                   />
-                  <div className="flex items-center justify-between flex-wrap gap-2" style={{ rowGap: isNarrow ? 8 : 4 }}>
+                  <div
+                    className="flex items-center justify-between flex-wrap gap-2"
+                    style={{ rowGap: isNarrow ? 8 : 4 }}
+                  >
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => setReviewPrivate(!reviewPrivate)}
@@ -2511,7 +2626,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                   RATINGS
                 </span>
                 <span style={{ color: '#2e2e2e', fontSize: 14, textTransform: 'uppercase' }}>
-                  {data.allRatings?.length || 0} FANS
+                  {data.allRatings?.length || 0} VIEWERS
                 </span>
               </div>
 
@@ -2630,7 +2745,7 @@ export default function FOTWLandingPage({ initialData }: { initialData?: any } =
                     Trailer
                   </a>
                 </div>
-                
+
                 {/* Horizontal line */}
                 <div style={{ height: 1, backgroundColor: C.border, width: '100%' }} />
 

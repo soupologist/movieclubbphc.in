@@ -10,6 +10,7 @@ import {
 } from '@/lib/fotw/schemas';
 import { FOTW_ADMINS } from '@/lib/fotwConfig';
 import { formatDisplayName } from '@/lib/fotw/utils';
+import { calculateUserStreak } from '@/lib/fotw/streaks';
 import mongoose from 'mongoose';
 
 export async function getBootstrapData(userEmail: string, seasonId?: string | null) {
@@ -142,36 +143,46 @@ export async function getBootstrapData(userEmail: string, seasonId?: string | nu
       { $unwind: { path: '$userDoc', preserveNullAndEmptyArrays: true } },
       { $match: { 'userDoc.excludeFromLeaderboard': { $ne: true } } },
       { $sort: { seasonWatchCount: -1 } },
-    ]).then((rows) =>
-      rows.map((r) => ({
-        _id: r.userDoc?._id,
-        name: formatDisplayName(r.userDoc?.name, r.userDoc?.username),
-        image: r.userDoc?.image ?? null,
-        watchedCount: r.userDoc?.watchedCount ?? 0,
-        seasonWatchCount: r.seasonWatchCount,
-        currentStreak: r.userDoc?.currentStreak || 0,
-        longestStreak: r.userDoc?.longestStreak || 0,
-      }))
-    );
+    ]).then(async (rows) => {
+      const allFilms = await FOTWFilm.find({}).select('_id dateSuggested createdAt lockedAt watchedBy').lean();
+      return rows.map((r) => {
+        const email = r.userDoc?.email || r._id;
+        const streak = calculateUserStreak(allFilms as any[], email, r.userDoc?.longestStreak || 0);
+        return {
+          _id: r.userDoc?._id,
+          name: formatDisplayName(r.userDoc?.name, r.userDoc?.username),
+          image: r.userDoc?.image ?? null,
+          watchedCount: r.userDoc?.watchedCount ?? 0,
+          seasonWatchCount: r.seasonWatchCount,
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+        };
+      });
+    });
   } else {
     // All-time leaderboard: simple indexed sort on FOTWUser.watchedCount
-    leaderboardPromise = FOTWUser.find({
-      watchedCount: { $gt: 0 },
-      excludeFromLeaderboard: { $ne: true },
-    })
-      .sort({ watchedCount: -1, createdAt: 1 })
-      .select('email username name watchedCount currentStreak longestStreak image')
-      .lean()
-      .then((users) =>
-        (users as any[]).map((u) => ({
+    leaderboardPromise = Promise.all([
+      FOTWUser.find({
+        watchedCount: { $gt: 0 },
+        excludeFromLeaderboard: { $ne: true },
+      })
+        .sort({ watchedCount: -1, createdAt: 1 })
+        .select('email username name watchedCount currentStreak longestStreak image')
+        .lean(),
+      FOTWFilm.find({}).select('_id dateSuggested createdAt lockedAt watchedBy').lean(),
+    ]).then(([users, allFilms]) =>
+      (users as any[]).map((u) => {
+        const streak = calculateUserStreak(allFilms as any[], u.email, u.longestStreak || 0);
+        return {
           _id: u._id,
           name: formatDisplayName(u.name, u.username),
           image: u.image ?? null,
           watchedCount: u.watchedCount,
-          currentStreak: u.currentStreak || 0,
-          longestStreak: u.longestStreak || 0,
-        }))
-      );
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+        };
+      })
+    );
   }
 
   // ── 6. Current film: fetch interaction data in parallel ──────────────────

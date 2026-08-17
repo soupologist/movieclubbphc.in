@@ -3,8 +3,9 @@ import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/dbConnect';
 import { FOTWRating, FOTWLike, FOTWUser, FOTWFilm, FOTWSeason, FOTWReview } from '@/lib/fotw/schemas';
 import { authOptions } from '@/lib/auth';
-import mongoose from 'mongoose';
 import { formatDisplayName } from '@/lib/fotw/utils';
+import { computeUserBadges } from '@/lib/badges';
+import { calculateUserStreak } from '@/lib/fotw/streaks';
 
 export async function GET(req: Request) {
   try {
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
 
     if (userIdParam) {
       userDoc = await FOTWUser.findById(userIdParam)
-        .select('email name username image watchedCount currentStreak longestStreak')
+        .select('email name username image watchedCount currentStreak longestStreak spottedBug')
         .lean();
       if (!userDoc) {
         return NextResponse.json({ message: 'User not found' }, { status: 404 });
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
       targetEmail = userDoc.email;
     } else if (emailParam) {
       userDoc = await FOTWUser.findOne({ email: emailParam })
-        .select('email name username image watchedCount currentStreak longestStreak')
+        .select('email name username image watchedCount currentStreak longestStreak spottedBug')
         .lean();
     }
 
@@ -62,11 +63,16 @@ export async function GET(req: Request) {
       };
     }
 
-    const [ratings, likes, reviews, seasonFilms] = await Promise.all([
+    const [ratings, likes, reviews, seasonFilms, allFilmsForBadges, activeSeason, allRatings] = await Promise.all([
       FOTWRating.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWLike.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
       FOTWReview.find({ userEmail: targetEmail }).sort({ createdAt: -1 }).lean(),
-      FOTWFilm.find(dateFilter).select('_id title posterUrl watchedBy').lean()
+      FOTWFilm.find(dateFilter).select('_id title posterUrl watchedBy').lean(),
+      FOTWFilm.find({ dateSuggested: { $ne: null } })
+        .select('_id title posterUrl language year isSilent isAfrican isSouthAmerican isFemaleDirector directorGender originCountry dateSuggested createdAt chosenBy chosenByEmail addedBy watchedCount watchedBy')
+        .lean(),
+      FOTWSeason.findOne({ endDate: null }).select('_id startDate endDate').lean(),
+      FOTWRating.find({}).select('filmId rating').lean(),
     ]);
 
     const filmMap = new Map(seasonFilms.map((f: any) => [f._id.toString(), f]));
@@ -116,16 +122,52 @@ export async function GET(req: Request) {
         posterUrl: f.posterUrl
       }));
 
+    // --- Compute streaks ---
+    const streaks = calculateUserStreak(
+      allFilmsForBadges as any[],
+      targetEmail!,
+      (userDoc as any)?.longestStreak || 0
+    );
+
+    // --- Compute badges ---
+    const userWatchesForBadges = (allFilmsForBadges as any[])
+      .filter((f) => Array.isArray(f.watchedBy) && f.watchedBy.some((w: any) => w.userEmail === targetEmail))
+      .map((f: any) => ({ filmId: f._id.toString(), dateSuggested: f.dateSuggested, language: f.language }));
+
+    const allBadges = computeUserBadges({
+      userEmail: targetEmail!,
+      userName: (userDoc as any)?.name,
+      userUsername: (userDoc as any)?.username,
+      spottedBug: (userDoc as any)?.spottedBug ?? false,
+      watchedCount: (userDoc as any)?.watchedCount ?? userWatchesForBadges.length,
+      longestStreak: streaks.longestStreak,
+      currentStreak: streaks.currentStreak,
+      userWatches: userWatchesForBadges,
+      userReviews: (reviews as any[]).map((r) => ({ filmId: r.filmId.toString(), body: r.body })),
+      allFilms: allFilmsForBadges as any[],
+      allRatings: (allRatings as any[]).map((r: any) => ({ filmId: r.filmId.toString(), rating: r.rating })),
+      activeSeason: activeSeason as any,
+    });
+
+    const earnedBadges = allBadges.filter((b) => b.earned).map((b) => ({
+      id: b.id,
+      name: b.name,
+      symbol: b.symbol,
+      description: b.description,
+      imageUrl: b.imageUrl,
+    }));
+
     return NextResponse.json({
       name: userDoc ? formatDisplayName(userDoc.name, userDoc.username) : targetEmail,
       image: (userDoc as any)?.image ?? null,
       watchedCount: watchedFilms.length,
-      currentStreak: (userDoc as any)?.currentStreak ?? 0,
-      longestStreak: (userDoc as any)?.longestStreak ?? 0,
+      currentStreak: streaks.currentStreak,
+      longestStreak: streaks.longestStreak,
       ratings: ratingsList,
       likes: likesList,
       reviews: reviewsList,
-      watchedFilms: watchedFilms
+      watchedFilms: watchedFilms,
+      earnedBadges,
     });
   } catch (error) {
     console.error('Error fetching user activity:', error);

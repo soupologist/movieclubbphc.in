@@ -280,7 +280,12 @@ export default function MembersList({ members }: { members: Member[] }) {
                         justifyContent: 'center',
                       }}
                     >
-                      {badge.symbol}
+                      {badge.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={badge.imageUrl} alt={badge.name} style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                      ) : (
+                        badge.symbol
+                      )}
                     </span>
                   ))}
                   {member.earnedBadges.length > 5 && (
